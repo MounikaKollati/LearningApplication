@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_include">
+    <sys_script_include action="INSERT_OR_UPDATE">
+        <access>package_private</access>
+        <active>true</active>
+        <api_name>x_1549902_asean_0.ShowFLowUtils</api_name>
+        <caller_access/>
+        <client_callable>true</client_callable>
+        <description/>
+        <mobile_callable>false</mobile_callable>
+        <name>ShowFLowUtils</name>
+        <sandbox_callable>false</sandbox_callable>
+        <script><![CDATA[var ShowFLowUtils = Class.create();
+ShowFLowUtils.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {
+    getFlowContext: function() {
+        var id = this.getParameter('sysparm_id');
+        var tablename = this.getParameter('sysparm_tablename');
+        var ctx = new GlideRecord("sys_flow_context");
+        ctx.addEncodedQuery("source_table=" + tablename + "^source_record=" + id);
+        ctx.query();
+        if (ctx.next()) {
+            var results = {
+                "success": "true",
+                "id": ctx.getUniqueValue()
+            };
+            return JSON.stringify(results);
+        }
+        gs.addErrorMessage("Flow Context does not exist for this record.");
+        var results1 = {
+            "success": "false"
+        };
+        return JSON.stringify(results1);
+    },
+
+    type: 'ShowFLowUtils'
+});]]></script>
+        <sys_class_name>sys_script_include</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 05:23:46</sys_created_on>
+        <sys_id>8a20262a474e8310ff78de94116d437d</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>ShowFLowUtils</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy>read</sys_policy>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sys_script_include_8a20262a474e8310ff78de94116d437d</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:24:10</sys_updated_on>
+    </sys_script_include>
+</record_update>

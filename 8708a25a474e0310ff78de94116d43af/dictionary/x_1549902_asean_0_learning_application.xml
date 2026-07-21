@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element attributes="enforce_dot_walk_cross_scope_access=true" audit="true" db_object_id="ca59221e474e0310ff78de94116d4309" extends="task" label="Learning Application" max_length="40" name="x_1549902_asean_0_learning_application" type="collection">
+        <element label="Count" max_length="40" name="count" type="integer"/>
+        <element calculation="(function calculatedFieldValue(current) {&#13;&#10;&#13;&#10;&#9;// Add your code here&#13;&#10;&#9;return '';  // return the calculated value&#13;&#10;&#13;&#10;})(current);" label="HR Comments" max_length="1000" name="u_hr_comments" type="string"/>
+        <element label="By Submitting the Learning Application Form,I acknowledge I comply to all the re" mandatory="true" max_length="255" name="acknowlegment" type="boolean"/>
+        <element calculation="(function calculatedFieldValue(current) {&#13;&#10;&#13;&#10;&#9;// Add your code here&#13;&#10;&#9;return '';  // return the calculated value&#13;&#10;&#13;&#10;})(current);" label="L2 Manager Comments" max_length="1000" name="u_l2_manager_comments" type="string"/>
+        <element label="Total Cost" max_length="38" name="u_total_cost" type="float"/>
+        <element label="Course Fee" max_length="38" name="u_course_fee" type="float"/>
+        <element label="Comment" max_length="40" name="u_comment" type="journal_input"/>
+        <element label="Training Provider Name" max_length="255" name="u_training_provider_name" type="string"/>
+        <element calculation="(function calculatedFieldValue(current) {&#13;&#10;&#13;&#10;&#9;// Add your code here&#13;&#10;&#9;return '';  // return the calculated value&#13;&#10;&#13;&#10;})(current);" label="Direct Manager Comments " max_length="200" name="u_direct_manager_comments" type="string"/>
+        <element choice="3" default="EUR" label="Currency" max_length="40" name="currency" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="EUR" sequence="1" value="EUR"/>
+                <element inactive="true" inactive_on_update="true" label="EUR" sequence="0" value="default_eur"/>
+            </choice>
+        </element>
+        <element choice="3" label="Is Payment Required" max_length="40" name="u_payment_required" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Yes" sequence="0" value="yes"/>
+                <element inactive_on_update="false" label="No" sequence="1" value="no"/>
+            </choice>
+        </element>
+        <element label="Other Expenses" max_length="38" name="u_other_expenses" type="float"/>
+        <element default="javascript:gs.getUserID();" dynamic_default_value="90d1921e5f510100a9ad2572f2b477fe" label="Employee Name" max_length="32" name="u_employee_name" reference="sys_user" type="reference" use_dynamic_default="true"/>
+        <element choice="3" default="draft" label="Status" max_length="40" name="u_status" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Return by L2" sequence="11" value="return_by_l2"/>
+                <element inactive_on_update="false" label="Draft" sequence="0" value="draft"/>
+                <element inactive_on_update="false" label="Pending Manager Approval" sequence="2" value="pending_manager_approval"/>
+                <element inactive="true" inactive_on_update="true" label="Learning In Progress" sequence="6" value="learning_in_progress"/>
+                <element inactive_on_update="false" label="Return by Manager" sequence="10" value="return_by_manager"/>
+                <element inactive_on_update="false" label="Pending L2 Approval" sequence="3" value="pending_l2_approval"/>
+                <element inactive="true" inactive_on_update="true" label="Pending Feedback" sequence="7" value="pending_feedback"/>
+                <element inactive_on_update="false" label="Return by HR" sequence="12" value="return_by_hr"/>
+                <element inactive_on_update="false" label="Completed" sequence="8" value="completed"/>
+                <element inactive_on_update="false" label="Pending HR Review" sequence="4" value="pending_hr_review"/>
+                <element inactive_on_update="false" label="Submitted" sequence="1" value="submitted"/>
+                <element inactive_on_update="false" label="Approved" sequence="5" value="approved"/>
+                <element inactive_on_update="false" label="Rejected" sequence="9" value="rejected"/>
+            </choice>
+        </element>
+        <element choice="1" label="Course Type" max_length="40" name="u_course_type" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Leadership" sequence="1" value="leadership"/>
+                <element inactive_on_update="false" label="Functional/Technical" sequence="2" value="functional_technical"/>
+                <element inactive_on_update="false" label="Soft Skills" sequence="3" value="soft_skills"/>
+                <element inactive_on_update="false" label="Higher Education Sponsorship" sequence="0" value="higher_education_sponsorship"/>
+            </choice>
+        </element>
+        <element label="In Company Manager Email" max_length="40" name="u_manager_email" reference="sys_user" type="reference"/>
+        <element choice="3" label="Course Format" max_length="40" name="u_course_format" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Overseas Training" sequence="1" value="overseas_training"/>
+                <element inactive_on_update="false" label="Local Training" sequence="2" value="local_training"/>
+                <element inactive_on_update="false" label="Virtual" sequence="3" value="virtual"/>
+                <element inactive_on_update="false" label="Web-based Training" sequence="0" value="web_based_training"/>
+            </choice>
+        </element>
+        <element choice="3" label="Manager Approval (L2 Required)" max_length="40" name="u_l2_required" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Yes" sequence="0" value="yes"/>
+                <element inactive_on_update="false" label="No" sequence="1" value="no"/>
+            </choice>
+        </element>
+        <element label="Management L2" max_length="32" name="u_management_l2" reference="sys_user" type="reference"/>
+        <element choice="1" label="Training Location - Country" max_length="40" name="u_training_country" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Malaysia" sequence="1" value="malaysia"/>
+                <element inactive_on_update="false" label="Philippines" sequence="5" value="philippines"/>
+                <element inactive_on_update="false" label="Vietnam" sequence="0" value="vietnam"/>
+                <element inactive_on_update="false" label="Singapore" sequence="2" value="singapore"/>
+                <element inactive_on_update="false" label="Indonesia" sequence="3" value="indonesia"/>
+                <element inactive_on_update="false" label="Thailand" sequence="4" value="thailand"/>
+            </choice>
+        </element>
+        <element label="Course Start Date" max_length="40" name="u_course_start_date" type="glide_date"/>
+        <element label="Specify Other Expenses" max_length="30000" name="u_specify_other_expenses" type="string"/>
+        <element label="Country" max_length="32" name="u_country" reference="core_country" type="reference"/>
+        <element calculation="(function calculatedFieldValue(current) {&#13;&#10;&#13;&#10;&#9;// Add your code here&#13;&#10;&#9;return '';  // return the calculated value&#13;&#10;&#13;&#10;})(current);" label="Cost" max_length="20" name="u_cost" type="currency"/>
+        <element label="Employee Email" max_length="40" name="u_employee_email" type="string"/>
+        <element label="Course Title" mandatory="true" max_length="255" name="u_course_title" type="string"/>
+        <element label="Course End Date" max_length="40" name="u_course_end_date" type="glide_date"/>
+        <element label="Total Training Hours" max_length="38" name="u_total_training_hours" type="decimal"/>
+    </element>
+</database>

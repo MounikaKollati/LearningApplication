@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="catalog_script_client">
+    <catalog_script_client action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <applies_catalog>true</applies_catalog>
+        <applies_extended>false</applies_extended>
+        <applies_req_item>true</applies_req_item>
+        <applies_sc_task>true</applies_sc_task>
+        <applies_target_record>true</applies_target_record>
+        <applies_to>item</applies_to>
+        <cat_item display_value=" ASEAN Mapping">40382a6a478e8310ff78de94116d435e</cat_item>
+        <cat_variable>IO:da6b4018479ecf10ff78de94116d4386</cat_variable>
+        <condition/>
+        <description/>
+        <field/>
+        <global>true</global>
+        <isolate_script>true</isolate_script>
+        <messages/>
+        <name>Payment Required Field Visibility</name>
+        <order/>
+        <published_ref/>
+        <script><![CDATA[function onChange(control, oldValue, newValue, isLoading) {
+
+    if (isLoading) {
+        return;
+    }
+
+    var paymentRequired = (newValue == 'yes'); // Change 'yes' if your value is different
+
+    // Payment fields
+    // g_form.setDisplay('u_currency', paymentRequired);
+    g_form.setMandatory('u_currency', false);
+
+    // g_form.setDisplay('u_course_fee', paymentRequired);
+    g_form.setMandatory('u_course_fee', paymentRequired);
+
+    // g_form.setDisplay('u_other_expenses', paymentRequired);
+    g_form.setMandatory('u_other_expenses', false);
+
+    // g_form.setDisplay('u_specify_other_expenses', paymentRequired);
+    g_form.setMandatory('u_specify_other_expenses', false);
+
+    // g_form.setDisplay('u_total_cost', paymentRequired);
+
+    // g_form.setDisplay('is_l2_approval_required', paymentRequired);
+    g_form.setDisplay('l2_manager', paymentRequired);
+
+    // Make read-only when hidden
+    g_form.setReadOnly('u_currency', !paymentRequired);
+    g_form.setReadOnly('u_course_fee', !paymentRequired);
+    g_form.setReadOnly('u_other_expenses', !paymentRequired);
+    g_form.setReadOnly('u_specify_other_expenses', !paymentRequired);
+    g_form.setReadOnly('u_total_cost', !paymentRequired);
+    g_form.setReadOnly('u_l2_required', !paymentRequired);
+    g_form.setReadOnly('u_management_l2', !paymentRequired);
+
+    // Optional: Clear values when Payment Required = No
+    if (!paymentRequired) {
+        // g_form.clearValue('u_currency');
+        g_form.clearValue('u_course_fee');
+        g_form.clearValue('u_other_expenses');
+        g_form.clearValue('u_specify_other_expenses');
+        g_form.clearValue('u_total_cost');
+        g_form.clearValue('u_l2_required');
+        g_form.clearValue('u_management_l2');
+    }
+}]]></script>
+        <sys_class_name>catalog_script_client</sys_class_name>
+        <sys_created_by>gungun</sys_created_by>
+        <sys_created_on>2026-07-21 05:06:44</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>680c8018479ecf10ff78de94116d43e5</sys_id>
+        <sys_mod_count>4</sys_mod_count>
+        <sys_name>Payment Required Field Visibility</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>catalog_script_client_680c8018479ecf10ff78de94116d43e5</sys_update_name>
+        <sys_updated_by>gungun</sys_updated_by>
+        <sys_updated_on>2026-07-21 05:28:14</sys_updated_on>
+        <table/>
+        <type>onChange</type>
+        <ui_type>10</ui_type>
+        <va_supported>true</va_supported>
+        <variable_set/>
+        <view/>
+    </catalog_script_client>
+</record_update>

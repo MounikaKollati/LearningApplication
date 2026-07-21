@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_scope_privilege">
+    <sys_scope_privilege action="INSERT_OR_UPDATE">
+        <operation>write</operation>
+        <source_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</source_scope>
+        <status>allowed</status>
+        <sys_class_name>sys_scope_privilege</sys_class_name>
+        <sys_created_by>cameron.richard</sys_created_by>
+        <sys_created_on>2026-07-16 07:33:34</sys_created_on>
+        <sys_id>0f2ef6a24782c310ff78de94116d4345</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>sysapproval_approver</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sys_scope_privilege_0f2ef6a24782c310ff78de94116d4345</sys_update_name>
+        <sys_updated_by>cameron.richard</sys_updated_by>
+        <sys_updated_on>2026-07-16 07:33:34</sys_updated_on>
+        <target_name>sysapproval_approver</target_name>
+        <target_scope display_value="Global">global</target_scope>
+        <target_type>sys_db_object</target_type>
+    </sys_scope_privilege>
+</record_update>

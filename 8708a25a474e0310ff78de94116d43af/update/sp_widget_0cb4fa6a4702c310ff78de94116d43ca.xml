@@ -1,0 +1,1489 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($window) {
+
+    var c = this;
+
+    /*
+     * Return to Check My Records ASEAN.
+     */
+    c.goBack = function() {
+        $window.location.href =
+            "?id=check_my_records_asean";
+    };
+
+    /*
+     * Open attachment in a new browser tab.
+     */
+    c.viewAttachment = function(attachment) {
+
+        if (
+            !attachment ||
+            !attachment.viewUrl
+        ) {
+            return;
+        }
+
+        $window.open(
+            attachment.viewUrl,
+            "_blank"
+        );
+    };
+
+    /*
+     * Download attachment.
+     */
+    c.downloadAttachment = function(attachment) {
+
+        if (
+            !attachment ||
+            !attachment.downloadUrl
+        ) {
+            return;
+        }
+
+        var downloadLink =
+            document.createElement("a");
+
+        downloadLink.href =
+            attachment.downloadUrl;
+
+        downloadLink.download =
+            attachment.fileName || "attachment";
+
+        downloadLink.target = "_blank";
+
+        document.body.appendChild(
+            downloadLink
+        );
+
+        downloadLink.click();
+
+        document.body.removeChild(
+            downloadLink
+        );
+    };
+
+    /*
+     * Select an icon based on attachment type.
+     */
+    c.getAttachmentIcon = function(
+        contentType,
+        fileName
+    ) {
+
+        var type =
+            (contentType || "").toLowerCase();
+
+        var name =
+            (fileName || "").toLowerCase();
+
+        if (
+            type.indexOf("pdf") > -1 ||
+            name.indexOf(".pdf") > -1
+        ) {
+            return "fa-file-pdf-o";
+        }
+
+        if (
+            type.indexOf("image") > -1 ||
+            /\.(png|jpg|jpeg|gif|bmp|webp)$/.test(name)
+        ) {
+            return "fa-file-image-o";
+        }
+
+        if (
+            type.indexOf("spreadsheet") > -1 ||
+            type.indexOf("excel") > -1 ||
+            /\.(xls|xlsx|csv)$/.test(name)
+        ) {
+            return "fa-file-excel-o";
+        }
+
+        if (
+            type.indexOf("word") > -1 ||
+            /\.(doc|docx)$/.test(name)
+        ) {
+            return "fa-file-word-o";
+        }
+
+        if (
+            type.indexOf("presentation") > -1 ||
+            type.indexOf("powerpoint") > -1 ||
+            /\.(ppt|pptx)$/.test(name)
+        ) {
+            return "fa-file-powerpoint-o";
+        }
+
+        if (
+            type.indexOf("zip") > -1 ||
+            /\.(zip|rar|7z)$/.test(name)
+        ) {
+            return "fa-file-archive-o";
+        }
+
+        if (
+            type.indexOf("text") > -1 ||
+            /\.(txt|log)$/.test(name)
+        ) {
+            return "fa-file-text-o";
+        }
+
+        return "fa-file-o";
+    };
+
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.view-registration-container {&#13;
+    min-height: 100vh;&#13;
+    padding: 25px;&#13;
+    background: #f5f7fa;&#13;
+}&#13;
+&#13;
+/* Main card */&#13;
+.registration-card {&#13;
+    overflow: hidden;&#13;
+    background: #ffffff;&#13;
+    border: 1px solid #dfe3e8;&#13;
+    border-radius: 8px;&#13;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);&#13;
+}&#13;
+&#13;
+/* Header */&#13;
+.registration-header {&#13;
+    padding: 25px 30px;&#13;
+    background: #ffffff;&#13;
+    border-bottom: 1px solid #e6e6e6;&#13;
+}&#13;
+&#13;
+.registration-header h2 {&#13;
+    margin: 0;&#13;
+    color: #f58220;&#13;
+    font-size: 24px;&#13;
+    font-weight: 600;&#13;
+}&#13;
+&#13;
+.registration-header h2 i {&#13;
+    margin-right: 10px;&#13;
+}&#13;
+&#13;
+.request-number {&#13;
+    margin-top: 10px;&#13;
+    color: #555555;&#13;
+    font-size: 15px;&#13;
+    font-weight: 500;&#13;
+}&#13;
+&#13;
+/* Body */&#13;
+.registration-body {&#13;
+    padding: 30px;&#13;
+}&#13;
+&#13;
+.form-group {&#13;
+    margin-bottom: 22px;&#13;
+}&#13;
+&#13;
+.form-group label {&#13;
+    display: block;&#13;
+    margin-bottom: 7px;&#13;
+    color: #444444;&#13;
+    font-size: 14px;&#13;
+    font-weight: 600;&#13;
+}&#13;
+&#13;
+/* Normal fields */&#13;
+.form-control {&#13;
+    width: 100%;&#13;
+    height: 42px;&#13;
+    padding: 8px 12px;&#13;
+    color: #333333;&#13;
+    background: #f8f9fb !important;&#13;
+    border: 1px solid #d9dee5;&#13;
+    border-radius: 4px;&#13;
+    box-shadow: none;&#13;
+    cursor: default;&#13;
+}&#13;
+&#13;
+.form-control:focus {&#13;
+    border-color: #d9dee5;&#13;
+    outline: none;&#13;
+    box-shadow: none;&#13;
+}&#13;
+&#13;
+input.form-control[readonly],&#13;
+textarea.form-control[readonly] {&#13;
+    color: #333333;&#13;
+    background: #f8f9fb !important;&#13;
+    cursor: default;&#13;
+}&#13;
+&#13;
+.readonly-textarea {&#13;
+    min-height: 120px;&#13;
+    height: auto;&#13;
+    padding: 12px;&#13;
+    overflow-y: auto;&#13;
+    line-height: 1.6;&#13;
+    white-space: pre-wrap;&#13;
+    overflow-wrap: break-word;&#13;
+    resize: vertical;&#13;
+}&#13;
+&#13;
+/* Boolean */&#13;
+.checkbox-field {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+    height: 42px;&#13;
+    padding: 0 12px;&#13;
+    background: #f8f9fb;&#13;
+    border: 1px solid #d9dee5;&#13;
+    border-radius: 4px;&#13;
+}&#13;
+&#13;
+.checkbox-field input {&#13;
+    margin: 0 10px 0 0;&#13;
+}&#13;
+&#13;
+.checkbox-field span {&#13;
+    color: #333333;&#13;
+    font-size: 14px;&#13;
+}&#13;
+&#13;
+/* Common section heading */&#13;
+.section-heading {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+    margin-bottom: 20px;&#13;
+    color: #f58220;&#13;
+    font-size: 20px;&#13;
+    font-weight: 600;&#13;
+}&#13;
+&#13;
+.section-heading &gt; i {&#13;
+    margin-right: 8px;&#13;
+}&#13;
+&#13;
+.section-count {&#13;
+    display: inline-flex;&#13;
+    align-items: center;&#13;
+    justify-content: center;&#13;
+    min-width: 26px;&#13;
+    height: 26px;&#13;
+    margin-left: 10px;&#13;
+    padding: 0 8px;&#13;
+    color: #ffffff;&#13;
+    background: #f58220;&#13;
+    border-radius: 13px;&#13;
+    font-size: 12px;&#13;
+    font-weight: 600;&#13;
+}&#13;
+&#13;
+/* Attachments */&#13;
+.attachments-section {&#13;
+    clear: both;&#13;
+    margin-top: 15px;&#13;
+    padding-top: 25px;&#13;
+    border-top: 1px solid #e6e6e6;&#13;
+}&#13;
+&#13;
+.attachment-list {&#13;
+    width: 100%;&#13;
+}&#13;
+&#13;
+.attachment-card {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+    width: 100%;&#13;
+    margin-bottom: 12px;&#13;
+    padding: 14px 16px;&#13;
+    background: #ffffff;&#13;
+    border: 1px solid #dfe3e8;&#13;
+    border-left: 4px solid #f58220;&#13;
+    border-radius: 5px;&#13;
+    transition:&#13;
+        border-color 0.2s ease,&#13;
+        box-shadow 0.2s ease,&#13;
+        transform 0.2s ease;&#13;
+}&#13;
+&#13;
+.attachment-card:hover {&#13;
+    border-color: #f5b075;&#13;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.07);&#13;
+    transform: translateY(-1px);&#13;
+}&#13;
+&#13;
+.attachment-icon {&#13;
+    display: flex;&#13;
+    flex: 0 0 48px;&#13;
+    align-items: center;&#13;
+    justify-content: center;&#13;
+    width: 48px;&#13;
+    height: 48px;&#13;
+    margin-right: 15px;&#13;
+    color: #f58220;&#13;
+    background: #fff5ec;&#13;
+    border-radius: 6px;&#13;
+    font-size: 25px;&#13;
+}&#13;
+&#13;
+.attachment-information {&#13;
+    flex: 1;&#13;
+    min-width: 0;&#13;
+}&#13;
+&#13;
+.attachment-name {&#13;
+    overflow: hidden;&#13;
+    margin-bottom: 7px;&#13;
+    color: #333333;&#13;
+    font-size: 14px;&#13;
+    font-weight: 600;&#13;
+    text-overflow: ellipsis;&#13;
+    white-space: nowrap;&#13;
+}&#13;
+&#13;
+.attachment-metadata {&#13;
+    display: flex;&#13;
+    flex-wrap: wrap;&#13;
+    color: #666666;&#13;
+    font-size: 12px;&#13;
+    gap: 8px 18px;&#13;
+}&#13;
+&#13;
+.attachment-metadata span {&#13;
+    display: inline-flex;&#13;
+    align-items: center;&#13;
+}&#13;
+&#13;
+.attachment-metadata i {&#13;
+    margin-right: 5px;&#13;
+    color: #777777;&#13;
+}&#13;
+&#13;
+.attachment-actions {&#13;
+    display: flex;&#13;
+    flex: 0 0 auto;&#13;
+    align-items: center;&#13;
+    margin-left: 15px;&#13;
+    gap: 8px;&#13;
+}&#13;
+&#13;
+.attachment-view-btn,&#13;
+.attachment-download-btn {&#13;
+    padding: 7px 13px;&#13;
+    border-radius: 4px;&#13;
+    font-size: 13px;&#13;
+    font-weight: 600;&#13;
+    transition:&#13;
+        background 0.2s ease,&#13;
+        color 0.2s ease,&#13;
+        border-color 0.2s ease;&#13;
+}&#13;
+&#13;
+.attachment-view-btn {&#13;
+    color: #f58220;&#13;
+    background: #ffffff;&#13;
+    border: 1px solid #f58220;&#13;
+}&#13;
+&#13;
+.attachment-view-btn:hover,&#13;
+.attachment-view-btn:focus {&#13;
+    color: #ffffff;&#13;
+    background: #f58220;&#13;
+    border-color: #f58220;&#13;
+    outline: none;&#13;
+}&#13;
+&#13;
+.attachment-download-btn {&#13;
+    color: #ffffff;&#13;
+    background: #f58220;&#13;
+    border: 1px solid #f58220;&#13;
+}&#13;
+&#13;
+.attachment-download-btn:hover,&#13;
+.attachment-download-btn:focus {&#13;
+    color: #ffffff;&#13;
+    background: #d96b0f;&#13;
+    border-color: #d96b0f;&#13;
+    outline: none;&#13;
+}&#13;
+&#13;
+.attachment-actions i {&#13;
+    margin-right: 5px;&#13;
+}&#13;
+&#13;
+/* Journal section */&#13;
+.journal-section {&#13;
+    clear: both;&#13;
+    margin-top: 30px;&#13;
+    padding-top: 25px;&#13;
+    border-top: 1px solid #e6e6e6;&#13;
+}&#13;
+&#13;
+.journal-group {&#13;
+    margin-bottom: 28px;&#13;
+}&#13;
+&#13;
+.journal-title {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+    margin: 0 0 14px;&#13;
+    padding-bottom: 9px;&#13;
+    color: #333333;&#13;
+    font-size: 17px;&#13;
+    font-weight: 600;&#13;
+    border-bottom: 1px solid #eceff2;&#13;
+}&#13;
+&#13;
+.journal-title &gt; i {&#13;
+    margin-right: 9px;&#13;
+    color: #f58220;&#13;
+}&#13;
+&#13;
+.journal-count {&#13;
+    display: inline-flex;&#13;
+    align-items: center;&#13;
+    justify-content: center;&#13;
+    min-width: 25px;&#13;
+    height: 25px;&#13;
+    margin-left: 9px;&#13;
+    padding: 0 8px;&#13;
+    color: #ffffff;&#13;
+    background: #f58220;&#13;
+    border-radius: 13px;&#13;
+    font-size: 12px;&#13;
+    font-weight: 600;&#13;
+}&#13;
+&#13;
+.journal-entry {&#13;
+    margin-bottom: 14px;&#13;
+    overflow: hidden;&#13;
+    background: #ffffff;&#13;
+    border: 1px solid #dfe3e8;&#13;
+    border-left: 4px solid #f58220;&#13;
+    border-radius: 5px;&#13;
+}&#13;
+&#13;
+.comments-entry {&#13;
+    border-left-color: #f58220;&#13;
+}&#13;
+&#13;
+.work-notes-entry {&#13;
+    border-left-color: #5c6bc0;&#13;
+}&#13;
+&#13;
+.journal-entry-header {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+    justify-content: space-between;&#13;
+    padding: 10px 14px;&#13;
+    color: #555555;&#13;
+    background: #f8f9fb;&#13;
+    border-bottom: 1px solid #e6e9ed;&#13;
+    font-size: 12px;&#13;
+}&#13;
+&#13;
+.journal-user {&#13;
+    font-weight: 600;&#13;
+}&#13;
+&#13;
+.journal-user i,&#13;
+.journal-date i {&#13;
+    margin-right: 5px;&#13;
+}&#13;
+&#13;
+.journal-date {&#13;
+    color: #666666;&#13;
+}&#13;
+&#13;
+.journal-entry-body {&#13;
+    min-height: 45px;&#13;
+    padding: 14px;&#13;
+    color: #333333;&#13;
+    font-size: 14px;&#13;
+    line-height: 1.65;&#13;
+    white-space: pre-wrap;&#13;
+    overflow-wrap: anywhere;&#13;
+}&#13;
+&#13;
+.journal-empty {&#13;
+    margin-bottom: 15px;&#13;
+    padding: 14px;&#13;
+    color: #666666;&#13;
+    background: #f8f9fb;&#13;
+    border: 1px dashed #cfd5dc;&#13;
+    border-radius: 4px;&#13;
+    font-style: italic;&#13;
+}&#13;
+&#13;
+.journal-denied {&#13;
+    color: #a94442;&#13;
+    background: #fdf2f2;&#13;
+    border-color: #e5b8b8;&#13;
+}&#13;
+&#13;
+/* Alerts */&#13;
+.alert {&#13;
+    margin-bottom: 22px;&#13;
+    border-radius: 4px;&#13;
+}&#13;
+&#13;
+/* Footer */&#13;
+.registration-footer {&#13;
+    padding: 20px 30px;&#13;
+    background: #ffffff;&#13;
+    border-top: 1px solid #e6e6e6;&#13;
+}&#13;
+&#13;
+/* Back button */&#13;
+.back-btn {&#13;
+    padding: 8px 22px;&#13;
+    color: #f58220;&#13;
+    background: #ffffff;&#13;
+    border: 2px solid #f58220;&#13;
+    border-radius: 5px;&#13;
+    font-size: 14px;&#13;
+    font-weight: 600;&#13;
+    transition:&#13;
+        background 0.25s ease,&#13;
+        color 0.25s ease,&#13;
+        border-color 0.25s ease;&#13;
+}&#13;
+&#13;
+.back-btn i {&#13;
+    margin-right: 8px;&#13;
+}&#13;
+&#13;
+.back-btn:hover,&#13;
+.back-btn:focus,&#13;
+.back-btn:active {&#13;
+    color: #ffffff;&#13;
+    background: #f58220;&#13;
+    border-color: #f58220;&#13;
+    outline: none;&#13;
+    box-shadow: none;&#13;
+}&#13;
+&#13;
+/* Tablet */&#13;
+@media (max-width: 992px) {&#13;
+&#13;
+    .view-registration-container {&#13;
+        padding: 18px;&#13;
+    }&#13;
+&#13;
+    .registration-header,&#13;
+    .registration-body,&#13;
+    .registration-footer {&#13;
+        padding-left: 20px;&#13;
+        padding-right: 20px;&#13;
+    }&#13;
+&#13;
+    .attachment-card {&#13;
+        align-items: flex-start;&#13;
+    }&#13;
+&#13;
+    .attachment-actions {&#13;
+        flex-direction: column;&#13;
+    }&#13;
+&#13;
+    .attachment-view-btn,&#13;
+    .attachment-download-btn {&#13;
+        width: 105px;&#13;
+    }&#13;
+}&#13;
+&#13;
+/* Mobile */&#13;
+@media (max-width: 768px) {&#13;
+&#13;
+    .view-registration-container {&#13;
+        padding: 10px;&#13;
+    }&#13;
+&#13;
+    .registration-header {&#13;
+        padding: 18px;&#13;
+    }&#13;
+&#13;
+    .registration-header h2 {&#13;
+        font-size: 20px;&#13;
+    }&#13;
+&#13;
+    .registration-body {&#13;
+        padding: 18px;&#13;
+    }&#13;
+&#13;
+    .registration-footer {&#13;
+        padding: 18px;&#13;
+    }&#13;
+&#13;
+    .attachment-card {&#13;
+        display: block;&#13;
+    }&#13;
+&#13;
+    .attachment-icon {&#13;
+        margin: 0 0 12px;&#13;
+    }&#13;
+&#13;
+    .attachment-name {&#13;
+        white-space: normal;&#13;
+        overflow-wrap: anywhere;&#13;
+    }&#13;
+&#13;
+    .attachment-metadata {&#13;
+        display: block;&#13;
+    }&#13;
+&#13;
+    .attachment-metadata span {&#13;
+        display: flex;&#13;
+        margin-bottom: 6px;&#13;
+    }&#13;
+&#13;
+    .attachment-actions {&#13;
+        display: flex;&#13;
+        flex-direction: row;&#13;
+        width: 100%;&#13;
+        margin: 14px 0 0;&#13;
+    }&#13;
+&#13;
+    .attachment-view-btn,&#13;
+    .attachment-download-btn {&#13;
+        flex: 1;&#13;
+        width: auto;&#13;
+    }&#13;
+&#13;
+    .journal-entry-header {&#13;
+        display: block;&#13;
+    }&#13;
+&#13;
+    .journal-date {&#13;
+        display: block;&#13;
+        margin-top: 7px;&#13;
+    }&#13;
+&#13;
+    .back-btn {&#13;
+        width: 100%;&#13;
+    }&#13;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>view_record_asean</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>View Records ASEAN</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+
+    var TABLE =
+        "x_1549902_asean_0_learning_application";
+
+    data.fields = [];
+    data.journalFields = [];
+    data.attachments = [];
+
+    data.recordFound = false;
+    data.requestNumber = "";
+    data.errorMessage = "";
+    data.journalMessage = "";
+    data.attachmentMessage = "";
+
+    var sysId = $sp.getParameter("sys_id");
+
+    if (!sysId) {
+        data.errorMessage =
+            "Learning Application record not specified.";
+        return;
+    }
+
+    /*
+     * Read the Learning Application.
+     * GlideRecordSecure respects table and field ACLs.
+     */
+    var applicationGR =
+        new GlideRecordSecure(TABLE);
+
+    if (!applicationGR.get(sysId)) {
+        data.errorMessage =
+            "Record not found, or you do not have permission to access it.";
+        return;
+    }
+
+    data.recordFound = true;
+    data.requestNumber =
+        applicationGR.getDisplayValue("number") || "";
+
+    /*
+     * Application fields displayed in this order.
+     */
+    var fieldOrder = [
+        "number",
+        "u_employee_name",
+        "u_employee_email",
+        "u_country",
+        "u_manager_email",
+        "u_management_l2",
+        "manager_approval_l2_required",
+
+        "u_course_title",
+        "u_course_type",
+        "u_course_format",
+        "u_training_country",
+        "u_training_provider_name",
+        "course_start_date",
+        "u_course_end_date",
+        "u_total_training_hours",
+
+        "is_payment_required",
+        "currency",
+        "u_course_fee",
+        "u_other_expenses",
+        "u_specify_other_expenses",
+        "u_total_cost",
+
+        "u_comment",
+        "u_status"
+    ];
+
+    var addedFields = {};
+
+    /*
+     * Add configured fields.
+     */
+    for (var i = 0; i < fieldOrder.length; i++) {
+        addNormalField(fieldOrder[i], i);
+    }
+
+    /*
+     * Add any additional active fields created directly
+     * on the scoped Learning Application table.
+     */
+    var dictionaryGR =
+        new GlideRecord("sys_dictionary");
+
+    dictionaryGR.addQuery("name", TABLE);
+    dictionaryGR.addNotNullQuery("element");
+    dictionaryGR.addQuery("active", true);
+    dictionaryGR.orderBy("position");
+    dictionaryGR.orderBy("column_label");
+    dictionaryGR.query();
+
+    var nextOrder = fieldOrder.length;
+
+    while (dictionaryGR.next()) {
+
+        var dictionaryField =
+            dictionaryGR.getValue("element");
+
+        if (!dictionaryField) {
+            continue;
+        }
+
+        /*
+         * Journal fields are displayed separately.
+         */
+        if (
+            dictionaryField == "comments" ||
+            dictionaryField == "work_notes" ||
+            dictionaryField == "comments_and_work_notes"
+        ) {
+            continue;
+        }
+
+        if (addedFields[dictionaryField]) {
+            continue;
+        }
+
+        addNormalField(
+            dictionaryField,
+            nextOrder++
+        );
+    }
+
+    /*
+     * Read journal entries.
+     */
+    addJournalField(
+        "comments",
+        "Additional Comments"
+    );
+
+    addJournalField(
+        "work_notes",
+        "Work Notes"
+    );
+
+    /*
+     * Check whether any journal history exists.
+     */
+    var journalEntryCount = 0;
+
+    for (
+        var journalIndex = 0;
+        journalIndex < data.journalFields.length;
+        journalIndex++
+    ) {
+        journalEntryCount +=
+            data.journalFields[journalIndex].entries.length;
+    }
+
+    if (journalEntryCount === 0) {
+        data.journalMessage =
+            "No Additional Comments or Work Notes have been posted.";
+    }
+
+    /*
+     * Read attachments belonging to this record.
+     */
+    loadAttachments();
+
+    /*
+     * Add a normal field.
+     */
+    function addNormalField(
+        fieldName,
+        orderNumber
+    ) {
+
+        if (
+            !fieldName ||
+            addedFields[fieldName] ||
+            !applicationGR.isValidField(fieldName)
+        ) {
+            return;
+        }
+
+        var fieldElement =
+            applicationGR.getElement(fieldName);
+
+        if (!fieldElement) {
+            return;
+        }
+
+        /*
+         * Respect field read ACL.
+         */
+        try {
+            if (!fieldElement.canRead()) {
+                return;
+            }
+        } catch (fieldReadError) {
+            /*
+             * Continue when canRead is unavailable.
+             */
+        }
+
+        var descriptor =
+            fieldElement.getED();
+
+        if (!descriptor) {
+            return;
+        }
+
+        var fieldType =
+            descriptor.getInternalType() || "string";
+
+        /*
+         * Journal fields are handled separately.
+         */
+        if (
+            fieldType == "journal" ||
+            fieldType == "journal_input"
+        ) {
+            return;
+        }
+
+        var rawValue =
+            applicationGR.getValue(fieldName);
+
+        var displayValue =
+            applicationGR.getDisplayValue(fieldName);
+
+        var isMultiLine =
+            fieldType == "html" ||
+            fieldType == "translated_html" ||
+            fieldType == "string_full_utf8" ||
+            fieldType == "translated_text" ||
+            fieldType == "script";
+
+        data.fields.push({
+            name: fieldName,
+
+            label:
+                fieldElement.getLabel() ||
+                fieldName,
+
+            value:
+                rawValue === null
+                    ? ""
+                    : rawValue.toString(),
+
+            displayValue:
+                displayValue === null
+                    ? ""
+                    : displayValue.toString(),
+
+            type: fieldType,
+            isMultiLine: isMultiLine,
+            fullWidth: isMultiLine,
+            order: orderNumber
+        });
+
+        addedFields[fieldName] = true;
+    }
+
+    /*
+     * Load Additional Comments or Work Notes
+     * directly from sys_journal_field.
+     */
+    function addJournalField(
+        elementName,
+        displayLabel
+    ) {
+
+        var journalData = {
+            name: elementName,
+            label: displayLabel,
+            entries: [],
+            canRead: true
+        };
+
+        /*
+         * Check the parent journal field ACL.
+         */
+        if (applicationGR.isValidField(elementName)) {
+
+            try {
+                var journalElement =
+                    applicationGR.getElement(elementName);
+
+                if (
+                    journalElement &&
+                    !journalElement.canRead()
+                ) {
+                    journalData.canRead = false;
+                    data.journalFields.push(journalData);
+                    return;
+                }
+            } catch (journalAclError) {
+                /*
+                 * Continue with the journal query.
+                 */
+            }
+        }
+
+        var journalGR =
+            new GlideRecordSecure("sys_journal_field");
+
+        journalGR.addQuery(
+            "element_id",
+            sysId
+        );
+
+        journalGR.addQuery(
+            "element",
+            elementName
+        );
+
+        journalGR.orderByDesc("sys_created_on");
+        journalGR.query();
+
+        while (journalGR.next()) {
+
+            var createdByUserName =
+                journalGR.getValue("sys_created_by") || "";
+
+            journalData.entries.push({
+                sysId:
+                    journalGR.getUniqueValue(),
+
+                value:
+                    journalGR.getValue("value") || "",
+
+                createdOn:
+                    journalGR.getDisplayValue(
+                        "sys_created_on"
+                    ) || "",
+
+                createdBy:
+                    getUserDisplayName(
+                        createdByUserName
+                    )
+            });
+        }
+
+        data.journalFields.push(journalData);
+    }
+
+    /*
+     * Load record attachments.
+     */
+    function loadAttachments() {
+
+        var attachmentGR =
+            new GlideRecordSecure("sys_attachment");
+
+        attachmentGR.addQuery(
+            "table_name",
+            TABLE
+        );
+
+        attachmentGR.addQuery(
+            "table_sys_id",
+            sysId
+        );
+
+        attachmentGR.orderByDesc("sys_created_on");
+        attachmentGR.query();
+
+        while (attachmentGR.next()) {
+
+            var attachmentSysId =
+                attachmentGR.getUniqueValue();
+
+            var fileName =
+                attachmentGR.getValue("file_name") ||
+                "Attachment";
+
+            var contentType =
+                attachmentGR.getValue("content_type") ||
+                "application/octet-stream";
+
+            var sizeBytes =
+                parseInt(
+                    attachmentGR.getValue("size_bytes"),
+                    10
+                ) || 0;
+
+            var uploadedByUserName =
+                attachmentGR.getValue("sys_created_by") || "";
+
+            data.attachments.push({
+                sysId: attachmentSysId,
+                fileName: fileName,
+                contentType: contentType,
+
+                sizeBytes: sizeBytes,
+                sizeDisplay: formatFileSize(sizeBytes),
+
+                uploadedOn:
+                    attachmentGR.getDisplayValue(
+                        "sys_created_on"
+                    ) || "",
+
+                uploadedBy:
+                    getUserDisplayName(
+                        uploadedByUserName
+                    ),
+
+                viewUrl:
+                    "/sys_attachment.do?sys_id=" +
+                    attachmentSysId,
+
+                downloadUrl:
+                    "/sys_attachment.do?sys_id=" +
+                    attachmentSysId
+            });
+        }
+
+        if (data.attachments.length === 0) {
+            data.attachmentMessage =
+                "No attachments are available for this record.";
+        }
+    }
+
+    /*
+     * Convert bytes to readable file size.
+     */
+    function formatFileSize(sizeBytes) {
+
+        if (!sizeBytes || sizeBytes < 1) {
+            return "0 KB";
+        }
+
+        if (sizeBytes < 1024) {
+            return sizeBytes + " bytes";
+        }
+
+        if (sizeBytes < 1048576) {
+            return (
+                Math.round(
+                    sizeBytes / 1024 * 10
+                ) / 10
+            ) + " KB";
+        }
+
+        if (sizeBytes < 1073741824) {
+            return (
+                Math.round(
+                    sizeBytes / 1048576 * 10
+                ) / 10
+            ) + " MB";
+        }
+
+        return (
+            Math.round(
+                sizeBytes / 1073741824 * 10
+            ) / 10
+        ) + " GB";
+    }
+
+    /*
+     * Convert sys_created_by username to user display name.
+     */
+    function getUserDisplayName(userName) {
+
+        if (!userName) {
+            return "";
+        }
+
+        var userGR =
+            new GlideRecord("sys_user");
+
+        userGR.addQuery(
+            "user_name",
+            userName
+        );
+
+        userGR.setLimit(1);
+        userGR.query();
+
+        if (userGR.next()) {
+            return (
+                userGR.getDisplayValue() ||
+                userName
+            );
+        }
+
+        return userName;
+    }
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 06:54:14</sys_created_on>
+        <sys_id>0cb4fa6a4702c310ff78de94116d43ca</sys_id>
+        <sys_mod_count>5</sys_mod_count>
+        <sys_name>View Records ASEAN</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sp_widget_0cb4fa6a4702c310ff78de94116d43ca</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 10:16:12</sys_updated_on>
+        <template><![CDATA[<div class="view-registration-container">
+
+    <div class="registration-card">
+
+        <!-- Header -->
+        <div class="registration-header">
+
+            <h2>
+                <i class="fa fa-file-text-o"></i>
+                Learning Application Details
+            </h2>
+
+            <div class="request-number"
+                 ng-if="c.data.requestNumber">
+
+                <strong>Application Number:</strong>
+                {{c.data.requestNumber}}
+
+            </div>
+
+        </div>
+
+        <!-- Body -->
+        <div class="registration-body">
+
+            <!-- Error message -->
+            <div class="alert alert-danger"
+                 ng-if="c.data.errorMessage">
+
+                <i class="fa fa-exclamation-circle"></i>
+                {{c.data.errorMessage}}
+
+            </div>
+
+            <div ng-if="c.data.recordFound">
+
+                <!-- Application fields -->
+                <div class="row">
+
+                    <div ng-repeat="field in c.data.fields track by field.name"
+                         ng-class="field.fullWidth
+                            ? 'col-md-12 col-sm-12'
+                            : 'col-md-6 col-sm-12'">
+
+                        <div class="form-group">
+
+                            <label>
+                                {{field.label}}
+                            </label>
+
+                            <!-- Boolean field -->
+                            <div class="checkbox-field"
+                                 ng-if="field.type == 'boolean'">
+
+                                <input type="checkbox"
+                                       disabled
+                                       ng-checked="
+                                          field.value == '1' ||
+                                          field.value == 'true'
+                                       ">
+
+                                <span>
+                                    {{
+                                        field.value == '1' ||
+                                        field.value == 'true'
+                                        ? 'Yes'
+                                        : 'No'
+                                    }}
+                                </span>
+
+                            </div>
+
+                            <!-- Multiline field -->
+                            <textarea class="form-control readonly-textarea"
+                                      readonly
+                                      rows="5"
+                                      ng-if="field.isMultiLine"
+                                      ng-model="field.displayValue">
+                            </textarea>
+
+                            <!-- Normal field -->
+                            <input type="text"
+                                   class="form-control"
+                                   readonly
+                                   ng-if="
+                                      field.type != 'boolean' &&
+                                      !field.isMultiLine
+                                   "
+                                   ng-model="field.displayValue">
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Attachments -->
+                <div class="attachments-section">
+
+                    <div class="section-heading">
+                        <i class="fa fa-paperclip"></i>
+                        Attachments
+
+                        <span class="section-count">
+                            {{c.data.attachments.length}}
+                        </span>
+                    </div>
+
+                    <div class="alert alert-info"
+                         ng-if="c.data.attachmentMessage">
+
+                        <i class="fa fa-info-circle"></i>
+                        {{c.data.attachmentMessage}}
+
+                    </div>
+
+                    <div class="attachment-list"
+                         ng-if="c.data.attachments.length > 0">
+
+                        <div class="attachment-card"
+                             ng-repeat="attachment in c.data.attachments
+                                        track by attachment.sysId">
+
+                            <div class="attachment-icon">
+
+                                <i class="fa"
+                                   ng-class="c.getAttachmentIcon(
+                                      attachment.contentType,
+                                      attachment.fileName
+                                   )">
+                                </i>
+
+                            </div>
+
+                            <div class="attachment-information">
+
+                                <div class="attachment-name"
+                                     title="{{attachment.fileName}}">
+                                    {{attachment.fileName}}
+                                </div>
+
+                                <div class="attachment-metadata">
+
+                                    <span>
+                                        <i class="fa fa-database"></i>
+                                        {{attachment.sizeDisplay}}
+                                    </span>
+
+                                    <span ng-if="attachment.uploadedBy">
+                                        <i class="fa fa-user-o"></i>
+                                        {{attachment.uploadedBy}}
+                                    </span>
+
+                                    <span ng-if="attachment.uploadedOn">
+                                        <i class="fa fa-clock-o"></i>
+                                        {{attachment.uploadedOn}}
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                            <div class="attachment-actions">
+
+                                <button type="button"
+                                        class="btn attachment-view-btn"
+                                        ng-click="c.viewAttachment(attachment)">
+
+                                    <i class="fa fa-eye"></i>
+                                    View
+
+                                </button>
+
+                                <button type="button"
+                                        class="btn attachment-download-btn"
+                                        ng-click="c.downloadAttachment(attachment)">
+
+                                    <i class="fa fa-download"></i>
+                                    Download
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Comments and Work Notes -->
+                <div class="journal-section">
+
+                    <div class="section-heading">
+                        <i class="fa fa-comments-o"></i>
+                        Comments and Work Notes
+                    </div>
+
+                    <div class="alert alert-info"
+                         ng-if="c.data.journalMessage">
+
+                        <i class="fa fa-info-circle"></i>
+                        {{c.data.journalMessage}}
+
+                    </div>
+
+                    <div class="journal-group"
+                         ng-repeat="journal in c.data.journalFields
+                                    track by journal.name">
+
+                        <h3 class="journal-title">
+
+                            <i class="fa"
+                               ng-class="{
+                                  'fa-comment-o':
+                                      journal.name == 'comments',
+                                  'fa-sticky-note-o':
+                                      journal.name == 'work_notes'
+                               }">
+                            </i>
+
+                            {{journal.label}}
+
+                            <span class="journal-count">
+                                {{journal.entries.length}}
+                            </span>
+
+                        </h3>
+
+                        <!-- Journal ACL denied -->
+                        <div class="journal-empty journal-denied"
+                             ng-if="!journal.canRead">
+
+                            You do not have permission to view
+                            {{journal.label}}.
+
+                        </div>
+
+                        <!-- No journal entries -->
+                        <div class="journal-empty"
+                             ng-if="
+                                journal.canRead &&
+                                journal.entries.length == 0
+                             ">
+
+                            No {{journal.label}} have been posted.
+
+                        </div>
+
+                        <!-- Journal entry -->
+                        <div class="journal-entry"
+                             ng-repeat="entry in journal.entries
+                                        track by entry.sysId"
+                             ng-class="{
+                                'comments-entry':
+                                    journal.name == 'comments',
+                                'work-notes-entry':
+                                    journal.name == 'work_notes'
+                             }">
+
+                            <div class="journal-entry-header">
+
+                                <span class="journal-user">
+
+                                    <i class="fa fa-user-o"></i>
+                                    {{entry.createdBy}}
+
+                                </span>
+
+                                <span class="journal-date">
+
+                                    <i class="fa fa-clock-o"></i>
+                                    {{entry.createdOn}}
+
+                                </span>
+
+                            </div>
+
+                            <div class="journal-entry-body"
+                                 ng-bind="entry.value">
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="registration-footer">
+
+            <button type="button"
+                    class="btn back-btn"
+                    ng-click="c.goBack()">
+
+                <i class="fa fa-arrow-left"></i>
+                Back
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>]]></template>
+    </sp_widget>
+</record_update>

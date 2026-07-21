@@ -1,0 +1,6375 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="DELETE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($scope,$timeout,$location,nowAttachmentHandler) {
+  var c = this;
+
+  c.filters = {};
+  c.loading = false;
+  c.refreshing = false;
+  c.uploading = false;
+  c.submitting = false;
+  c.sortDescending = true;
+
+  c.showCompletionForm = false;
+  c.attachmentButtonVisible = false;
+
+  c.successMessage = "";
+  c.errorMessage = "";
+  c.formError = "";
+  c.uploadMessage = "";
+
+  c.selectedRecord = {};
+  c.completionForm = {};
+  c.attachments = [];
+
+  /*
+   * Request number autocomplete variables.
+   */
+  c.requestSearch = "";
+  c.showRequestDropdown = false;
+  c.filteredRequestNumbers = [];
+  c.activeRequestIndex = -1;
+
+  c.displayRecords = angular.copy(
+    c.data.records || []
+  );
+
+  $scope.attachmentHandler = null;
+
+  initializeRequestNumbers();
+
+  function initializeRequestNumbers() {
+    var requestNumbers = [];
+
+    if (
+      c.data.filterOptions &&
+      c.data.filterOptions.requestNumbers
+    ) {
+      requestNumbers =
+        c.data.filterOptions.requestNumbers;
+    }
+
+    c.filteredRequestNumbers =
+      angular.copy(requestNumbers);
+  }
+
+  function updateDisplayRecords(records) {
+    var updatedRecords = records || [];
+
+    c.data.records = updatedRecords;
+    c.displayRecords = updatedRecords.slice(0);
+
+    if (!c.sortDescending) {
+      c.displayRecords.reverse();
+    }
+  }
+
+  /*
+   * Request number autocomplete.
+   */
+  c.filterRequestNumbers = function() {
+    var searchValue = String(
+      c.requestSearch || ""
+    ).trim().toLowerCase();
+
+    var requestNumbers =
+      c.data.filterOptions &&
+      c.data.filterOptions.requestNumbers
+        ? c.data.filterOptions.requestNumbers
+        : [];
+
+    c.filters.requestNumber =
+      String(c.requestSearch || "").trim();
+
+    if (!searchValue) {
+      c.filteredRequestNumbers =
+        angular.copy(requestNumbers);
+    } else {
+      c.filteredRequestNumbers =
+        requestNumbers.filter(function(number) {
+          return String(number)
+            .toLowerCase()
+            .indexOf(searchValue) !== -1;
+        });
+    }
+
+    c.activeRequestIndex = -1;
+    c.showRequestDropdown = true;
+  };
+
+  c.openRequestDropdown = function() {
+    c.filterRequestNumbers();
+    c.showRequestDropdown = true;
+  };
+
+  c.toggleRequestDropdown = function(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    c.showRequestDropdown =
+      !c.showRequestDropdown;
+
+    if (c.showRequestDropdown) {
+      c.filterRequestNumbers();
+    }
+  };
+
+  c.hideRequestDropdown = function() {
+    $timeout(function() {
+      c.showRequestDropdown = false;
+      c.activeRequestIndex = -1;
+    }, 200);
+  };
+
+  c.selectRequestNumber = function(
+    requestNumber,
+    event
+  ) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    c.requestSearch = requestNumber || "";
+    c.filters.requestNumber =
+      requestNumber || "";
+
+    c.showRequestDropdown = false;
+    c.activeRequestIndex = -1;
+  };
+
+  c.clearRequestNumber = function(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    c.requestSearch = "";
+    c.filters.requestNumber = "";
+    c.activeRequestIndex = -1;
+
+    initializeRequestNumbers();
+
+    c.showRequestDropdown = true;
+  };
+
+  c.handleRequestKeydown = function(event) {
+    if (!event) {
+      return;
+    }
+
+    var keyCode = event.which || event.keyCode;
+    var options =
+      c.filteredRequestNumbers || [];
+
+    /*
+     * Down arrow.
+     */
+    if (keyCode === 40) {
+      event.preventDefault();
+
+      c.showRequestDropdown = true;
+
+      if (!options.length) {
+        return;
+      }
+
+      c.activeRequestIndex++;
+
+      if (
+        c.activeRequestIndex >= options.length
+      ) {
+        c.activeRequestIndex = 0;
+      }
+
+      return;
+    }
+
+    /*
+     * Up arrow.
+     */
+    if (keyCode === 38) {
+      event.preventDefault();
+
+      if (!options.length) {
+        return;
+      }
+
+      c.activeRequestIndex--;
+
+      if (c.activeRequestIndex < 0) {
+        c.activeRequestIndex =
+          options.length - 1;
+      }
+
+      return;
+    }
+
+    /*
+     * Enter.
+     */
+    if (keyCode === 13) {
+      event.preventDefault();
+
+      if (
+        c.showRequestDropdown &&
+        c.activeRequestIndex >= 0 &&
+        options[c.activeRequestIndex]
+      ) {
+        c.selectRequestNumber(
+          options[c.activeRequestIndex]
+        );
+      }
+
+      c.search();
+      return;
+    }
+
+    /*
+     * Escape.
+     */
+    if (keyCode === 27) {
+      c.showRequestDropdown = false;
+      c.activeRequestIndex = -1;
+    }
+  };
+
+  c.openView = function(record) {
+    if (!record || !record.sys_id) {
+      return;
+    }
+
+    $location.url(
+      "?id=view_record_asean&sys_id=" +
+      encodeURIComponent(record.sys_id)
+    );
+  };
+
+  c.openEdit = function(record) {
+    if (!record || !record.sys_id) {
+      return;
+    }
+
+    if (record.statusValue !== "draft") {
+      c.errorMessage =
+        "Only Draft applications can be edited.";
+      return;
+    }
+
+    $location.url(
+      "?id=edit_registration_asean&sys_id=" +
+      encodeURIComponent(record.sys_id)
+    );
+  };
+
+  c.openFeedback = function(record) {
+    if (!record || !record.sys_id) {
+      return;
+    }
+
+    if (
+      record.statusValue !== "pending_feedback"
+    ) {
+      c.errorMessage =
+        "Feedback is available only for " +
+        "Pending Feedback applications.";
+      return;
+    }
+
+    $location.url(
+      "?id=feedback_asean&sys_id=" +
+      encodeURIComponent(record.sys_id)
+    );
+  };
+
+  c.goBack = function() {
+    $location.url("?id=employee_role_asean");
+  };
+
+  c.search = function() {
+    if (c.loading || c.refreshing) {
+      return;
+    }
+
+    /*
+     * Use typed text even when user does not
+     * select an item from the dropdown.
+     */
+    c.filters.requestNumber = String(
+      c.requestSearch || ""
+    ).trim();
+
+    c.showRequestDropdown = false;
+    c.loading = true;
+    c.errorMessage = "";
+
+    c.server.get({
+      action: "search",
+      filters: angular.copy(c.filters)
+    }).then(
+      function(response) {
+        updateDisplayRecords(
+          response.data.records || []
+        );
+
+        if (
+          response.data.success === false &&
+          response.data.message
+        ) {
+          c.errorMessage =
+            response.data.message;
+        }
+
+        c.loading = false;
+      },
+      function() {
+        c.loading = false;
+        c.errorMessage =
+          "Unable to search the learning applications.";
+      }
+    );
+  };
+
+  c.reset = function() {
+    if (c.loading || c.refreshing) {
+      return;
+    }
+
+    c.filters = {};
+    c.requestSearch = "";
+    c.showRequestDropdown = false;
+    c.activeRequestIndex = -1;
+
+    c.sortDescending = true;
+    c.loading = true;
+    c.errorMessage = "";
+
+    c.server.get({
+      action: "reset",
+      filters: {}
+    }).then(
+      function(response) {
+        updateDisplayRecords(
+          response.data.records || []
+        );
+
+        if (response.data.filterOptions) {
+          c.data.filterOptions =
+            response.data.filterOptions;
+        }
+
+        initializeRequestNumbers();
+
+        c.loading = false;
+      },
+      function() {
+        c.loading = false;
+        c.errorMessage =
+          "Unable to reset the learning applications.";
+      }
+    );
+  };
+
+  c.refresh = function() {
+    if (c.refreshing || c.loading) {
+      return;
+    }
+
+    c.filters.requestNumber = String(
+      c.requestSearch || ""
+    ).trim();
+
+    c.showRequestDropdown = false;
+    c.refreshing = true;
+    c.errorMessage = "";
+
+    var refreshTimeout = $timeout(
+      function() {
+        if (c.refreshing) {
+          c.refreshing = false;
+          c.errorMessage =
+            "Refresh took too long. Please try again.";
+        }
+      },
+      15000
+    );
+
+    c.server.get({
+      action: "refresh",
+      filters: angular.copy(c.filters)
+    }).then(
+      function(response) {
+        $timeout.cancel(refreshTimeout);
+
+        updateDisplayRecords(
+          response.data.records || []
+        );
+
+        if (response.data.filterOptions) {
+          c.data.filterOptions =
+            response.data.filterOptions;
+
+          initializeRequestNumbers();
+        }
+
+        c.refreshing = false;
+      },
+      function() {
+        $timeout.cancel(refreshTimeout);
+
+        c.refreshing = false;
+        c.errorMessage =
+          "Unable to refresh the learning applications.";
+      }
+    );
+  };
+
+  c.toggleSort = function() {
+    if (c.loading || c.refreshing) {
+      return;
+    }
+
+    c.sortDescending = !c.sortDescending;
+    c.displayRecords.reverse();
+  };
+
+  c.getStatusClass = function(statusValue) {
+    switch (statusValue) {
+      case "draft":
+        return "status-draft";
+
+      case "submitted":
+        return "status-submitted";
+
+      case "pending_manager_approval":
+      case "pending_l2_approval":
+      case "pending_hr_review":
+        return "status-approval";
+
+      case "approved":
+        return "status-approved";
+
+      case "learning_in_progress":
+        return "status-progress";
+
+      case "pending_feedback":
+        return "status-feedback";
+
+      case "completed":
+        return "status-complete";
+
+      case "rejected":
+        return "status-rejected";
+
+      default:
+        return "status-default";
+    }
+  };
+
+  c.openCompletionForm = function(record) {
+    if (!record || !record.sys_id) {
+      return;
+    }
+
+    if (
+      record.statusValue !==
+      "learning_in_progress"
+    ) {
+      c.errorMessage =
+        "Certificate upload is available only for " +
+        "Learning In Progress applications.";
+      return;
+    }
+
+    c.formError = "";
+    c.uploadMessage = "";
+    c.successMessage = "";
+    c.errorMessage = "";
+    c.attachments = [];
+    c.attachmentButtonVisible = false;
+
+    c.selectedRecord =
+      angular.copy(record);
+
+    c.completionForm = {
+      requestNumber:
+        record.requestNumber || "",
+      employeeName:
+        record.employeeName || "",
+      courseTitle:
+        record.courseTitle || "",
+      courseStartDate:
+        record.courseStartDate || "",
+      courseEndDate:
+        record.courseEndDate || "",
+      completionComment: ""
+    };
+
+    initializeAttachmentHandler(
+      record.sys_id
+    );
+
+    c.showCompletionForm = true;
+
+    $timeout(function() {
+      c.attachmentButtonVisible = true;
+      c.loadAttachments();
+    }, 100);
+  };
+
+  function initializeAttachmentHandler(sysId) {
+    function attachmentSuccess(
+      attachments,
+      action
+    ) {
+      c.uploading = false;
+      c.attachments = attachments || [];
+
+      if (action === "added") {
+        c.uploadMessage =
+          "Certificate uploaded successfully.";
+      }
+
+      if (action === "deleted") {
+        c.uploadMessage =
+          "Certificate removed successfully.";
+      }
+
+      c.loadAttachments();
+      $scope.$evalAsync();
+    }
+
+    function attachmentError(error) {
+      c.uploading = false;
+
+      if (error && error.msg) {
+        c.formError =
+          error.msg +
+          (
+            error.fileName
+              ? " " + error.fileName
+              : ""
+          );
+      } else {
+        c.formError =
+          "Certificate upload failed.";
+      }
+
+      $scope.$evalAsync();
+    }
+
+    $scope.attachmentHandler =
+      new nowAttachmentHandler(
+        attachmentSuccess,
+        attachmentError
+      );
+
+    $scope.attachmentHandler.setParams(
+      "x_1549902_asean_0_learning_application",
+      sysId,
+      10 * 1024 * 1024
+    );
+  }
+
+  $scope.$on(
+    "dialog.upload_too_large.show",
+    function() {
+      c.uploading = false;
+      c.formError =
+        "The certificate exceeds the maximum " +
+        "allowed size of 10 MB.";
+
+      $scope.$evalAsync();
+    }
+  );
+
+  $scope.$on(
+    "attachment.upload.start",
+    function() {
+      c.uploading = true;
+      c.formError = "";
+      c.uploadMessage = "";
+
+      $scope.$evalAsync();
+    }
+  );
+
+  $scope.$on(
+    "sp.attachments.update",
+    function() {
+      c.uploading = false;
+
+      if (
+        c.showCompletionForm &&
+        c.selectedRecord &&
+        c.selectedRecord.sys_id
+      ) {
+        c.loadAttachments();
+      }
+    }
+  );
+
+  c.loadAttachments = function() {
+    if (
+      !c.showCompletionForm ||
+      !c.selectedRecord ||
+      !c.selectedRecord.sys_id
+    ) {
+      return;
+    }
+
+    c.server.get({
+      action: "get_attachments",
+      sys_id: c.selectedRecord.sys_id
+    }).then(
+      function(response) {
+        c.attachments =
+          response.data.attachments || [];
+
+        c.uploading = false;
+
+        if (
+          response.data.success === false &&
+          response.data.message
+        ) {
+          c.formError =
+            response.data.message;
+        }
+      },
+      function() {
+        c.uploading = false;
+        c.formError =
+          "Unable to load uploaded certificates.";
+      }
+    );
+  };
+
+  c.deleteAttachment = function(
+    attachment
+  ) {
+    if (
+      !$scope.attachmentHandler ||
+      !attachment
+    ) {
+      return;
+    }
+
+    c.formError = "";
+    c.uploadMessage = "";
+
+    $scope.attachmentHandler
+      .deleteAttachment(attachment);
+  };
+
+  c.submitForFeedback = function() {
+    if (c.submitting || c.uploading) {
+      return;
+    }
+
+    c.formError = "";
+    c.uploadMessage = "";
+
+    var completionComment =
+      c.completionForm.completionComment
+        ? String(
+            c.completionForm.completionComment
+          ).trim()
+        : "";
+
+    if (!completionComment) {
+      c.formError =
+        "Completion Comments are mandatory.";
+      return;
+    }
+
+    if (
+      !c.attachments ||
+      c.attachments.length === 0
+    ) {
+      c.formError =
+        "Please upload the completion certificate.";
+      return;
+    }
+
+    c.submitting = true;
+
+    c.server.get({
+      action: "submit_for_feedback",
+      sys_id: c.selectedRecord.sys_id,
+
+      form: {
+        requestNumber:
+          c.completionForm.requestNumber,
+
+        employeeName:
+          c.completionForm.employeeName,
+
+        courseTitle:
+          c.completionForm.courseTitle,
+
+        courseStartDate:
+          c.completionForm.courseStartDate,
+
+        courseEndDate:
+          c.completionForm.courseEndDate,
+
+        completionComment:
+          completionComment
+      },
+
+      filters: angular.copy(c.filters)
+    }).then(
+      function(response) {
+        c.submitting = false;
+
+        if (response.data.success) {
+          c.attachmentButtonVisible = false;
+          $scope.attachmentHandler = null;
+          c.attachments = [];
+
+          c.successMessage =
+            response.data.message ||
+            "Certificate and comments submitted successfully.";
+
+          updateDisplayRecords(
+            response.data.records || []
+          );
+
+          $timeout(function() {
+            c.showCompletionForm = false;
+            c.selectedRecord = {};
+            c.completionForm = {};
+          }, 50);
+
+          $timeout(function() {
+            c.successMessage = "";
+          }, 7000);
+        } else {
+          c.formError =
+            response.data.message ||
+            "Unable to update the learning application.";
+        }
+      },
+      function() {
+        c.submitting = false;
+        c.formError =
+          "An unexpected error occurred while submitting.";
+      }
+    );
+  };
+
+  c.overlayClick = function(event) {
+    if (
+      event &&
+      event.target !== event.currentTarget
+    ) {
+      return;
+    }
+
+    c.closeCompletionForm();
+  };
+
+  c.closeCompletionForm = function() {
+    if (c.submitting || c.uploading) {
+      return;
+    }
+
+    c.attachmentButtonVisible = false;
+    $scope.attachmentHandler = null;
+    c.attachments = [];
+    c.formError = "";
+    c.uploadMessage = "";
+
+    $timeout(function() {
+      c.showCompletionForm = false;
+      c.selectedRecord = {};
+      c.completionForm = {};
+    }, 50);
+  };
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.learning-records-page {&#13;
+  position: relative;&#13;
+  width: 100%;&#13;
+  min-height: 610px;&#13;
+  overflow: visible;&#13;
+  background: #ffffff;&#13;
+  border: 1px solid #555555;&#13;
+  font-family: Arial, Helvetica, sans-serif;&#13;
+}&#13;
+&#13;
+.records-page-header {&#13;
+  display: flex;&#13;
+  min-height: 84px;&#13;
+  padding: 12px 20px;&#13;
+  align-items: flex-start;&#13;
+  background: #ffffff;&#13;
+  border-bottom: 1px solid #dddddd;&#13;
+}&#13;
+&#13;
+.records-title {&#13;
+  flex: 1;&#13;
+  color: #ed6b21;&#13;
+  font-size: 28px;&#13;
+  font-weight: 500;&#13;
+  line-height: 55px;&#13;
+}&#13;
+&#13;
+.logged-in-user-details {&#13;
+  width: 390px;&#13;
+  padding-top: 4px;&#13;
+  margin-right: 20px;&#13;
+}&#13;
+&#13;
+.user-detail-row {&#13;
+  display: flex;&#13;
+  margin-bottom: 8px;&#13;
+  align-items: center;&#13;
+}&#13;
+&#13;
+.user-detail-label {&#13;
+  width: 95px;&#13;
+  color: #666666;&#13;
+  font-size: 12px;&#13;
+}&#13;
+&#13;
+.user-detail-value {&#13;
+  color: #222222;&#13;
+  font-size: 15px;&#13;
+  text-decoration: underline;&#13;
+}&#13;
+&#13;
+.healthineers-logo {&#13;
+  position: relative;&#13;
+  min-width: 165px;&#13;
+  padding-right: 30px;&#13;
+  text-align: right;&#13;
+}&#13;
+&#13;
+.siemens-text {&#13;
+  color: #009999;&#13;
+  font-size: 20px;&#13;
+  font-weight: 700;&#13;
+  letter-spacing: 1px;&#13;
+}&#13;
+&#13;
+.healthineers-text {&#13;
+  color: #ed6b21;&#13;
+  font-size: 18px;&#13;
+  font-weight: 700;&#13;
+}&#13;
+&#13;
+.healthineers-dots {&#13;
+  position: absolute;&#13;
+  top: 5px;&#13;
+  right: 0;&#13;
+  width: 23px;&#13;
+}&#13;
+&#13;
+.healthineers-dots span {&#13;
+  display: block;&#13;
+  width: 7px;&#13;
+  height: 7px;&#13;
+  margin: 2px auto;&#13;
+  background: #ed6b21;&#13;
+  border-radius: 50%;&#13;
+}&#13;
+&#13;
+.main-message {&#13;
+  margin: 12px 18px;&#13;
+}&#13;
+&#13;
+.records-filter-section {&#13;
+  position: relative;&#13;
+  z-index: 30;&#13;
+  padding: 18px 30px 20px;&#13;
+  overflow: visible;&#13;
+  background: #eeeeee;&#13;
+  border-bottom: 1px solid #d4d4d4;&#13;
+}&#13;
+&#13;
+.filter-section-title {&#13;
+  padding-bottom: 12px;&#13;
+  margin-bottom: 15px;&#13;
+  color: #444444;&#13;
+  border-bottom: 1px solid #d2d2d2;&#13;
+  font-size: 17px;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.filter-section-title i {&#13;
+  margin-right: 7px;&#13;
+  color: #ed6b21;&#13;
+}&#13;
+&#13;
+.filter-fields-container {&#13;
+  display: grid;&#13;
+  max-width: 1100px;&#13;
+  margin: 0 auto;&#13;
+  overflow: visible;&#13;
+  grid-template-columns:&#13;
+    repeat(2, minmax(320px, 1fr));&#13;
+  column-gap: 40px;&#13;
+  row-gap: 15px;&#13;
+}&#13;
+&#13;
+.filter-item {&#13;
+  position: relative;&#13;
+  display: flex;&#13;
+  min-width: 0;&#13;
+  overflow: visible;&#13;
+  align-items: center;&#13;
+}&#13;
+&#13;
+.filter-item label {&#13;
+  width: 160px;&#13;
+  margin: 0 12px 0 0;&#13;
+  color: #444444;&#13;
+  font-size: 14px;&#13;
+  font-weight: 600;&#13;
+  text-align: right;&#13;
+}&#13;
+&#13;
+.filter-control {&#13;
+  flex: 1;&#13;
+  height: 38px;&#13;
+  min-width: 0;&#13;
+  padding: 5px 30px 5px 10px;&#13;
+  color: #333333;&#13;
+  background: #ffffff;&#13;
+  border: 1px solid #bdbdbd;&#13;
+  border-radius: 2px;&#13;
+  box-shadow: none;&#13;
+}&#13;
+&#13;
+/*&#13;
+ * Request number autocomplete.&#13;
+ */&#13;
+.request-filter-item {&#13;
+  z-index: 50;&#13;
+}&#13;
+&#13;
+.request-filter-container {&#13;
+  position: relative;&#13;
+  flex: 1;&#13;
+  min-width: 0;&#13;
+  overflow: visible;&#13;
+}&#13;
+&#13;
+.request-input-wrapper {&#13;
+  position: relative;&#13;
+  width: 100%;&#13;
+}&#13;
+&#13;
+.request-number-input {&#13;
+  width: 100%;&#13;
+  padding-right: 64px;&#13;
+}&#13;
+&#13;
+.request-dropdown-button {&#13;
+  position: absolute;&#13;
+  top: 1px;&#13;
+  right: 1px;&#13;
+  width: 34px;&#13;
+  height: 36px;&#13;
+  padding: 0;&#13;
+  color: #555555;&#13;
+  background: transparent;&#13;
+  border: 0;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.request-dropdown-button:hover {&#13;
+  color: #ed6b21;&#13;
+  background: #f7f7f7;&#13;
+}&#13;
+&#13;
+.request-clear-button {&#13;
+  position: absolute;&#13;
+  top: 1px;&#13;
+  right: 35px;&#13;
+  width: 28px;&#13;
+  height: 36px;&#13;
+  padding: 0;&#13;
+  color: #888888;&#13;
+  background: transparent;&#13;
+  border: 0;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.request-clear-button:hover {&#13;
+  color: #d9534f;&#13;
+}&#13;
+&#13;
+.request-dropdown {&#13;
+  position: absolute;&#13;
+  z-index: 9999;&#13;
+  top: calc(100% + 2px);&#13;
+  right: 0;&#13;
+  left: 0;&#13;
+  max-height: 230px;&#13;
+  padding: 0;&#13;
+  margin: 0;&#13;
+  overflow-x: hidden;&#13;
+  overflow-y: auto;&#13;
+  background: #ffffff;&#13;
+  border: 1px solid #aaaaaa;&#13;
+  border-radius: 2px;&#13;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);&#13;
+  list-style: none;&#13;
+}&#13;
+&#13;
+.request-dropdown li {&#13;
+  padding: 10px 12px;&#13;
+  color: #333333;&#13;
+  background: #ffffff;&#13;
+  border-bottom: 1px solid #eeeeee;&#13;
+  font-size: 13px;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.request-dropdown li:last-child {&#13;
+  border-bottom: 0;&#13;
+}&#13;
+&#13;
+.request-dropdown li i {&#13;
+  margin-right: 7px;&#13;
+  color: #ed6b21;&#13;
+}&#13;
+&#13;
+.request-dropdown li:hover,&#13;
+.request-dropdown .request-option-active {&#13;
+  color: #222222;&#13;
+  background: #fff2e9;&#13;
+}&#13;
+&#13;
+.request-dropdown .request-dropdown-all {&#13;
+  color: #444444;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.request-dropdown .request-dropdown-empty {&#13;
+  color: #777777;&#13;
+  background: #fafafa;&#13;
+  font-style: italic;&#13;
+  text-align: center;&#13;
+  cursor: default;&#13;
+}&#13;
+&#13;
+.request-dropdown .request-dropdown-empty:hover {&#13;
+  background: #fafafa;&#13;
+}&#13;
+&#13;
+.filter-buttons-row {&#13;
+  display: flex;&#13;
+  margin-top: 22px;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  flex-wrap: wrap;&#13;
+  gap: 12px;&#13;
+}&#13;
+&#13;
+.filter-action-button {&#13;
+  display: inline-flex;&#13;
+  min-width: 125px;&#13;
+  height: 40px;&#13;
+  padding: 0 18px;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  color: #ffffff;&#13;
+  border: 1px solid transparent;&#13;
+  border-radius: 3px;&#13;
+  font-size: 14px;&#13;
+  font-weight: 600;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.filter-action-button i {&#13;
+  margin-right: 7px;&#13;
+}&#13;
+&#13;
+.filter-action-button[disabled] {&#13;
+  cursor: not-allowed;&#13;
+  opacity: 0.6;&#13;
+}&#13;
+&#13;
+.primary-filter-button {&#13;
+  background: #40ae58;&#13;
+  border-color: #359a4a;&#13;
+}&#13;
+&#13;
+.reset-filter-button {&#13;
+  color: #444444;&#13;
+  background: #ffffff;&#13;
+  border-color: #aaaaaa;&#13;
+}&#13;
+&#13;
+.secondary-filter-button {&#13;
+  background: #687783;&#13;
+  border-color: #586771;&#13;
+}&#13;
+&#13;
+.refresh-filter-button {&#13;
+  background: #168b99;&#13;
+  border-color: #117682;&#13;
+}&#13;
+&#13;
+.records-loading,&#13;
+.records-empty-message {&#13;
+  padding: 45px 20px;&#13;
+  color: #666666;&#13;
+  font-size: 15px;&#13;
+  text-align: center;&#13;
+}&#13;
+&#13;
+.records-loading div {&#13;
+  margin-top: 10px;&#13;
+}&#13;
+&#13;
+.records-table-wrapper {&#13;
+  position: relative;&#13;
+  z-index: 1;&#13;
+  width: 100%;&#13;
+  max-height: 500px;&#13;
+  overflow-x: auto;&#13;
+  overflow-y: auto;&#13;
+  background: #ffffff;&#13;
+}&#13;
+&#13;
+.records-table {&#13;
+  width: 100%;&#13;
+  min-width: 4250px;&#13;
+  table-layout: fixed;&#13;
+  border-collapse: separate;&#13;
+  border-spacing: 0;&#13;
+}&#13;
+&#13;
+.records-table thead th {&#13;
+  position: sticky;&#13;
+  z-index: 5;&#13;
+  top: 0;&#13;
+  width: 155px;&#13;
+  min-width: 155px;&#13;
+  max-width: 155px;&#13;
+  padding: 10px 12px;&#13;
+  color: #ffffff;&#13;
+  background: #959595;&#13;
+  border-right: 1px solid #b7b7b7;&#13;
+  border-bottom: 1px solid #777777;&#13;
+  font-size: 14px;&#13;
+  font-weight: 700;&#13;
+  text-align: center;&#13;
+  vertical-align: middle;&#13;
+}&#13;
+&#13;
+.records-table tbody td {&#13;
+  width: 155px;&#13;
+  min-width: 155px;&#13;
+  max-width: 155px;&#13;
+  padding: 12px 13px;&#13;
+  color: #4c4c4c;&#13;
+  background: #ffffff;&#13;
+  border-right: 1px solid #eeeeee;&#13;
+  border-bottom: 2px solid #d5e9f4;&#13;
+  font-size: 13px;&#13;
+  text-align: center;&#13;
+  vertical-align: top;&#13;
+  word-break: break-word;&#13;
+}&#13;
+&#13;
+.records-table tbody tr:hover td {&#13;
+  background: #fafafa;&#13;
+}&#13;
+&#13;
+.request-header {&#13;
+  position: sticky !important;&#13;
+  z-index: 12 !important;&#13;
+  left: 0;&#13;
+  width: 175px !important;&#13;
+  min-width: 175px !important;&#13;
+  max-width: 175px !important;&#13;
+  background: #898989 !important;&#13;
+}&#13;
+&#13;
+.request-number-column {&#13;
+  position: sticky;&#13;
+  z-index: 6;&#13;
+  left: 0;&#13;
+  width: 175px !important;&#13;
+  min-width: 175px !important;&#13;
+  max-width: 175px !important;&#13;
+  background: #ffffff !important;&#13;
+}&#13;
+&#13;
+.large-text-header,&#13;
+.large-text-column {&#13;
+  width: 280px !important;&#13;
+  min-width: 280px !important;&#13;
+  max-width: 280px !important;&#13;
+}&#13;
+&#13;
+.large-text-column {&#13;
+  text-align: left !important;&#13;
+}&#13;
+&#13;
+.long-text-value {&#13;
+  display: -webkit-box;&#13;
+  overflow: hidden;&#13;
+  line-height: 18px;&#13;
+  text-overflow: ellipsis;&#13;
+  -webkit-box-orient: vertical;&#13;
+  -webkit-line-clamp: 4;&#13;
+}&#13;
+&#13;
+.status-header {&#13;
+  position: sticky !important;&#13;
+  z-index: 11 !important;&#13;
+  right: 200px;&#13;
+  width: 175px !important;&#13;
+  min-width: 175px !important;&#13;
+  max-width: 175px !important;&#13;
+  background: #898989 !important;&#13;
+}&#13;
+&#13;
+.status-column {&#13;
+  position: sticky;&#13;
+  z-index: 7;&#13;
+  right: 200px;&#13;
+  width: 175px !important;&#13;
+  min-width: 175px !important;&#13;
+  max-width: 175px !important;&#13;
+  background: #ffffff !important;&#13;
+  vertical-align: middle !important;&#13;
+}&#13;
+&#13;
+.actions-header {&#13;
+  position: sticky !important;&#13;
+  z-index: 12 !important;&#13;
+  right: 0;&#13;
+  width: 200px !important;&#13;
+  min-width: 200px !important;&#13;
+  max-width: 200px !important;&#13;
+  background: #818181 !important;&#13;
+}&#13;
+&#13;
+.actions-column {&#13;
+  position: sticky;&#13;
+  z-index: 8;&#13;
+  right: 0;&#13;
+  width: 200px !important;&#13;
+  min-width: 200px !important;&#13;
+  max-width: 200px !important;&#13;
+  background: #ffffff !important;&#13;
+  vertical-align: middle !important;&#13;
+}&#13;
+&#13;
+.status-label {&#13;
+  display: inline-block;&#13;
+  min-width: 110px;&#13;
+  max-width: 155px;&#13;
+  padding: 6px 10px;&#13;
+  border-radius: 14px;&#13;
+  font-size: 11px;&#13;
+  font-weight: 600;&#13;
+  text-align: center;&#13;
+}&#13;
+&#13;
+.status-draft {&#13;
+  color: #495057;&#13;
+  background: #e9ecef;&#13;
+}&#13;
+&#13;
+.status-submitted {&#13;
+  color: #004085;&#13;
+  background: #cce5ff;&#13;
+}&#13;
+&#13;
+.status-approval {&#13;
+  color: #856404;&#13;
+  background: #fff3cd;&#13;
+}&#13;
+&#13;
+.status-approved {&#13;
+  color: #155724;&#13;
+  background: #c3e6cb;&#13;
+}&#13;
+&#13;
+.status-progress {&#13;
+  color: #7a4b00;&#13;
+  background: #ffe6a1;&#13;
+}&#13;
+&#13;
+.status-feedback {&#13;
+  color: #0c5460;&#13;
+  background: #d1ecf1;&#13;
+}&#13;
+&#13;
+.status-complete {&#13;
+  color: #155724;&#13;
+  background: #d4edda;&#13;
+}&#13;
+&#13;
+.status-rejected {&#13;
+  color: #721c24;&#13;
+  background: #f8d7da;&#13;
+}&#13;
+&#13;
+.status-default {&#13;
+  color: #383d41;&#13;
+  background: #e2e3e5;&#13;
+}&#13;
+&#13;
+.record-actions {&#13;
+  display: flex;&#13;
+  min-height: 42px;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  flex-wrap: wrap;&#13;
+  gap: 9px;&#13;
+}&#13;
+&#13;
+.record-action-button {&#13;
+  display: inline-flex;&#13;
+  width: 36px;&#13;
+  height: 36px;&#13;
+  padding: 0;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  color: #ed6b21;&#13;
+  background: transparent;&#13;
+  border: 0;&#13;
+  border-radius: 3px;&#13;
+  font-size: 23px;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.record-action-button:hover {&#13;
+  color: #c94d08;&#13;
+  background: #fff2ea;&#13;
+}&#13;
+&#13;
+.edit-button {&#13;
+  color: #111111;&#13;
+  border: 2px solid #111111;&#13;
+  font-size: 19px;&#13;
+}&#13;
+&#13;
+.edit-button:hover {&#13;
+  color: #ffffff;&#13;
+  background: #111111;&#13;
+}&#13;
+&#13;
+.records-back-section {&#13;
+  padding: 9px 11px;&#13;
+  background: #ffffff;&#13;
+  border-top: 1px solid #eeeeee;&#13;
+}&#13;
+&#13;
+.records-back-button {&#13;
+  display: inline-flex;&#13;
+  width: 40px;&#13;
+  height: 40px;&#13;
+  padding: 0;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  color: #111111;&#13;
+  background: #ffffff;&#13;
+  border: 3px solid #111111;&#13;
+  border-radius: 50%;&#13;
+  font-size: 22px;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.completion-overlay {&#13;
+  position: fixed;&#13;
+  z-index: 1050;&#13;
+  top: 0;&#13;
+  right: 0;&#13;
+  bottom: 0;&#13;
+  left: 0;&#13;
+  padding: 28px 15px;&#13;
+  overflow-y: auto;&#13;
+  background: rgba(0, 0, 0, 0.62);&#13;
+  isolation: isolate;&#13;
+}&#13;
+&#13;
+.completion-popup {&#13;
+  position: relative;&#13;
+  z-index: 1;&#13;
+  width: 100%;&#13;
+  max-width: 780px;&#13;
+  margin: 0 auto;&#13;
+  overflow: hidden;&#13;
+  background: #ffffff;&#13;
+  border-radius: 5px;&#13;
+  box-shadow: 0 12px 45px rgba(0, 0, 0, 0.4);&#13;
+}&#13;
+&#13;
+.completion-popup-header {&#13;
+  display: flex;&#13;
+  padding: 18px 22px;&#13;
+  align-items: flex-start;&#13;
+  justify-content: space-between;&#13;
+  color: #ffffff;&#13;
+  background: #ed6b21;&#13;
+}&#13;
+&#13;
+.completion-popup-header h4 {&#13;
+  margin: 0 0 5px;&#13;
+  font-size: 21px;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.completion-popup-header p {&#13;
+  margin: 0;&#13;
+}&#13;
+&#13;
+.popup-close-button {&#13;
+  padding: 0;&#13;
+  color: #ffffff;&#13;
+  background: transparent;&#13;
+  border: 0;&#13;
+  font-size: 31px;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.completion-popup-body {&#13;
+  max-height: 68vh;&#13;
+  padding: 22px;&#13;
+  overflow-y: auto;&#13;
+}&#13;
+&#13;
+.completion-popup-body label {&#13;
+  color: #333333;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.completion-popup-footer {&#13;
+  position: relative;&#13;
+  z-index: 5;&#13;
+  clear: both;&#13;
+  padding: 15px 22px;&#13;
+  text-align: right;&#13;
+  background: #f5f5f5;&#13;
+  border-top: 1px solid #dddddd;&#13;
+}&#13;
+&#13;
+.completion-popup-footer .btn {&#13;
+  margin-left: 8px;&#13;
+}&#13;
+&#13;
+.submit-completion-button {&#13;
+  color: #ffffff;&#13;
+  background: #ed6b21;&#13;
+  border-color: #d65d18;&#13;
+}&#13;
+&#13;
+.mandatory {&#13;
+  color: #d9534f;&#13;
+}&#13;
+&#13;
+.certificate-section {&#13;
+  position: relative;&#13;
+  z-index: 2;&#13;
+  padding: 17px;&#13;
+  margin-top: 18px;&#13;
+  overflow: visible;&#13;
+  background: #fafafa;&#13;
+  border: 1px dashed #999999;&#13;
+}&#13;
+&#13;
+.native-attachment-container {&#13;
+  position: relative;&#13;
+  z-index: 3;&#13;
+  display: flex;&#13;
+  width: 100%;&#13;
+  min-height: 42px;&#13;
+  margin-top: 10px;&#13;
+  align-items: center;&#13;
+  gap: 10px;&#13;
+}&#13;
+&#13;
+.native-attachment-container sp-attachment-button {&#13;
+  position: relative;&#13;
+  z-index: 4;&#13;
+  display: inline-block;&#13;
+  width: auto;&#13;
+  max-width: 100%;&#13;
+}&#13;
+&#13;
+.native-attachment-container button,&#13;
+.native-attachment-container .btn {&#13;
+  float: none !important;&#13;
+  width: auto;&#13;
+  max-width: 100%;&#13;
+  margin: 0 !important;&#13;
+  transform: none !important;&#13;
+}&#13;
+&#13;
+.attach-certificate-label {&#13;
+  color: #ed6b21;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.certificate-uploading {&#13;
+  margin-top: 12px;&#13;
+  color: #337ab7;&#13;
+}&#13;
+&#13;
+.uploaded-attachments {&#13;
+  position: relative;&#13;
+  z-index: 2;&#13;
+  width: 100%;&#13;
+  margin-top: 16px;&#13;
+  clear: both;&#13;
+}&#13;
+&#13;
+.uploaded-attachment-row {&#13;
+  display: flex;&#13;
+  width: 100%;&#13;
+  padding: 10px;&#13;
+  margin-bottom: 7px;&#13;
+  align-items: center;&#13;
+  justify-content: space-between;&#13;
+  background: #ffffff;&#13;
+  border: 1px solid #dddddd;&#13;
+}&#13;
+&#13;
+.uploaded-attachment-name {&#13;
+  min-width: 0;&#13;
+  overflow: hidden;&#13;
+  text-overflow: ellipsis;&#13;
+  white-space: nowrap;&#13;
+}&#13;
+&#13;
+.uploaded-attachment-size {&#13;
+  margin-left: 8px;&#13;
+  color: #777777;&#13;
+  font-size: 12px;&#13;
+}&#13;
+&#13;
+.delete-attachment-button {&#13;
+  color: #d9534f;&#13;
+  background: transparent;&#13;
+  border: 0;&#13;
+  font-size: 17px;&#13;
+}&#13;
+&#13;
+.no-certificate-message {&#13;
+  margin-top: 12px;&#13;
+  color: #777777;&#13;
+}&#13;
+&#13;
+@media screen and (max-width: 1000px) {&#13;
+  .records-page-header {&#13;
+    flex-wrap: wrap;&#13;
+  }&#13;
+&#13;
+  .filter-fields-container {&#13;
+    grid-template-columns: 1fr;&#13;
+  }&#13;
+}&#13;
+&#13;
+@media screen and (max-width: 650px) {&#13;
+  .filter-item {&#13;
+    display: block;&#13;
+  }&#13;
+&#13;
+  .filter-item label {&#13;
+    display: block;&#13;
+    width: auto;&#13;
+    margin-bottom: 5px;&#13;
+    text-align: left;&#13;
+  }&#13;
+&#13;
+  .filter-buttons-row {&#13;
+    flex-direction: column;&#13;
+  }&#13;
+&#13;
+  .filter-action-button {&#13;
+    width: 100%;&#13;
+  }&#13;
+&#13;
+  .completion-overlay {&#13;
+    padding: 8px;&#13;
+  }&#13;
+&#13;
+  .completion-popup-footer .btn {&#13;
+    display: block;&#13;
+    width: 100%;&#13;
+    margin: 6px 0;&#13;
+  }&#13;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>check_my_records_asean_new</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Check My Records ASEAN New</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+  var TABLE =
+    "x_1549902_asean_0_learning_application";
+
+  var STATUS_FIELD = "u_status";
+
+  var STATUS_DRAFT = "draft";
+  var STATUS_LEARNING =
+    "learning_in_progress";
+  var STATUS_FEEDBACK =
+    "pending_feedback";
+
+  data.records = [];
+  data.attachments = [];
+  data.success = true;
+  data.message = "";
+
+  data.userEmail =
+    gs.getUser().getEmail() || "";
+
+  data.userName =
+    gs.getUserDisplayName();
+
+  data.userLevel = "Employee";
+  data.tableName = TABLE;
+
+  data.filterOptions = {
+    requestNumbers: [],
+    courseTypes: [],
+    courseFormats: [],
+    statuses: []
+  };
+
+  function getValue(gr, fieldName) {
+    if (
+      !gr ||
+      !gr.isValidField(fieldName)
+    ) {
+      return "";
+    }
+
+    return gr.getValue(fieldName) || "";
+  }
+
+  function getDisplay(gr, fieldName) {
+    if (
+      !gr ||
+      !gr.isValidField(fieldName)
+    ) {
+      return "";
+    }
+
+    return gr.getDisplayValue(fieldName) || "";
+  }
+
+  function addUnique(array, value) {
+    if (
+      value &&
+      array.indexOf(value) === -1
+    ) {
+      array.push(value);
+    }
+  }
+
+  function addUniqueObject(
+    array,
+    value,
+    displayValue
+  ) {
+    if (!value) {
+      return;
+    }
+
+    for (var i = 0; i < array.length; i++) {
+      if (array[i].value === value) {
+        return;
+      }
+    }
+
+    array.push({
+      value: value,
+      display: displayValue || value
+    });
+  }
+
+  function addEmployeeQuery(gr) {
+    var employeeQuery = gr.addQuery(
+      "u_employee_name",
+      gs.getUserID()
+    );
+
+    if (data.userEmail) {
+      employeeQuery.addOrCondition(
+        "u_employee_email",
+        data.userEmail
+      );
+    }
+  }
+
+  function getEmployeeRecord(sysId) {
+    if (!sysId) {
+      return null;
+    }
+
+    var gr =
+      new GlideRecordSecure(TABLE);
+
+    gr.addQuery("sys_id", sysId);
+    addEmployeeQuery(gr);
+    gr.setLimit(1);
+    gr.query();
+
+    if (gr.next()) {
+      return gr;
+    }
+
+    return null;
+  }
+
+  function loadFilterOptions() {
+    data.filterOptions = {
+      requestNumbers: [],
+      courseTypes: [],
+      courseFormats: [],
+      statuses: []
+    };
+
+    var gr =
+      new GlideRecordSecure(TABLE);
+
+    addEmployeeQuery(gr);
+    gr.orderByDesc("sys_created_on");
+    gr.query();
+
+    while (gr.next()) {
+      addUnique(
+        data.filterOptions.requestNumbers,
+        getDisplay(gr, "number")
+      );
+
+      addUniqueObject(
+        data.filterOptions.courseTypes,
+        getValue(gr, "u_course_type"),
+        getDisplay(gr, "u_course_type")
+      );
+
+      addUniqueObject(
+        data.filterOptions.courseFormats,
+        getValue(gr, "u_course_format"),
+        getDisplay(gr, "u_course_format")
+      );
+
+      addUniqueObject(
+        data.filterOptions.statuses,
+        getValue(gr, STATUS_FIELD),
+        getDisplay(gr, STATUS_FIELD)
+      );
+    }
+
+    data.filterOptions.requestNumbers.sort();
+  }
+
+  function loadRecords(filters) {
+    filters = filters || {};
+
+    var records = [];
+    var gr =
+      new GlideRecordSecure(TABLE);
+
+    addEmployeeQuery(gr);
+
+    /*
+     * Free-text request number search.
+     *
+     * LEA0001039 finds exact record.
+     * 1039 also finds LEA0001039.
+     */
+    if (filters.requestNumber) {
+      var requestNumber =
+        String(filters.requestNumber).trim();
+
+      if (requestNumber) {
+        gr.addQuery(
+          "number",
+          "CONTAINS",
+          requestNumber
+        );
+      }
+    }
+
+    if (filters.courseType) {
+      gr.addQuery(
+        "u_course_type",
+        filters.courseType
+      );
+    }
+
+    if (filters.courseFormat) {
+      gr.addQuery(
+        "u_course_format",
+        filters.courseFormat
+      );
+    }
+
+    if (filters.status) {
+      gr.addQuery(
+        STATUS_FIELD,
+        filters.status
+      );
+    }
+
+    gr.orderByDesc("sys_created_on");
+    gr.query();
+
+    while (gr.next()) {
+      var statusValue =
+        getValue(gr, STATUS_FIELD);
+
+      records.push({
+        sys_id:
+          gr.getUniqueValue(),
+
+        requestNumber:
+          getDisplay(gr, "number"),
+
+        employeeName:
+          getDisplay(
+            gr,
+            "u_employee_name"
+          ),
+
+        employeeEmail:
+          getValue(
+            gr,
+            "u_employee_email"
+          ),
+
+        country:
+          getDisplay(
+            gr,
+            "u_country"
+          ),
+
+        manager:
+          getDisplay(
+            gr,
+            "u_manager_email"
+          ),
+
+        managementL2:
+          getDisplay(
+            gr,
+            "u_management_l2"
+          ),
+
+        managerL2Required:
+          getDisplay(
+            gr,
+            "manager_approval_l2_required"
+          ),
+
+        courseTitle:
+          getDisplay(
+            gr,
+            "u_course_title"
+          ),
+
+        courseType:
+          getDisplay(
+            gr,
+            "u_course_type"
+          ),
+
+        courseFormat:
+          getDisplay(
+            gr,
+            "u_course_format"
+          ),
+
+        courseStartDate:
+          getDisplay(
+            gr,
+            "course_start_date"
+          ),
+
+        courseEndDate:
+          getDisplay(
+            gr,
+            "u_course_end_date"
+          ),
+
+        totalTrainingHours:
+          getDisplay(
+            gr,
+            "u_total_training_hours"
+          ),
+
+        trainingCountry:
+          getDisplay(
+            gr,
+            "u_training_country"
+          ),
+
+        trainingProvider:
+          getDisplay(
+            gr,
+            "u_training_provider_name"
+          ),
+
+        paymentRequired:
+          getDisplay(
+            gr,
+            "is_payment_required"
+          ),
+
+        courseFee:
+          getDisplay(
+            gr,
+            "u_course_fee"
+          ),
+
+        otherExpenses:
+          getDisplay(
+            gr,
+            "u_other_expenses"
+          ),
+
+        specifyOtherExpenses:
+          getDisplay(
+            gr,
+            "u_specify_other_expenses"
+          ),
+
+        totalCost:
+          getDisplay(
+            gr,
+            "u_total_cost"
+          ),
+
+        currency:
+          getDisplay(
+            gr,
+            "currency"
+          ),
+
+        comment:
+          getValue(
+            gr,
+            "u_comment"
+          ),
+
+        approval:
+          getDisplay(
+            gr,
+            "approval"
+          ),
+
+        openedAt:
+          getDisplay(
+            gr,
+            "opened_at"
+          ),
+
+        status:
+          getDisplay(
+            gr,
+            STATUS_FIELD
+          ),
+
+        statusValue:
+          statusValue,
+
+        canEdit:
+          statusValue === STATUS_DRAFT,
+
+        canUploadCertificate:
+          statusValue === STATUS_LEARNING,
+
+        canProvideFeedback:
+          statusValue === STATUS_FEEDBACK
+      });
+    }
+
+    return records;
+  }
+
+  function loadAttachments(parentSysId) {
+    data.attachments = [];
+
+    var attachmentGr =
+      new GlideRecordSecure(
+        "sys_attachment"
+      );
+
+    attachmentGr.addQuery(
+      "table_name",
+      TABLE
+    );
+
+    attachmentGr.addQuery(
+      "table_sys_id",
+      parentSysId
+    );
+
+    attachmentGr.orderByDesc(
+      "sys_created_on"
+    );
+
+    attachmentGr.query();
+
+    while (attachmentGr.next()) {
+      var sizeBytes = parseInt(
+        attachmentGr.getValue(
+          "size_bytes"
+        ),
+        10
+      ) || 0;
+
+      var sizeDisplay = "";
+
+      if (
+        sizeBytes >=
+        1024 * 1024
+      ) {
+        sizeDisplay =
+          (
+            sizeBytes /
+            (1024 * 1024)
+          ).toFixed(2) +
+          " MB";
+      } else {
+        sizeDisplay =
+          (
+            sizeBytes /
+            1024
+          ).toFixed(2) +
+          " KB";
+      }
+
+      data.attachments.push({
+        sys_id:
+          attachmentGr.getUniqueValue(),
+
+        file_name:
+          attachmentGr.getValue(
+            "file_name"
+          ),
+
+        content_type:
+          attachmentGr.getValue(
+            "content_type"
+          ),
+
+        size_bytes:
+          sizeBytes,
+
+        size:
+          sizeDisplay
+      });
+    }
+  }
+
+  function hasCertificate(parentSysId) {
+    var attachmentGr =
+      new GlideRecordSecure(
+        "sys_attachment"
+      );
+
+    attachmentGr.addQuery(
+      "table_name",
+      TABLE
+    );
+
+    attachmentGr.addQuery(
+      "table_sys_id",
+      parentSysId
+    );
+
+    attachmentGr.setLimit(1);
+    attachmentGr.query();
+
+    return attachmentGr.hasNext();
+  }
+
+  function getCertificateNames(
+    parentSysId
+  ) {
+    var fileNames = [];
+
+    var attachmentGr =
+      new GlideRecordSecure(
+        "sys_attachment"
+      );
+
+    attachmentGr.addQuery(
+      "table_name",
+      TABLE
+    );
+
+    attachmentGr.addQuery(
+      "table_sys_id",
+      parentSysId
+    );
+
+    attachmentGr.orderByDesc(
+      "sys_created_on"
+    );
+
+    attachmentGr.query();
+
+    while (attachmentGr.next()) {
+      fileNames.push(
+        attachmentGr.getValue(
+          "file_name"
+        ) || "Attachment"
+      );
+    }
+
+    return fileNames;
+  }
+
+  /*
+   * Load certificate attachments.
+   */
+  if (
+    input &&
+    input.action === "get_attachments"
+  ) {
+    var attachmentParent =
+      getEmployeeRecord(input.sys_id);
+
+    if (!attachmentParent) {
+      data.success = false;
+      data.message =
+        "Learning application not found " +
+        "or access denied.";
+      return;
+    }
+
+    loadAttachments(
+      attachmentParent.getUniqueValue()
+    );
+
+    data.success = true;
+    return;
+  }
+
+  /*
+   * Submit certificate and move to
+   * Pending Feedback.
+   */
+  if (
+    input &&
+    input.action ===
+      "submit_for_feedback"
+  ) {
+    var updateGr =
+      getEmployeeRecord(input.sys_id);
+
+    if (!updateGr) {
+      data.success = false;
+      data.message =
+        "Learning application not found " +
+        "or access denied.";
+      return;
+    }
+
+    var currentStatus =
+      getValue(
+        updateGr,
+        STATUS_FIELD
+      );
+
+    if (
+      currentStatus !==
+      STATUS_LEARNING
+    ) {
+      data.success = false;
+      data.message =
+        "Only Learning In Progress " +
+        "applications can submit a " +
+        "completion certificate.";
+      return;
+    }
+
+    if (
+      !hasCertificate(
+        updateGr.getUniqueValue()
+      )
+    ) {
+      data.success = false;
+      data.message =
+        "Please upload the completion " +
+        "certificate before submitting.";
+      return;
+    }
+
+    var form = input.form || {};
+    var completionComment = "";
+
+    if (
+      form.completionComment !==
+        undefined &&
+      form.completionComment !== null
+    ) {
+      completionComment =
+        String(
+          form.completionComment
+        ).trim();
+    }
+
+    if (!completionComment) {
+      data.success = false;
+      data.message =
+        "Completion Comments are mandatory.";
+      return;
+    }
+
+    var certificateNames =
+      getCertificateNames(
+        updateGr.getUniqueValue()
+      );
+
+    if (
+      updateGr.isValidField(
+        "u_comment"
+      )
+    ) {
+      updateGr.setValue(
+        "u_comment",
+        completionComment
+      );
+    }
+
+    if (
+      updateGr.isValidField(
+        "work_notes"
+      )
+    ) {
+      var workNoteLines = [];
+
+      workNoteLines.push(
+        "Completion certificate uploaded by employee."
+      );
+
+      workNoteLines.push(
+        "Request Number: " +
+        getDisplay(
+          updateGr,
+          "number"
+        )
+      );
+
+      workNoteLines.push(
+        "Employee: " +
+        gs.getUserDisplayName()
+      );
+
+      workNoteLines.push(
+        "Course Title: " +
+        getDisplay(
+          updateGr,
+          "u_course_title"
+        )
+      );
+
+      workNoteLines.push(
+        "Certificate File(s): " +
+        (
+          certificateNames.length > 0
+            ? certificateNames.join(", ")
+            : "Certificate uploaded"
+        )
+      );
+
+      workNoteLines.push(
+        "Completion Comments: " +
+        completionComment
+      );
+
+      workNoteLines.push(
+        "Status changed from Learning In Progress " +
+        "to Pending Feedback."
+      );
+
+      updateGr.work_notes =
+        workNoteLines.join("\n");
+    }
+
+    updateGr.setValue(
+      STATUS_FIELD,
+      STATUS_FEEDBACK
+    );
+
+    var updatedSysId =
+      updateGr.update();
+
+    if (!updatedSysId) {
+      data.success = false;
+      data.message =
+        "The learning application " +
+        "could not be updated.";
+      return;
+    }
+
+    data.success = true;
+
+    data.message =
+      "Certificate and completion comments " +
+      "submitted successfully. The request " +
+      "has moved to Pending Feedback.";
+
+    loadFilterOptions();
+
+    data.records = loadRecords(
+      input.filters || {}
+    );
+
+    return;
+  }
+
+  /*
+   * Search records.
+   */
+  if (
+    input &&
+    input.action === "search"
+  ) {
+    data.records = loadRecords(
+      input.filters || {}
+    );
+
+    data.success = true;
+    return;
+  }
+
+  /*
+   * Refresh records and dropdown options.
+   */
+  if (
+    input &&
+    input.action === "refresh"
+  ) {
+    loadFilterOptions();
+
+    data.records = loadRecords(
+      input.filters || {}
+    );
+
+    data.success = true;
+    return;
+  }
+
+  /*
+   * Reset.
+   */
+  if (
+    input &&
+    input.action === "reset"
+  ) {
+    loadFilterOptions();
+
+    data.records = loadRecords({});
+
+    data.success = true;
+    return;
+  }
+
+  /*
+   * Initial widget load.
+   */
+  loadFilterOptions();
+  data.records = loadRecords({});
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-17 12:45:06</sys_created_on>
+        <sys_id>c04e858747468710ff78de94116d432e</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>Check My Records ASEAN New</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sp_widget_c04e858747468710ff78de94116d432e</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-20 03:43:26</sys_updated_on>
+        <template><![CDATA[<div class="learning-records-page">
+
+  <!-- Header -->
+  <div class="records-page-header">
+
+    <div class="records-title">
+      Your Learning Applications
+    </div>
+
+    <div class="logged-in-user-details">
+
+      <div class="user-detail-row">
+        <span class="user-detail-label">User Login:</span>
+        <span class="user-detail-value">{{c.data.userEmail}}</span>
+      </div>
+
+      <div class="user-detail-row">
+        <span class="user-detail-label">Level:</span>
+        <span class="user-detail-value">{{c.data.userLevel}}</span>
+      </div>
+
+    </div>
+
+    <div class="healthineers-logo">
+      <div class="siemens-text">SIEMENS</div>
+      <div class="healthineers-text">Healthineers</div>
+
+      <div class="healthineers-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Messages -->
+  <div class="alert alert-success main-message"
+       ng-if="c.successMessage">
+
+    <i class="fa fa-check-circle"></i>
+    {{c.successMessage}}
+
+  </div>
+
+  <div class="alert alert-danger main-message"
+       ng-if="c.errorMessage">
+
+    <i class="fa fa-exclamation-circle"></i>
+    {{c.errorMessage}}
+
+  </div>
+
+  <!-- Filters -->
+  <div class="records-filter-section">
+
+    <div class="filter-section-title">
+      <i class="fa fa-filter"></i>
+      Filter Learning Applications
+    </div>
+
+    <div class="filter-fields-container">
+
+      <!-- Request Number Autocomplete -->
+      <div class="filter-item request-filter-item">
+
+        <label for="request-number-filter">
+          Request Number:
+        </label>
+
+        <div class="request-filter-container">
+
+          <div class="request-input-wrapper">
+
+            <input type="text"
+                   id="request-number-filter"
+                   class="form-control filter-control request-number-input"
+                   ng-model="c.requestSearch"
+                   ng-change="c.filterRequestNumbers()"
+                   ng-focus="c.openRequestDropdown()"
+                   ng-blur="c.hideRequestDropdown()"
+                   ng-keydown="c.handleRequestKeydown($event)"
+                   autocomplete="off"
+                   placeholder="All or type request number">
+
+            <button type="button"
+                    class="request-dropdown-button"
+                    ng-mousedown="c.toggleRequestDropdown($event)"
+                    title="Show request numbers">
+
+              <i class="fa"
+                 ng-class="c.showRequestDropdown ?
+                 'fa-chevron-up' : 'fa-chevron-down'">
+              </i>
+
+            </button>
+
+            <button type="button"
+                    class="request-clear-button"
+                    ng-if="c.requestSearch"
+                    ng-mousedown="c.clearRequestNumber($event)"
+                    title="Clear request number">
+
+              <i class="fa fa-times"></i>
+
+            </button>
+
+          </div>
+
+          <ul class="request-dropdown"
+              ng-show="c.showRequestDropdown">
+
+            <li class="request-dropdown-all"
+                ng-mousedown="c.selectRequestNumber('', $event)">
+
+              All
+
+            </li>
+
+            <li ng-repeat="number in c.filteredRequestNumbers track by number"
+                ng-class="{
+                  'request-option-active':
+                  $index === c.activeRequestIndex
+                }"
+                ng-mousedown="c.selectRequestNumber(number, $event)">
+
+              <i class="fa fa-file-text-o"></i>
+              {{number}}
+
+            </li>
+
+            <li class="request-dropdown-empty"
+                ng-if="!c.filteredRequestNumbers ||
+                       c.filteredRequestNumbers.length === 0">
+
+              No matching request numbers found
+
+            </li>
+
+          </ul>
+
+        </div>
+
+      </div>
+
+      <!-- Course Type -->
+      <div class="filter-item">
+
+        <label for="course-type-filter">
+          Course Type:
+        </label>
+
+        <select id="course-type-filter"
+                class="form-control filter-control"
+                ng-model="c.filters.courseType"
+                ng-options="
+                  item.value as item.display
+                  for item in c.data.filterOptions.courseTypes
+                ">
+
+          <option value="">All</option>
+
+        </select>
+
+      </div>
+
+      <!-- Course Format -->
+      <div class="filter-item">
+
+        <label for="course-format-filter">
+          Course Format:
+        </label>
+
+        <select id="course-format-filter"
+                class="form-control filter-control"
+                ng-model="c.filters.courseFormat"
+                ng-options="
+                  item.value as item.display
+                  for item in c.data.filterOptions.courseFormats
+                ">
+
+          <option value="">All</option>
+
+        </select>
+
+      </div>
+
+      <!-- Ticket Status -->
+      <div class="filter-item">
+
+        <label for="status-filter">
+          Ticket Status:
+        </label>
+
+        <select id="status-filter"
+                class="form-control filter-control"
+                ng-model="c.filters.status"
+                ng-options="
+                  item.value as item.display
+                  for item in c.data.filterOptions.statuses
+                ">
+
+          <option value="">All</option>
+
+        </select>
+
+      </div>
+
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="filter-buttons-row">
+
+      <button type="button"
+              class="filter-action-button primary-filter-button"
+              ng-click="c.search()"
+              ng-disabled="c.loading || c.refreshing">
+
+        <i class="fa fa-search"></i>
+        Search
+
+      </button>
+
+      <button type="button"
+              class="filter-action-button reset-filter-button"
+              ng-click="c.reset()"
+              ng-disabled="c.loading || c.refreshing">
+
+        <i class="fa fa-undo"></i>
+        Reset
+
+      </button>
+
+      <button type="button"
+              class="filter-action-button secondary-filter-button"
+              ng-click="c.toggleSort()"
+              ng-disabled="c.loading || c.refreshing">
+
+        <i class="fa fa-sort-amount-desc"
+           ng-if="c.sortDescending">
+        </i>
+
+        <i class="fa fa-sort-amount-asc"
+           ng-if="!c.sortDescending">
+        </i>
+
+        Sort
+
+      </button>
+
+      <button type="button"
+              class="filter-action-button refresh-filter-button"
+              ng-click="c.refresh()"
+              ng-disabled="c.loading || c.refreshing">
+
+        <i class="fa fa-refresh"
+           ng-class="{'fa-spin': c.refreshing}">
+        </i>
+
+        <span ng-if="!c.refreshing">
+          Refresh
+        </span>
+
+        <span ng-if="c.refreshing">
+          Refreshing...
+        </span>
+
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- Loading -->
+  <div class="records-loading"
+       ng-if="c.loading">
+
+    <i class="fa fa-spinner fa-spin fa-2x"></i>
+
+    <div>
+      Loading learning applications...
+    </div>
+
+  </div>
+
+  <!-- Empty -->
+  <div class="records-empty-message"
+       ng-if="!c.loading &&
+              (!c.displayRecords ||
+               c.displayRecords.length === 0)">
+
+    <i class="fa fa-info-circle"></i>
+    No learning applications found.
+
+  </div>
+
+  <!-- Table -->
+  <div class="records-table-wrapper"
+       ng-if="!c.loading &&
+              c.displayRecords &&
+              c.displayRecords.length > 0">
+
+    <table class="records-table">
+
+      <thead>
+        <tr>
+
+          <th class="request-header">Number</th>
+          <th>Employee Name</th>
+          <th>Employee Email</th>
+          <th>Country</th>
+          <th>Manager</th>
+          <th>Management L2</th>
+          <th>L2 Approval Required</th>
+          <th>Course Title</th>
+          <th>Course Type</th>
+          <th>Course Format</th>
+          <th>Course Start Date</th>
+          <th>Course End Date</th>
+          <th>Total Training Hours</th>
+          <th>Training Country</th>
+          <th>Training Provider</th>
+          <th>Payment Required</th>
+          <th>Course Fee</th>
+          <th>Other Expenses</th>
+          <th>Specify Other Expenses</th>
+          <th>Total Cost</th>
+          <th>Currency</th>
+          <th class="large-text-header">Comment</th>
+          <th>Approval</th>
+          <th>Opened At</th>
+          <th class="status-header">Ticket Status</th>
+          <th class="actions-header">Actions</th>
+
+        </tr>
+      </thead>
+
+      <tbody>
+
+        <tr ng-repeat="
+          record in c.displayRecords
+          track by record.sys_id
+        ">
+
+          <td class="request-number-column">
+            <strong>
+              {{record.requestNumber || '-'}}
+            </strong>
+          </td>
+
+          <td>{{record.employeeName || '-'}}</td>
+          <td>{{record.employeeEmail || '-'}}</td>
+          <td>{{record.country || '-'}}</td>
+          <td>{{record.manager || '-'}}</td>
+          <td>{{record.managementL2 || '-'}}</td>
+          <td>{{record.managerL2Required || '-'}}</td>
+          <td>{{record.courseTitle || '-'}}</td>
+          <td>{{record.courseType || '-'}}</td>
+          <td>{{record.courseFormat || '-'}}</td>
+          <td>{{record.courseStartDate || '-'}}</td>
+          <td>{{record.courseEndDate || '-'}}</td>
+          <td>{{record.totalTrainingHours || '-'}}</td>
+          <td>{{record.trainingCountry || '-'}}</td>
+          <td>{{record.trainingProvider || '-'}}</td>
+          <td>{{record.paymentRequired || '-'}}</td>
+          <td>{{record.courseFee || '-'}}</td>
+          <td>{{record.otherExpenses || '-'}}</td>
+          <td>{{record.specifyOtherExpenses || '-'}}</td>
+          <td>{{record.totalCost || '-'}}</td>
+          <td>{{record.currency || '-'}}</td>
+
+          <td class="large-text-column">
+
+            <div class="long-text-value"
+                 title="{{record.comment}}">
+
+              {{record.comment || '-'}}
+
+            </div>
+
+          </td>
+
+          <td>{{record.approval || '-'}}</td>
+          <td>{{record.openedAt || '-'}}</td>
+
+          <td class="status-column">
+
+            <span class="status-label"
+                  ng-class="
+                    c.getStatusClass(record.statusValue)
+                  ">
+
+              {{record.status || '-'}}
+
+            </span>
+
+          </td>
+
+          <td class="actions-column">
+
+            <div class="record-actions">
+
+              <button type="button"
+                      class="record-action-button view-button"
+                      ng-click="c.openView(record)"
+                      title="View learning application">
+
+                <i class="fa fa-eye"></i>
+
+              </button>
+
+              <button type="button"
+                      class="record-action-button edit-button"
+                      ng-if="record.statusValue === 'draft'"
+                      ng-click="c.openEdit(record)"
+                      title="Edit learning application">
+
+                <i class="fa fa-pencil"></i>
+
+              </button>
+
+              <button type="button"
+                      class="record-action-button certificate-button"
+                      ng-if="
+                        record.statusValue ===
+                        'learning_in_progress'
+                      "
+                      ng-click="c.openCompletionForm(record)"
+                      title="Upload completion certificate">
+
+                <i class="fa fa-paperclip"></i>
+
+              </button>
+
+              <button type="button"
+                      class="record-action-button feedback-button"
+                      ng-if="
+                        record.statusValue ===
+                        'pending_feedback'
+                      "
+                      ng-click="c.openFeedback(record)"
+                      title="Provide feedback">
+
+                <i class="fa fa-file-text-o"></i>
+
+              </button>
+
+            </div>
+
+          </td>
+
+        </tr>
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  <!-- Back -->
+  <div class="records-back-section">
+
+    <button type="button"
+            class="records-back-button"
+            ng-click="c.goBack()"
+            title="Back to Employee Role">
+
+      <i class="fa fa-chevron-left"></i>
+
+    </button>
+
+  </div>
+
+</div>
+
+<!-- Certificate Popup -->
+<div class="completion-overlay"
+     ng-if="c.showCompletionForm"
+     ng-click="c.overlayClick($event)">
+
+  <div class="completion-popup"
+       ng-click="$event.stopPropagation()">
+
+    <div class="completion-popup-header">
+
+      <div>
+
+        <h4>
+          <i class="fa fa-certificate"></i>
+          Complete Learning Application
+        </h4>
+
+        <p>
+          Request Number:
+          <strong>
+            {{c.selectedRecord.requestNumber}}
+          </strong>
+        </p>
+
+      </div>
+
+      <button type="button"
+              class="popup-close-button"
+              ng-click="c.closeCompletionForm()"
+              ng-disabled="c.submitting || c.uploading"
+              title="Close">
+
+        &times;
+
+      </button>
+
+    </div>
+
+    <div class="completion-popup-body">
+
+      <div class="alert alert-danger"
+           ng-if="c.formError">
+
+        <i class="fa fa-exclamation-circle"></i>
+        {{c.formError}}
+
+      </div>
+
+      <div class="alert alert-success"
+           ng-if="c.uploadMessage">
+
+        <i class="fa fa-check-circle"></i>
+        {{c.uploadMessage}}
+
+      </div>
+
+      <div class="row">
+
+        <div class="col-md-6">
+
+          <div class="form-group">
+
+            <label>Request Number</label>
+
+            <input type="text"
+                   class="form-control"
+                   ng-model="c.completionForm.requestNumber"
+                   disabled>
+
+          </div>
+
+        </div>
+
+        <div class="col-md-6">
+
+          <div class="form-group">
+
+            <label>Employee Name</label>
+
+            <input type="text"
+                   class="form-control"
+                   ng-model="c.completionForm.employeeName"
+                   disabled>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="form-group">
+
+        <label>Course Title</label>
+
+        <input type="text"
+               class="form-control"
+               ng-model="c.completionForm.courseTitle"
+               disabled>
+
+      </div>
+
+      <div class="row">
+
+        <div class="col-md-6">
+
+          <div class="form-group">
+
+            <label>Course Start Date</label>
+
+            <input type="text"
+                   class="form-control"
+                   ng-model="c.completionForm.courseStartDate"
+                   disabled>
+
+          </div>
+
+        </div>
+
+        <div class="col-md-6">
+
+          <div class="form-group">
+
+            <label>Course End Date</label>
+
+            <input type="text"
+                   class="form-control"
+                   ng-model="c.completionForm.courseEndDate"
+                   disabled>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="form-group">
+
+        <label>
+          Completion Comments
+          <span class="mandatory">*</span>
+        </label>
+
+        <textarea class="form-control"
+                  rows="4"
+                  ng-model="
+                    c.completionForm.completionComment
+                  "
+                  placeholder="Enter completion comments">
+        </textarea>
+
+      </div>
+
+      <div class="certificate-section">
+
+        <label class="certificate-label">
+          Completion Certificate
+          <span class="mandatory">*</span>
+        </label>
+
+        <p class="help-block">
+          Upload PDF, JPG, JPEG, PNG, DOC or DOCX.
+          Maximum file size is 10 MB.
+        </p>
+
+        <div class="native-attachment-container"
+             ng-if="
+               c.showCompletionForm &&
+               c.attachmentButtonVisible &&
+               c.selectedRecord.sys_id
+             ">
+
+          <sp-attachment-button modal="false">
+          </sp-attachment-button>
+
+          <span class="attach-certificate-label">
+            Attach Certificate
+          </span>
+
+        </div>
+
+        <div class="certificate-uploading"
+             ng-if="c.uploading">
+
+          <i class="fa fa-spinner fa-spin"></i>
+          Uploading certificate...
+
+        </div>
+
+        <div class="uploaded-attachments"
+             ng-if="
+               c.attachments &&
+               c.attachments.length > 0
+             ">
+
+          <h5>Uploaded Certificate</h5>
+
+          <div class="uploaded-attachment-row"
+               ng-repeat="
+                 attachment in c.attachments
+                 track by attachment.sys_id
+               ">
+
+            <div class="uploaded-attachment-name">
+
+              <i class="fa fa-paperclip"></i>
+
+              <a ng-href="
+                   /sys_attachment.do?sys_id={{
+                     attachment.sys_id
+                   }}
+                 "
+                 target="_blank">
+
+                {{attachment.file_name}}
+
+              </a>
+
+              <span class="uploaded-attachment-size"
+                    ng-if="attachment.size">
+
+                ({{attachment.size}})
+
+              </span>
+
+            </div>
+
+            <button type="button"
+                    class="delete-attachment-button"
+                    ng-click="
+                      c.deleteAttachment(attachment)
+                    "
+                    ng-disabled="
+                      c.submitting || c.uploading
+                    "
+                    title="Delete attachment">
+
+              <i class="fa fa-trash"></i>
+
+            </button>
+
+          </div>
+
+        </div>
+
+        <div class="no-certificate-message"
+             ng-if="
+               !c.uploading &&
+               (!c.attachments ||
+                c.attachments.length === 0)
+             ">
+
+          <i class="fa fa-info-circle"></i>
+          No certificate uploaded yet.
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="completion-popup-footer">
+
+      <button type="button"
+              class="btn btn-default"
+              ng-click="c.closeCompletionForm()"
+              ng-disabled="c.submitting || c.uploading">
+
+        Cancel
+
+      </button>
+
+      <button type="button"
+              class="btn submit-completion-button"
+              ng-click="c.submitForFeedback()"
+              ng-disabled="c.submitting || c.uploading">
+
+        <i class="fa fa-spinner fa-spin"
+           ng-if="c.submitting">
+        </i>
+
+        <i class="fa fa-check"
+           ng-if="!c.submitting">
+        </i>
+
+        <span ng-if="!c.submitting">
+          Submit and Move to Pending Feedback
+        </span>
+
+        <span ng-if="c.submitting">
+          Submitting...
+        </span>
+
+      </button>
+
+    </div>
+
+  </div>
+
+</div>]]></template>
+    </sp_widget>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</application>
+        <file_path/>
+        <instance_id>1342adfb3b190fd8baf6048aa4e45a41</instance_id>
+        <instance_name>dev404202</instance_name>
+        <name>sp_widget_c04e858747468710ff78de94116d432e</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sp_widget"&gt;&lt;sp_widget action="INSERT_OR_UPDATE"&gt;&lt;category&gt;custom&lt;/category&gt;&lt;client_script&gt;&lt;![CDATA[api.controller = function($scope,$timeout,$location,nowAttachmentHandler) {
+  var c = this;
+
+  c.filters = {};
+  c.loading = false;
+  c.refreshing = false;
+  c.uploading = false;
+  c.submitting = false;
+  c.sortDescending = true;
+
+  c.showCompletionForm = false;
+  c.attachmentButtonVisible = false;
+
+  c.successMessage = "";
+  c.errorMessage = "";
+  c.formError = "";
+  c.uploadMessage = "";
+
+  c.selectedRecord = {};
+  c.completionForm = {};
+  c.attachments = [];
+
+  /*
+   * Request number autocomplete variables.
+   */
+  c.requestSearch = "";
+  c.showRequestDropdown = false;
+  c.filteredRequestNumbers = [];
+  c.activeRequestIndex = -1;
+
+  c.displayRecords = angular.copy(
+    c.data.records || []
+  );
+
+  $scope.attachmentHandler = null;
+
+  initializeRequestNumbers();
+
+  function initializeRequestNumbers() {
+    var requestNumbers = [];
+
+    if (
+      c.data.filterOptions &amp;&amp;
+      c.data.filterOptions.requestNumbers
+    ) {
+      requestNumbers =
+        c.data.filterOptions.requestNumbers;
+    }
+
+    c.filteredRequestNumbers =
+      angular.copy(requestNumbers);
+  }
+
+  function updateDisplayRecords(records) {
+    var updatedRecords = records || [];
+
+    c.data.records = updatedRecords;
+    c.displayRecords = updatedRecords.slice(0);
+
+    if (!c.sortDescending) {
+      c.displayRecords.reverse();
+    }
+  }
+
+  /*
+   * Request number autocomplete.
+   */
+  c.filterRequestNumbers = function() {
+    var searchValue = String(
+      c.requestSearch || ""
+    ).trim().toLowerCase();
+
+    var requestNumbers =
+      c.data.filterOptions &amp;&amp;
+      c.data.filterOptions.requestNumbers
+        ? c.data.filterOptions.requestNumbers
+        : [];
+
+    c.filters.requestNumber =
+      String(c.requestSearch || "").trim();
+
+    if (!searchValue) {
+      c.filteredRequestNumbers =
+        angular.copy(requestNumbers);
+    } else {
+      c.filteredRequestNumbers =
+        requestNumbers.filter(function(number) {
+          return String(number)
+            .toLowerCase()
+            .indexOf(searchValue) !== -1;
+        });
+    }
+
+    c.activeRequestIndex = -1;
+    c.showRequestDropdown = true;
+  };
+
+  c.openRequestDropdown = function() {
+    c.filterRequestNumbers();
+    c.showRequestDropdown = true;
+  };
+
+  c.toggleRequestDropdown = function(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    c.showRequestDropdown =
+      !c.showRequestDropdown;
+
+    if (c.showRequestDropdown) {
+      c.filterRequestNumbers();
+    }
+  };
+
+  c.hideRequestDropdown = function() {
+    $timeout(function() {
+      c.showRequestDropdown = false;
+      c.activeRequestIndex = -1;
+    }, 200);
+  };
+
+  c.selectRequestNumber = function(
+    requestNumber,
+    event
+  ) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    c.requestSearch = requestNumber || "";
+    c.filters.requestNumber =
+      requestNumber || "";
+
+    c.showRequestDropdown = false;
+    c.activeRequestIndex = -1;
+  };
+
+  c.clearRequestNumber = function(event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    c.requestSearch = "";
+    c.filters.requestNumber = "";
+    c.activeRequestIndex = -1;
+
+    initializeRequestNumbers();
+
+    c.showRequestDropdown = true;
+  };
+
+  c.handleRequestKeydown = function(event) {
+    if (!event) {
+      return;
+    }
+
+    var keyCode = event.which || event.keyCode;
+    var options =
+      c.filteredRequestNumbers || [];
+
+    /*
+     * Down arrow.
+     */
+    if (keyCode === 40) {
+      event.preventDefault();
+
+      c.showRequestDropdown = true;
+
+      if (!options.length) {
+        return;
+      }
+
+      c.activeRequestIndex++;
+
+      if (
+        c.activeRequestIndex &gt;= options.length
+      ) {
+        c.activeRequestIndex = 0;
+      }
+
+      return;
+    }
+
+    /*
+     * Up arrow.
+     */
+    if (keyCode === 38) {
+      event.preventDefault();
+
+      if (!options.length) {
+        return;
+      }
+
+      c.activeRequestIndex--;
+
+      if (c.activeRequestIndex &lt; 0) {
+        c.activeRequestIndex =
+          options.length - 1;
+      }
+
+      return;
+    }
+
+    /*
+     * Enter.
+     */
+    if (keyCode === 13) {
+      event.preventDefault();
+
+      if (
+        c.showRequestDropdown &amp;&amp;
+        c.activeRequestIndex &gt;= 0 &amp;&amp;
+        options[c.activeRequestIndex]
+      ) {
+        c.selectRequestNumber(
+          options[c.activeRequestIndex]
+        );
+      }
+
+      c.search();
+      return;
+    }
+
+    /*
+     * Escape.
+     */
+    if (keyCode === 27) {
+      c.showRequestDropdown = false;
+      c.activeRequestIndex = -1;
+    }
+  };
+
+  c.openView = function(record) {
+    if (!record || !record.sys_id) {
+      return;
+    }
+
+    $location.url(
+      "?id=view_record_asean&amp;sys_id=" +
+      encodeURIComponent(record.sys_id)
+    );
+  };
+
+  c.openEdit = function(record) {
+    if (!record || !record.sys_id) {
+      return;
+    }
+
+    if (record.statusValue !== "draft") {
+      c.errorMessage =
+        "Only Draft applications can be edited.";
+      return;
+    }
+
+    $location.url(
+      "?id=edit_registration_asean&amp;sys_id=" +
+      encodeURIComponent(record.sys_id)
+    );
+  };
+
+  c.openFeedback = function(record) {
+    if (!record || !record.sys_id) {
+      return;
+    }
+
+    if (
+      record.statusValue !== "pending_feedback"
+    ) {
+      c.errorMessage =
+        "Feedback is available only for " +
+        "Pending Feedback applications.";
+      return;
+    }
+
+    $location.url(
+      "?id=feedback_asean&amp;sys_id=" +
+      encodeURIComponent(record.sys_id)
+    );
+  };
+
+  c.goBack = function() {
+    $location.url("?id=employee_role_asean");
+  };
+
+  c.search = function() {
+    if (c.loading || c.refreshing) {
+      return;
+    }
+
+    /*
+     * Use typed text even when user does not
+     * select an item from the dropdown.
+     */
+    c.filters.requestNumber = String(
+      c.requestSearch || ""
+    ).trim();
+
+    c.showRequestDropdown = false;
+    c.loading = true;
+    c.errorMessage = "";
+
+    c.server.get({
+      action: "search",
+      filters: angular.copy(c.filters)
+    }).then(
+      function(response) {
+        updateDisplayRecords(
+          response.data.records || []
+        );
+
+        if (
+          response.data.success === false &amp;&amp;
+          response.data.message
+        ) {
+          c.errorMessage =
+            response.data.message;
+        }
+
+        c.loading = false;
+      },
+      function() {
+        c.loading = false;
+        c.errorMessage =
+          "Unable to search the learning applications.";
+      }
+    );
+  };
+
+  c.reset = function() {
+    if (c.loading || c.refreshing) {
+      return;
+    }
+
+    c.filters = {};
+    c.requestSearch = "";
+    c.showRequestDropdown = false;
+    c.activeRequestIndex = -1;
+
+    c.sortDescending = true;
+    c.loading = true;
+    c.errorMessage = "";
+
+    c.server.get({
+      action: "reset",
+      filters: {}
+    }).then(
+      function(response) {
+        updateDisplayRecords(
+          response.data.records || []
+        );
+
+        if (response.data.filterOptions) {
+          c.data.filterOptions =
+            response.data.filterOptions;
+        }
+
+        initializeRequestNumbers();
+
+        c.loading = false;
+      },
+      function() {
+        c.loading = false;
+        c.errorMessage =
+          "Unable to reset the learning applications.";
+      }
+    );
+  };
+
+  c.refresh = function() {
+    if (c.refreshing || c.loading) {
+      return;
+    }
+
+    c.filters.requestNumber = String(
+      c.requestSearch || ""
+    ).trim();
+
+    c.showRequestDropdown = false;
+    c.refreshing = true;
+    c.errorMessage = "";
+
+    var refreshTimeout = $timeout(
+      function() {
+        if (c.refreshing) {
+          c.refreshing = false;
+          c.errorMessage =
+            "Refresh took too long. Please try again.";
+        }
+      },
+      15000
+    );
+
+    c.server.get({
+      action: "refresh",
+      filters: angular.copy(c.filters)
+    }).then(
+      function(response) {
+        $timeout.cancel(refreshTimeout);
+
+        updateDisplayRecords(
+          response.data.records || []
+        );
+
+        if (response.data.filterOptions) {
+          c.data.filterOptions =
+            response.data.filterOptions;
+
+          initializeRequestNumbers();
+        }
+
+        c.refreshing = false;
+      },
+      function() {
+        $timeout.cancel(refreshTimeout);
+
+        c.refreshing = false;
+        c.errorMessage =
+          "Unable to refresh the learning applications.";
+      }
+    );
+  };
+
+  c.toggleSort = function() {
+    if (c.loading || c.refreshing) {
+      return;
+    }
+
+    c.sortDescending = !c.sortDescending;
+    c.displayRecords.reverse();
+  };
+
+  c.getStatusClass = function(statusValue) {
+    switch (statusValue) {
+      case "draft":
+        return "status-draft";
+
+      case "submitted":
+        return "status-submitted";
+
+      case "pending_manager_approval":
+      case "pending_l2_approval":
+      case "pending_hr_review":
+        return "status-approval";
+
+      case "approved":
+        return "status-approved";
+
+      case "learning_in_progress":
+        return "status-progress";
+
+      case "pending_feedback":
+        return "status-feedback";
+
+      case "completed":
+        return "status-complete";
+
+      case "rejected":
+        return "status-rejected";
+
+      default:
+        return "status-default";
+    }
+  };
+
+  c.openCompletionForm = function(record) {
+    if (!record || !record.sys_id) {
+      return;
+    }
+
+    if (
+      record.statusValue !==
+      "learning_in_progress"
+    ) {
+      c.errorMessage =
+        "Certificate upload is available only for " +
+        "Learning In Progress applications.";
+      return;
+    }
+
+    c.formError = "";
+    c.uploadMessage = "";
+    c.successMessage = "";
+    c.errorMessage = "";
+    c.attachments = [];
+    c.attachmentButtonVisible = false;
+
+    c.selectedRecord =
+      angular.copy(record);
+
+    c.completionForm = {
+      requestNumber:
+        record.requestNumber || "",
+      employeeName:
+        record.employeeName || "",
+      courseTitle:
+        record.courseTitle || "",
+      courseStartDate:
+        record.courseStartDate || "",
+      courseEndDate:
+        record.courseEndDate || "",
+      completionComment: ""
+    };
+
+    initializeAttachmentHandler(
+      record.sys_id
+    );
+
+    c.showCompletionForm = true;
+
+    $timeout(function() {
+      c.attachmentButtonVisible = true;
+      c.loadAttachments();
+    }, 100);
+  };
+
+  function initializeAttachmentHandler(sysId) {
+    function attachmentSuccess(
+      attachments,
+      action
+    ) {
+      c.uploading = false;
+      c.attachments = attachments || [];
+
+      if (action === "added") {
+        c.uploadMessage =
+          "Certificate uploaded successfully.";
+      }
+
+      if (action === "deleted") {
+        c.uploadMessage =
+          "Certificate removed successfully.";
+      }
+
+      c.loadAttachments();
+      $scope.$evalAsync();
+    }
+
+    function attachmentError(error) {
+      c.uploading = false;
+
+      if (error &amp;&amp; error.msg) {
+        c.formError =
+          error.msg +
+          (
+            error.fileName
+              ? " " + error.fileName
+              : ""
+          );
+      } else {
+        c.formError =
+          "Certificate upload failed.";
+      }
+
+      $scope.$evalAsync();
+    }
+
+    $scope.attachmentHandler =
+      new nowAttachmentHandler(
+        attachmentSuccess,
+        attachmentError
+      );
+
+    $scope.attachmentHandler.setParams(
+      "x_1549902_asean_0_learning_application",
+      sysId,
+      10 * 1024 * 1024
+    );
+  }
+
+  $scope.$on(
+    "dialog.upload_too_large.show",
+    function() {
+      c.uploading = false;
+      c.formError =
+        "The certificate exceeds the maximum " +
+        "allowed size of 10 MB.";
+
+      $scope.$evalAsync();
+    }
+  );
+
+  $scope.$on(
+    "attachment.upload.start",
+    function() {
+      c.uploading = true;
+      c.formError = "";
+      c.uploadMessage = "";
+
+      $scope.$evalAsync();
+    }
+  );
+
+  $scope.$on(
+    "sp.attachments.update",
+    function() {
+      c.uploading = false;
+
+      if (
+        c.showCompletionForm &amp;&amp;
+        c.selectedRecord &amp;&amp;
+        c.selectedRecord.sys_id
+      ) {
+        c.loadAttachments();
+      }
+    }
+  );
+
+  c.loadAttachments = function() {
+    if (
+      !c.showCompletionForm ||
+      !c.selectedRecord ||
+      !c.selectedRecord.sys_id
+    ) {
+      return;
+    }
+
+    c.server.get({
+      action: "get_attachments",
+      sys_id: c.selectedRecord.sys_id
+    }).then(
+      function(response) {
+        c.attachments =
+          response.data.attachments || [];
+
+        c.uploading = false;
+
+        if (
+          response.data.success === false &amp;&amp;
+          response.data.message
+        ) {
+          c.formError =
+            response.data.message;
+        }
+      },
+      function() {
+        c.uploading = false;
+        c.formError =
+          "Unable to load uploaded certificates.";
+      }
+    );
+  };
+
+  c.deleteAttachment = function(
+    attachment
+  ) {
+    if (
+      !$scope.attachmentHandler ||
+      !attachment
+    ) {
+      return;
+    }
+
+    c.formError = "";
+    c.uploadMessage = "";
+
+    $scope.attachmentHandler
+      .deleteAttachment(attachment);
+  };
+
+  c.submitForFeedback = function() {
+    if (c.submitting || c.uploading) {
+      return;
+    }
+
+    c.formError = "";
+    c.uploadMessage = "";
+
+    var completionComment =
+      c.completionForm.completionComment
+        ? String(
+            c.completionForm.completionComment
+          ).trim()
+        : "";
+
+    if (!completionComment) {
+      c.formError =
+        "Completion Comments are mandatory.";
+      return;
+    }
+
+    if (
+      !c.attachments ||
+      c.attachments.length === 0
+    ) {
+      c.formError =
+        "Please upload the completion certificate.";
+      return;
+    }
+
+    c.submitting = true;
+
+    c.server.get({
+      action: "submit_for_feedback",
+      sys_id: c.selectedRecord.sys_id,
+
+      form: {
+        requestNumber:
+          c.completionForm.requestNumber,
+
+        employeeName:
+          c.completionForm.employeeName,
+
+        courseTitle:
+          c.completionForm.courseTitle,
+
+        courseStartDate:
+          c.completionForm.courseStartDate,
+
+        courseEndDate:
+          c.completionForm.courseEndDate,
+
+        completionComment:
+          completionComment
+      },
+
+      filters: angular.copy(c.filters)
+    }).then(
+      function(response) {
+        c.submitting = false;
+
+        if (response.data.success) {
+          c.attachmentButtonVisible = false;
+          $scope.attachmentHandler = null;
+          c.attachments = [];
+
+          c.successMessage =
+            response.data.message ||
+            "Certificate and comments submitted successfully.";
+
+          updateDisplayRecords(
+            response.data.records || []
+          );
+
+          $timeout(function() {
+            c.showCompletionForm = false;
+            c.selectedRecord = {};
+            c.completionForm = {};
+          }, 50);
+
+          $timeout(function() {
+            c.successMessage = "";
+          }, 7000);
+        } else {
+          c.formError =
+            response.data.message ||
+            "Unable to update the learning application.";
+        }
+      },
+      function() {
+        c.submitting = false;
+        c.formError =
+          "An unexpected error occurred while submitting.";
+      }
+    );
+  };
+
+  c.overlayClick = function(event) {
+    if (
+      event &amp;&amp;
+      event.target !== event.currentTarget
+    ) {
+      return;
+    }
+
+    c.closeCompletionForm();
+  };
+
+  c.closeCompletionForm = function() {
+    if (c.submitting || c.uploading) {
+      return;
+    }
+
+    c.attachmentButtonVisible = false;
+    $scope.attachmentHandler = null;
+    c.attachments = [];
+    c.formError = "";
+    c.uploadMessage = "";
+
+    $timeout(function() {
+      c.showCompletionForm = false;
+      c.selectedRecord = {};
+      c.completionForm = {};
+    }, 50);
+  };
+};]]&gt;&lt;/client_script&gt;&lt;controller_as&gt;c&lt;/controller_as&gt;&lt;css&gt;.learning-records-page {&amp;#13;
+  position: relative;&amp;#13;
+  width: 100%;&amp;#13;
+  min-height: 610px;&amp;#13;
+  overflow: visible;&amp;#13;
+  background: #ffffff;&amp;#13;
+  border: 1px solid #555555;&amp;#13;
+  font-family: Arial, Helvetica, sans-serif;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.records-page-header {&amp;#13;
+  display: flex;&amp;#13;
+  min-height: 84px;&amp;#13;
+  padding: 12px 20px;&amp;#13;
+  align-items: flex-start;&amp;#13;
+  background: #ffffff;&amp;#13;
+  border-bottom: 1px solid #dddddd;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.records-title {&amp;#13;
+  flex: 1;&amp;#13;
+  color: #ed6b21;&amp;#13;
+  font-size: 28px;&amp;#13;
+  font-weight: 500;&amp;#13;
+  line-height: 55px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.logged-in-user-details {&amp;#13;
+  width: 390px;&amp;#13;
+  padding-top: 4px;&amp;#13;
+  margin-right: 20px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.user-detail-row {&amp;#13;
+  display: flex;&amp;#13;
+  margin-bottom: 8px;&amp;#13;
+  align-items: center;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.user-detail-label {&amp;#13;
+  width: 95px;&amp;#13;
+  color: #666666;&amp;#13;
+  font-size: 12px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.user-detail-value {&amp;#13;
+  color: #222222;&amp;#13;
+  font-size: 15px;&amp;#13;
+  text-decoration: underline;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.healthineers-logo {&amp;#13;
+  position: relative;&amp;#13;
+  min-width: 165px;&amp;#13;
+  padding-right: 30px;&amp;#13;
+  text-align: right;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.siemens-text {&amp;#13;
+  color: #009999;&amp;#13;
+  font-size: 20px;&amp;#13;
+  font-weight: 700;&amp;#13;
+  letter-spacing: 1px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.healthineers-text {&amp;#13;
+  color: #ed6b21;&amp;#13;
+  font-size: 18px;&amp;#13;
+  font-weight: 700;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.healthineers-dots {&amp;#13;
+  position: absolute;&amp;#13;
+  top: 5px;&amp;#13;
+  right: 0;&amp;#13;
+  width: 23px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.healthineers-dots span {&amp;#13;
+  display: block;&amp;#13;
+  width: 7px;&amp;#13;
+  height: 7px;&amp;#13;
+  margin: 2px auto;&amp;#13;
+  background: #ed6b21;&amp;#13;
+  border-radius: 50%;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.main-message {&amp;#13;
+  margin: 12px 18px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.records-filter-section {&amp;#13;
+  position: relative;&amp;#13;
+  z-index: 30;&amp;#13;
+  padding: 18px 30px 20px;&amp;#13;
+  overflow: visible;&amp;#13;
+  background: #eeeeee;&amp;#13;
+  border-bottom: 1px solid #d4d4d4;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-section-title {&amp;#13;
+  padding-bottom: 12px;&amp;#13;
+  margin-bottom: 15px;&amp;#13;
+  color: #444444;&amp;#13;
+  border-bottom: 1px solid #d2d2d2;&amp;#13;
+  font-size: 17px;&amp;#13;
+  font-weight: 600;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-section-title i {&amp;#13;
+  margin-right: 7px;&amp;#13;
+  color: #ed6b21;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-fields-container {&amp;#13;
+  display: grid;&amp;#13;
+  max-width: 1100px;&amp;#13;
+  margin: 0 auto;&amp;#13;
+  overflow: visible;&amp;#13;
+  grid-template-columns:&amp;#13;
+    repeat(2, minmax(320px, 1fr));&amp;#13;
+  column-gap: 40px;&amp;#13;
+  row-gap: 15px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-item {&amp;#13;
+  position: relative;&amp;#13;
+  display: flex;&amp;#13;
+  min-width: 0;&amp;#13;
+  overflow: visible;&amp;#13;
+  align-items: center;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-item label {&amp;#13;
+  width: 160px;&amp;#13;
+  margin: 0 12px 0 0;&amp;#13;
+  color: #444444;&amp;#13;
+  font-size: 14px;&amp;#13;
+  font-weight: 600;&amp;#13;
+  text-align: right;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-control {&amp;#13;
+  flex: 1;&amp;#13;
+  height: 38px;&amp;#13;
+  min-width: 0;&amp;#13;
+  padding: 5px 30px 5px 10px;&amp;#13;
+  color: #333333;&amp;#13;
+  background: #ffffff;&amp;#13;
+  border: 1px solid #bdbdbd;&amp;#13;
+  border-radius: 2px;&amp;#13;
+  box-shadow: none;&amp;#13;
+}&amp;#13;
+&amp;#13;
+/*&amp;#13;
+ * Request number autocomplete.&amp;#13;
+ */&amp;#13;
+.request-filter-item {&amp;#13;
+  z-index: 50;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-filter-container {&amp;#13;
+  position: relative;&amp;#13;
+  flex: 1;&amp;#13;
+  min-width: 0;&amp;#13;
+  overflow: visible;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-input-wrapper {&amp;#13;
+  position: relative;&amp;#13;
+  width: 100%;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-number-input {&amp;#13;
+  width: 100%;&amp;#13;
+  padding-right: 64px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown-button {&amp;#13;
+  position: absolute;&amp;#13;
+  top: 1px;&amp;#13;
+  right: 1px;&amp;#13;
+  width: 34px;&amp;#13;
+  height: 36px;&amp;#13;
+  padding: 0;&amp;#13;
+  color: #555555;&amp;#13;
+  background: transparent;&amp;#13;
+  border: 0;&amp;#13;
+  cursor: pointer;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown-button:hover {&amp;#13;
+  color: #ed6b21;&amp;#13;
+  background: #f7f7f7;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-clear-button {&amp;#13;
+  position: absolute;&amp;#13;
+  top: 1px;&amp;#13;
+  right: 35px;&amp;#13;
+  width: 28px;&amp;#13;
+  height: 36px;&amp;#13;
+  padding: 0;&amp;#13;
+  color: #888888;&amp;#13;
+  background: transparent;&amp;#13;
+  border: 0;&amp;#13;
+  cursor: pointer;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-clear-button:hover {&amp;#13;
+  color: #d9534f;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown {&amp;#13;
+  position: absolute;&amp;#13;
+  z-index: 9999;&amp;#13;
+  top: calc(100% + 2px);&amp;#13;
+  right: 0;&amp;#13;
+  left: 0;&amp;#13;
+  max-height: 230px;&amp;#13;
+  padding: 0;&amp;#13;
+  margin: 0;&amp;#13;
+  overflow-x: hidden;&amp;#13;
+  overflow-y: auto;&amp;#13;
+  background: #ffffff;&amp;#13;
+  border: 1px solid #aaaaaa;&amp;#13;
+  border-radius: 2px;&amp;#13;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);&amp;#13;
+  list-style: none;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown li {&amp;#13;
+  padding: 10px 12px;&amp;#13;
+  color: #333333;&amp;#13;
+  background: #ffffff;&amp;#13;
+  border-bottom: 1px solid #eeeeee;&amp;#13;
+  font-size: 13px;&amp;#13;
+  cursor: pointer;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown li:last-child {&amp;#13;
+  border-bottom: 0;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown li i {&amp;#13;
+  margin-right: 7px;&amp;#13;
+  color: #ed6b21;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown li:hover,&amp;#13;
+.request-dropdown .request-option-active {&amp;#13;
+  color: #222222;&amp;#13;
+  background: #fff2e9;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown .request-dropdown-all {&amp;#13;
+  color: #444444;&amp;#13;
+  font-weight: 600;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown .request-dropdown-empty {&amp;#13;
+  color: #777777;&amp;#13;
+  background: #fafafa;&amp;#13;
+  font-style: italic;&amp;#13;
+  text-align: center;&amp;#13;
+  cursor: default;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown .request-dropdown-empty:hover {&amp;#13;
+  background: #fafafa;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-buttons-row {&amp;#13;
+  display: flex;&amp;#13;
+  margin-top: 22px;&amp;#13;
+  align-items: center;&amp;#13;
+  justify-content: center;&amp;#13;
+  flex-wrap: wrap;&amp;#13;
+  gap: 12px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-action-button {&amp;#13;
+  display: inline-flex;&amp;#13;
+  min-width: 125px;&amp;#13;
+  height: 40px;&amp;#13;
+  padding: 0 18px;&amp;#13;
+  align-items: center;&amp;#13;
+  justify-content: center;&amp;#13;
+  color: #ffffff;&amp;#13;
+  border: 1px solid transparent;&amp;#13;
+  border-radius: 3px;&amp;#13;
+  font-size: 14px;&amp;#13;
+  font-weight: 600;&amp;#13;
+  cursor: pointer;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-action-button i {&amp;#13;
+  margin-right: 7px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-action-button[disabled] {&amp;#13;
+  cursor: not-allowed;&amp;#13;
+  opacity: 0.6;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.primary-filter-button {&amp;#13;
+  background: #40ae58;&amp;#13;
+  border-color: #359a4a;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.reset-filter-button {&amp;#13;
+  color: #444444;&amp;#13;
+  background: #ffffff;&amp;#13;
+  border-color: #aaaaaa;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.secondary-filter-button {&amp;#13;
+  background: #687783;&amp;#13;
+  border-color: #586771;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.refresh-filter-button {&amp;#13;
+  background: #168b99;&amp;#13;
+  border-color: #117682;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.records-loading,&amp;#13;
+.records-empty-message {&amp;#13;
+  padding: 45px 20px;&amp;#13;
+  color: #666666;&amp;#13;
+  font-size: 15px;&amp;#13;
+  text-align: center;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.records-loading div {&amp;#13;
+  margin-top: 10px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.records-table-wrapper {&amp;#13;
+  position: relative;&amp;#13;
+  z-index: 1;&amp;#13;
+  width: 100%;&amp;#13;
+  max-height: 500px;&amp;#13;
+  overflow-x: auto;&amp;#13;
+  overflow-y: auto;&amp;#13;
+  background: #ffffff;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.records-table {&amp;#13;
+  width: 100%;&amp;#13;
+  min-width: 4250px;&amp;#13;
+  table-layout: fixed;&amp;#13;
+  border-collapse: separate;&amp;#13;
+  border-spacing: 0;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.records-table thead th {&amp;#13;
+  position: sticky;&amp;#13;
+  z-index: 5;&amp;#13;
+  top: 0;&amp;#13;
+  width: 155px;&amp;#13;
+  min-width: 155px;&amp;#13;
+  max-width: 155px;&amp;#13;
+  padding: 10px 12px;&amp;#13;
+  color: #ffffff;&amp;#13;
+  background: #959595;&amp;#13;
+  border-right: 1px solid #b7b7b7;&amp;#13;
+  border-bottom: 1px solid #777777;&amp;#13;
+  font-size: 14px;&amp;#13;
+  font-weight: 700;&amp;#13;
+  text-align: center;&amp;#13;
+  vertical-align: middle;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.records-table tbody td {&amp;#13;
+  width: 155px;&amp;#13;
+  min-width: 155px;&amp;#13;
+  max-width: 155px;&amp;#13;
+  padding: 12px 13px;&amp;#13;
+  color: #4c4c4c;&amp;#13;
+  background: #ffffff;&amp;#13;
+  border-right: 1px solid #eeeeee;&amp;#13;
+  border-bottom: 2px solid #d5e9f4;&amp;#13;
+  font-size: 13px;&amp;#13;
+  text-align: center;&amp;#13;
+  vertical-align: top;&amp;#13;
+  word-break: break-word;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.records-table tbody tr:hover td {&amp;#13;
+  background: #fafafa;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-header {&amp;#13;
+  position: sticky !important;&amp;#13;
+  z-index: 12 !important;&amp;#13;
+  left: 0;&amp;#13;
+  width: 175px !important;&amp;#13;
+  min-width: 175px !important;&amp;#13;
+  max-width: 175px !important;&amp;#13;
+  background: #898989 !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-number-column {&amp;#13;
+  position: sticky;&amp;#13;
+  z-index: 6;&amp;#13;
+  left: 0;&amp;#13;
+  width: 175px !important;&amp;#13;
+  min-width: 175px !important;&amp;#13;
+  max-width: 175px !important;&amp;#13;
+  background: #ffffff !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.large-text-header,&amp;#13;
+.large-text-column {&amp;#13;
+  width: 280px !important;&amp;#13;
+  min-width: 280px !important;&amp;#13;
+  max-width: 280px !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.large-text-column {&amp;#13;
+  text-align: left !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.long-text-value {&amp;#13;
+  display: -webkit-box;&amp;#13;
+  overflow: hidden;&amp;#13;
+  line-height: 18px;&amp;#13;
+  text-overflow: ellipsis;&amp;#13;
+  -webkit-box-orient: vertical;&amp;#13;
+  -webkit-line-clamp: 4;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.status-header {&amp;#13;
+  position: sticky !important;&amp;#13;
+  z-index: 11 !important;&amp;#13;
+  right: 200px;&amp;#13;
+  width: 175px !important;&amp;#13;
+  min-width: 175px !important;&amp;#13;
+  max-width: 175px !important;&amp;#13;
+  background: #898989 !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.status-column {&amp;#13;
+  position: sticky;&amp;#13;
+  z-index: 7;&amp;#13;
+  right: 200px;&amp;#13;
+  width: 175px !important;&amp;#13;
+  min-width: 175px !important;&amp;#13;
+  max-width: 175px !important;&amp;#13;
+  background: #ffffff !important;&amp;#13;
+  vertical-align: middle !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.actions-header {&amp;#13;
+  position: sticky !important;&amp;#13;
+  z-index: 12 !important;&amp;#13;
+  right: 0;&amp;#13;
+  width: 200px !important;&amp;#13;
+  min-width: 200px !important;&amp;#13;
+  max-width: 200px !important;&amp;#13;
+  background: #818181 !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.actions-column {&amp;#13;
+  position: sticky;&amp;#13;
+  z-index: 8;&amp;#13;
+  right: 0;&amp;#13;
+  width: 200px !important;&amp;#13;
+  min-width: 200px !important;&amp;#13;
+  max-width: 200px !important;&amp;#13;
+  background: #ffffff !important;&amp;#13;
+  vertical-align: middle !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.status-label {&amp;#13;
+  display: inline-block;&amp;#13;
+  min-width: 110px;&amp;#13;
+  max-width: 155px;&amp;#13;
+  padding: 6px 10px;&amp;#13;
+  border-radius: 14px;&amp;#13;
+  font-size: 11px;&amp;#13;
+  font-weight: 600;&amp;#13;
+  text-align: center;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.status-draft {&amp;#13;
+  color: #495057;&amp;#13;
+  background: #e9ecef;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.status-submitted {&amp;#13;
+  color: #004085;&amp;#13;
+  background: #cce5ff;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.status-approval {&amp;#13;
+  color: #856404;&amp;#13;
+  background: #fff3cd;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.status-approved {&amp;#13;
+  color: #155724;&amp;#13;
+  background: #c3e6cb;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.status-progress {&amp;#13;
+  color: #7a4b00;&amp;#13;
+  background: #ffe6a1;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.status-feedback {&amp;#13;
+  color: #0c5460;&amp;#13;
+  background: #d1ecf1;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.status-complete {&amp;#13;
+  color: #155724;&amp;#13;
+  background: #d4edda;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.status-rejected {&amp;#13;
+  color: #721c24;&amp;#13;
+  background: #f8d7da;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.status-default {&amp;#13;
+  color: #383d41;&amp;#13;
+  background: #e2e3e5;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.record-actions {&amp;#13;
+  display: flex;&amp;#13;
+  min-height: 42px;&amp;#13;
+  align-items: center;&amp;#13;
+  justify-content: center;&amp;#13;
+  flex-wrap: wrap;&amp;#13;
+  gap: 9px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.record-action-button {&amp;#13;
+  display: inline-flex;&amp;#13;
+  width: 36px;&amp;#13;
+  height: 36px;&amp;#13;
+  padding: 0;&amp;#13;
+  align-items: center;&amp;#13;
+  justify-content: center;&amp;#13;
+  color: #ed6b21;&amp;#13;
+  background: transparent;&amp;#13;
+  border: 0;&amp;#13;
+  border-radius: 3px;&amp;#13;
+  font-size: 23px;&amp;#13;
+  cursor: pointer;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.record-action-button:hover {&amp;#13;
+  color: #c94d08;&amp;#13;
+  background: #fff2ea;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.edit-button {&amp;#13;
+  color: #111111;&amp;#13;
+  border: 2px solid #111111;&amp;#13;
+  font-size: 19px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.edit-button:hover {&amp;#13;
+  color: #ffffff;&amp;#13;
+  background: #111111;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.records-back-section {&amp;#13;
+  padding: 9px 11px;&amp;#13;
+  background: #ffffff;&amp;#13;
+  border-top: 1px solid #eeeeee;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.records-back-button {&amp;#13;
+  display: inline-flex;&amp;#13;
+  width: 40px;&amp;#13;
+  height: 40px;&amp;#13;
+  padding: 0;&amp;#13;
+  align-items: center;&amp;#13;
+  justify-content: center;&amp;#13;
+  color: #111111;&amp;#13;
+  background: #ffffff;&amp;#13;
+  border: 3px solid #111111;&amp;#13;
+  border-radius: 50%;&amp;#13;
+  font-size: 22px;&amp;#13;
+  cursor: pointer;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.completion-overlay {&amp;#13;
+  position: fixed;&amp;#13;
+  z-index: 1050;&amp;#13;
+  top: 0;&amp;#13;
+  right: 0;&amp;#13;
+  bottom: 0;&amp;#13;
+  left: 0;&amp;#13;
+  padding: 28px 15px;&amp;#13;
+  overflow-y: auto;&amp;#13;
+  background: rgba(0, 0, 0, 0.62);&amp;#13;
+  isolation: isolate;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.completion-popup {&amp;#13;
+  position: relative;&amp;#13;
+  z-index: 1;&amp;#13;
+  width: 100%;&amp;#13;
+  max-width: 780px;&amp;#13;
+  margin: 0 auto;&amp;#13;
+  overflow: hidden;&amp;#13;
+  background: #ffffff;&amp;#13;
+  border-radius: 5px;&amp;#13;
+  box-shadow: 0 12px 45px rgba(0, 0, 0, 0.4);&amp;#13;
+}&amp;#13;
+&amp;#13;
+.completion-popup-header {&amp;#13;
+  display: flex;&amp;#13;
+  padding: 18px 22px;&amp;#13;
+  align-items: flex-start;&amp;#13;
+  justify-content: space-between;&amp;#13;
+  color: #ffffff;&amp;#13;
+  background: #ed6b21;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.completion-popup-header h4 {&amp;#13;
+  margin: 0 0 5px;&amp;#13;
+  font-size: 21px;&amp;#13;
+  font-weight: 600;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.completion-popup-header p {&amp;#13;
+  margin: 0;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.popup-close-button {&amp;#13;
+  padding: 0;&amp;#13;
+  color: #ffffff;&amp;#13;
+  background: transparent;&amp;#13;
+  border: 0;&amp;#13;
+  font-size: 31px;&amp;#13;
+  cursor: pointer;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.completion-popup-body {&amp;#13;
+  max-height: 68vh;&amp;#13;
+  padding: 22px;&amp;#13;
+  overflow-y: auto;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.completion-popup-body label {&amp;#13;
+  color: #333333;&amp;#13;
+  font-weight: 600;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.completion-popup-footer {&amp;#13;
+  position: relative;&amp;#13;
+  z-index: 5;&amp;#13;
+  clear: both;&amp;#13;
+  padding: 15px 22px;&amp;#13;
+  text-align: right;&amp;#13;
+  background: #f5f5f5;&amp;#13;
+  border-top: 1px solid #dddddd;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.completion-popup-footer .btn {&amp;#13;
+  margin-left: 8px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.submit-completion-button {&amp;#13;
+  color: #ffffff;&amp;#13;
+  background: #ed6b21;&amp;#13;
+  border-color: #d65d18;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.mandatory {&amp;#13;
+  color: #d9534f;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.certificate-section {&amp;#13;
+  position: relative;&amp;#13;
+  z-index: 2;&amp;#13;
+  padding: 17px;&amp;#13;
+  margin-top: 18px;&amp;#13;
+  overflow: visible;&amp;#13;
+  background: #fafafa;&amp;#13;
+  border: 1px dashed #999999;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.native-attachment-container {&amp;#13;
+  position: relative;&amp;#13;
+  z-index: 3;&amp;#13;
+  display: flex;&amp;#13;
+  width: 100%;&amp;#13;
+  min-height: 42px;&amp;#13;
+  margin-top: 10px;&amp;#13;
+  align-items: center;&amp;#13;
+  gap: 10px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.native-attachment-container sp-attachment-button {&amp;#13;
+  position: relative;&amp;#13;
+  z-index: 4;&amp;#13;
+  display: inline-block;&amp;#13;
+  width: auto;&amp;#13;
+  max-width: 100%;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.native-attachment-container button,&amp;#13;
+.native-attachment-container .btn {&amp;#13;
+  float: none !important;&amp;#13;
+  width: auto;&amp;#13;
+  max-width: 100%;&amp;#13;
+  margin: 0 !important;&amp;#13;
+  transform: none !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attach-certificate-label {&amp;#13;
+  color: #ed6b21;&amp;#13;
+  font-weight: 600;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.certificate-uploading {&amp;#13;
+  margin-top: 12px;&amp;#13;
+  color: #337ab7;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.uploaded-attachments {&amp;#13;
+  position: relative;&amp;#13;
+  z-index: 2;&amp;#13;
+  width: 100%;&amp;#13;
+  margin-top: 16px;&amp;#13;
+  clear: both;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.uploaded-attachment-row {&amp;#13;
+  display: flex;&amp;#13;
+  width: 100%;&amp;#13;
+  padding: 10px;&amp;#13;
+  margin-bottom: 7px;&amp;#13;
+  align-items: center;&amp;#13;
+  justify-content: space-between;&amp;#13;
+  background: #ffffff;&amp;#13;
+  border: 1px solid #dddddd;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.uploaded-attachment-name {&amp;#13;
+  min-width: 0;&amp;#13;
+  overflow: hidden;&amp;#13;
+  text-overflow: ellipsis;&amp;#13;
+  white-space: nowrap;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.uploaded-attachment-size {&amp;#13;
+  margin-left: 8px;&amp;#13;
+  color: #777777;&amp;#13;
+  font-size: 12px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.delete-attachment-button {&amp;#13;
+  color: #d9534f;&amp;#13;
+  background: transparent;&amp;#13;
+  border: 0;&amp;#13;
+  font-size: 17px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.no-certificate-message {&amp;#13;
+  margin-top: 12px;&amp;#13;
+  color: #777777;&amp;#13;
+}&amp;#13;
+&amp;#13;
+@media screen and (max-width: 1000px) {&amp;#13;
+  .records-page-header {&amp;#13;
+    flex-wrap: wrap;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .filter-fields-container {&amp;#13;
+    grid-template-columns: 1fr;&amp;#13;
+  }&amp;#13;
+}&amp;#13;
+&amp;#13;
+@media screen and (max-width: 650px) {&amp;#13;
+  .filter-item {&amp;#13;
+    display: block;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .filter-item label {&amp;#13;
+    display: block;&amp;#13;
+    width: auto;&amp;#13;
+    margin-bottom: 5px;&amp;#13;
+    text-align: left;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .filter-buttons-row {&amp;#13;
+    flex-direction: column;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .filter-action-button {&amp;#13;
+    width: 100%;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .completion-overlay {&amp;#13;
+    padding: 8px;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .completion-popup-footer .btn {&amp;#13;
+    display: block;&amp;#13;
+    width: 100%;&amp;#13;
+    margin: 6px 0;&amp;#13;
+  }&amp;#13;
+}&lt;/css&gt;&lt;data_table&gt;sp_instance&lt;/data_table&gt;&lt;demo_data/&gt;&lt;description/&gt;&lt;docs/&gt;&lt;field_list/&gt;&lt;has_preview&gt;false&lt;/has_preview&gt;&lt;id&gt;check_my_records_asean_new&lt;/id&gt;&lt;internal&gt;false&lt;/internal&gt;&lt;link&gt;&lt;![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]&gt;&lt;/link&gt;&lt;name&gt;Check My Records ASEAN New&lt;/name&gt;&lt;option_schema/&gt;&lt;public&gt;false&lt;/public&gt;&lt;roles/&gt;&lt;script&gt;&lt;![CDATA[(function() {
+  var TABLE =
+    "x_1549902_asean_0_learning_application";
+
+  var STATUS_FIELD = "u_status";
+
+  var STATUS_DRAFT = "draft";
+  var STATUS_LEARNING =
+    "learning_in_progress";
+  var STATUS_FEEDBACK =
+    "pending_feedback";
+
+  data.records = [];
+  data.attachments = [];
+  data.success = true;
+  data.message = "";
+
+  data.userEmail =
+    gs.getUser().getEmail() || "";
+
+  data.userName =
+    gs.getUserDisplayName();
+
+  data.userLevel = "Employee";
+  data.tableName = TABLE;
+
+  data.filterOptions = {
+    requestNumbers: [],
+    courseTypes: [],
+    courseFormats: [],
+    statuses: []
+  };
+
+  function getValue(gr, fieldName) {
+    if (
+      !gr ||
+      !gr.isValidField(fieldName)
+    ) {
+      return "";
+    }
+
+    return gr.getValue(fieldName) || "";
+  }
+
+  function getDisplay(gr, fieldName) {
+    if (
+      !gr ||
+      !gr.isValidField(fieldName)
+    ) {
+      return "";
+    }
+
+    return gr.getDisplayValue(fieldName) || "";
+  }
+
+  function addUnique(array, value) {
+    if (
+      value &amp;&amp;
+      array.indexOf(value) === -1
+    ) {
+      array.push(value);
+    }
+  }
+
+  function addUniqueObject(
+    array,
+    value,
+    displayValue
+  ) {
+    if (!value) {
+      return;
+    }
+
+    for (var i = 0; i &lt; array.length; i++) {
+      if (array[i].value === value) {
+        return;
+      }
+    }
+
+    array.push({
+      value: value,
+      display: displayValue || value
+    });
+  }
+
+  function addEmployeeQuery(gr) {
+    var employeeQuery = gr.addQuery(
+      "u_employee_name",
+      gs.getUserID()
+    );
+
+    if (data.userEmail) {
+      employeeQuery.addOrCondition(
+        "u_employee_email",
+        data.userEmail
+      );
+    }
+  }
+
+  function getEmployeeRecord(sysId) {
+    if (!sysId) {
+      return null;
+    }
+
+    var gr =
+      new GlideRecordSecure(TABLE);
+
+    gr.addQuery("sys_id", sysId);
+    addEmployeeQuery(gr);
+    gr.setLimit(1);
+    gr.query();
+
+    if (gr.next()) {
+      return gr;
+    }
+
+    return null;
+  }
+
+  function loadFilterOptions() {
+    data.filterOptions = {
+      requestNumbers: [],
+      courseTypes: [],
+      courseFormats: [],
+      statuses: []
+    };
+
+    var gr =
+      new GlideRecordSecure(TABLE);
+
+    addEmployeeQuery(gr);
+    gr.orderByDesc("sys_created_on");
+    gr.query();
+
+    while (gr.next()) {
+      addUnique(
+        data.filterOptions.requestNumbers,
+        getDisplay(gr, "number")
+      );
+
+      addUniqueObject(
+        data.filterOptions.courseTypes,
+        getValue(gr, "u_course_type"),
+        getDisplay(gr, "u_course_type")
+      );
+
+      addUniqueObject(
+        data.filterOptions.courseFormats,
+        getValue(gr, "u_course_format"),
+        getDisplay(gr, "u_course_format")
+      );
+
+      addUniqueObject(
+        data.filterOptions.statuses,
+        getValue(gr, STATUS_FIELD),
+        getDisplay(gr, STATUS_FIELD)
+      );
+    }
+
+    data.filterOptions.requestNumbers.sort();
+  }
+
+  function loadRecords(filters) {
+    filters = filters || {};
+
+    var records = [];
+    var gr =
+      new GlideRecordSecure(TABLE);
+
+    addEmployeeQuery(gr);
+
+    /*
+     * Free-text request number search.
+     *
+     * LEA0001039 finds exact record.
+     * 1039 also finds LEA0001039.
+     */
+    if (filters.requestNumber) {
+      var requestNumber =
+        String(filters.requestNumber).trim();
+
+      if (requestNumber) {
+        gr.addQuery(
+          "number",
+          "CONTAINS",
+          requestNumber
+        );
+      }
+    }
+
+    if (filters.courseType) {
+      gr.addQuery(
+        "u_course_type",
+        filters.courseType
+      );
+    }
+
+    if (filters.courseFormat) {
+      gr.addQuery(
+        "u_course_format",
+        filters.courseFormat
+      );
+    }
+
+    if (filters.status) {
+      gr.addQuery(
+        STATUS_FIELD,
+        filters.status
+      );
+    }
+
+    gr.orderByDesc("sys_created_on");
+    gr.query();
+
+    while (gr.next()) {
+      var statusValue =
+        getValue(gr, STATUS_FIELD);
+
+      records.push({
+        sys_id:
+          gr.getUniqueValue(),
+
+        requestNumber:
+          getDisplay(gr, "number"),
+
+        employeeName:
+          getDisplay(
+            gr,
+            "u_employee_name"
+          ),
+
+        employeeEmail:
+          getValue(
+            gr,
+            "u_employee_email"
+          ),
+
+        country:
+          getDisplay(
+            gr,
+            "u_country"
+          ),
+
+        manager:
+          getDisplay(
+            gr,
+            "u_manager_email"
+          ),
+
+        managementL2:
+          getDisplay(
+            gr,
+            "u_management_l2"
+          ),
+
+        managerL2Required:
+          getDisplay(
+            gr,
+            "manager_approval_l2_required"
+          ),
+
+        courseTitle:
+          getDisplay(
+            gr,
+            "u_course_title"
+          ),
+
+        courseType:
+          getDisplay(
+            gr,
+            "u_course_type"
+          ),
+
+        courseFormat:
+          getDisplay(
+            gr,
+            "u_course_format"
+          ),
+
+        courseStartDate:
+          getDisplay(
+            gr,
+            "course_start_date"
+          ),
+
+        courseEndDate:
+          getDisplay(
+            gr,
+            "u_course_end_date"
+          ),
+
+        totalTrainingHours:
+          getDisplay(
+            gr,
+            "u_total_training_hours"
+          ),
+
+        trainingCountry:
+          getDisplay(
+            gr,
+            "u_training_country"
+          ),
+
+        trainingProvider:
+          getDisplay(
+            gr,
+            "u_training_provider_name"
+          ),
+
+        paymentRequired:
+          getDisplay(
+            gr,
+            "is_payment_required"
+          ),
+
+        courseFee:
+          getDisplay(
+            gr,
+            "u_course_fee"
+          ),
+
+        otherExpenses:
+          getDisplay(
+            gr,
+            "u_other_expenses"
+          ),
+
+        specifyOtherExpenses:
+          getDisplay(
+            gr,
+            "u_specify_other_expenses"
+          ),
+
+        totalCost:
+          getDisplay(
+            gr,
+            "u_total_cost"
+          ),
+
+        currency:
+          getDisplay(
+            gr,
+            "currency"
+          ),
+
+        comment:
+          getValue(
+            gr,
+            "u_comment"
+          ),
+
+        approval:
+          getDisplay(
+            gr,
+            "approval"
+          ),
+
+        openedAt:
+          getDisplay(
+            gr,
+            "opened_at"
+          ),
+
+        status:
+          getDisplay(
+            gr,
+            STATUS_FIELD
+          ),
+
+        statusValue:
+          statusValue,
+
+        canEdit:
+          statusValue === STATUS_DRAFT,
+
+        canUploadCertificate:
+          statusValue === STATUS_LEARNING,
+
+        canProvideFeedback:
+          statusValue === STATUS_FEEDBACK
+      });
+    }
+
+    return records;
+  }
+
+  function loadAttachments(parentSysId) {
+    data.attachments = [];
+
+    var attachmentGr =
+      new GlideRecordSecure(
+        "sys_attachment"
+      );
+
+    attachmentGr.addQuery(
+      "table_name",
+      TABLE
+    );
+
+    attachmentGr.addQuery(
+      "table_sys_id",
+      parentSysId
+    );
+
+    attachmentGr.orderByDesc(
+      "sys_created_on"
+    );
+
+    attachmentGr.query();
+
+    while (attachmentGr.next()) {
+      var sizeBytes = parseInt(
+        attachmentGr.getValue(
+          "size_bytes"
+        ),
+        10
+      ) || 0;
+
+      var sizeDisplay = "";
+
+      if (
+        sizeBytes &gt;=
+        1024 * 1024
+      ) {
+        sizeDisplay =
+          (
+            sizeBytes /
+            (1024 * 1024)
+          ).toFixed(2) +
+          " MB";
+      } else {
+        sizeDisplay =
+          (
+            sizeBytes /
+            1024
+          ).toFixed(2) +
+          " KB";
+      }
+
+      data.attachments.push({
+        sys_id:
+          attachmentGr.getUniqueValue(),
+
+        file_name:
+          attachmentGr.getValue(
+            "file_name"
+          ),
+
+        content_type:
+          attachmentGr.getValue(
+            "content_type"
+          ),
+
+        size_bytes:
+          sizeBytes,
+
+        size:
+          sizeDisplay
+      });
+    }
+  }
+
+  function hasCertificate(parentSysId) {
+    var attachmentGr =
+      new GlideRecordSecure(
+        "sys_attachment"
+      );
+
+    attachmentGr.addQuery(
+      "table_name",
+      TABLE
+    );
+
+    attachmentGr.addQuery(
+      "table_sys_id",
+      parentSysId
+    );
+
+    attachmentGr.setLimit(1);
+    attachmentGr.query();
+
+    return attachmentGr.hasNext();
+  }
+
+  function getCertificateNames(
+    parentSysId
+  ) {
+    var fileNames = [];
+
+    var attachmentGr =
+      new GlideRecordSecure(
+        "sys_attachment"
+      );
+
+    attachmentGr.addQuery(
+      "table_name",
+      TABLE
+    );
+
+    attachmentGr.addQuery(
+      "table_sys_id",
+      parentSysId
+    );
+
+    attachmentGr.orderByDesc(
+      "sys_created_on"
+    );
+
+    attachmentGr.query();
+
+    while (attachmentGr.next()) {
+      fileNames.push(
+        attachmentGr.getValue(
+          "file_name"
+        ) || "Attachment"
+      );
+    }
+
+    return fileNames;
+  }
+
+  /*
+   * Load certificate attachments.
+   */
+  if (
+    input &amp;&amp;
+    input.action === "get_attachments"
+  ) {
+    var attachmentParent =
+      getEmployeeRecord(input.sys_id);
+
+    if (!attachmentParent) {
+      data.success = false;
+      data.message =
+        "Learning application not found " +
+        "or access denied.";
+      return;
+    }
+
+    loadAttachments(
+      attachmentParent.getUniqueValue()
+    );
+
+    data.success = true;
+    return;
+  }
+
+  /*
+   * Submit certificate and move to
+   * Pending Feedback.
+   */
+  if (
+    input &amp;&amp;
+    input.action ===
+      "submit_for_feedback"
+  ) {
+    var updateGr =
+      getEmployeeRecord(input.sys_id);
+
+    if (!updateGr) {
+      data.success = false;
+      data.message =
+        "Learning application not found " +
+        "or access denied.";
+      return;
+    }
+
+    var currentStatus =
+      getValue(
+        updateGr,
+        STATUS_FIELD
+      );
+
+    if (
+      currentStatus !==
+      STATUS_LEARNING
+    ) {
+      data.success = false;
+      data.message =
+        "Only Learning In Progress " +
+        "applications can submit a " +
+        "completion certificate.";
+      return;
+    }
+
+    if (
+      !hasCertificate(
+        updateGr.getUniqueValue()
+      )
+    ) {
+      data.success = false;
+      data.message =
+        "Please upload the completion " +
+        "certificate before submitting.";
+      return;
+    }
+
+    var form = input.form || {};
+    var completionComment = "";
+
+    if (
+      form.completionComment !==
+        undefined &amp;&amp;
+      form.completionComment !== null
+    ) {
+      completionComment =
+        String(
+          form.completionComment
+        ).trim();
+    }
+
+    if (!completionComment) {
+      data.success = false;
+      data.message =
+        "Completion Comments are mandatory.";
+      return;
+    }
+
+    var certificateNames =
+      getCertificateNames(
+        updateGr.getUniqueValue()
+      );
+
+    if (
+      updateGr.isValidField(
+        "u_comment"
+      )
+    ) {
+      updateGr.setValue(
+        "u_comment",
+        completionComment
+      );
+    }
+
+    if (
+      updateGr.isValidField(
+        "work_notes"
+      )
+    ) {
+      var workNoteLines = [];
+
+      workNoteLines.push(
+        "Completion certificate uploaded by employee."
+      );
+
+      workNoteLines.push(
+        "Request Number: " +
+        getDisplay(
+          updateGr,
+          "number"
+        )
+      );
+
+      workNoteLines.push(
+        "Employee: " +
+        gs.getUserDisplayName()
+      );
+
+      workNoteLines.push(
+        "Course Title: " +
+        getDisplay(
+          updateGr,
+          "u_course_title"
+        )
+      );
+
+      workNoteLines.push(
+        "Certificate File(s): " +
+        (
+          certificateNames.length &gt; 0
+            ? certificateNames.join(", ")
+            : "Certificate uploaded"
+        )
+      );
+
+      workNoteLines.push(
+        "Completion Comments: " +
+        completionComment
+      );
+
+      workNoteLines.push(
+        "Status changed from Learning In Progress " +
+        "to Pending Feedback."
+      );
+
+      updateGr.work_notes =
+        workNoteLines.join("\n");
+    }
+
+    updateGr.setValue(
+      STATUS_FIELD,
+      STATUS_FEEDBACK
+    );
+
+    var updatedSysId =
+      updateGr.update();
+
+    if (!updatedSysId) {
+      data.success = false;
+      data.message =
+        "The learning application " +
+        "could not be updated.";
+      return;
+    }
+
+    data.success = true;
+
+    data.message =
+      "Certificate and completion comments " +
+      "submitted successfully. The request " +
+      "has moved to Pending Feedback.";
+
+    loadFilterOptions();
+
+    data.records = loadRecords(
+      input.filters || {}
+    );
+
+    return;
+  }
+
+  /*
+   * Search records.
+   */
+  if (
+    input &amp;&amp;
+    input.action === "search"
+  ) {
+    data.records = loadRecords(
+      input.filters || {}
+    );
+
+    data.success = true;
+    return;
+  }
+
+  /*
+   * Refresh records and dropdown options.
+   */
+  if (
+    input &amp;&amp;
+    input.action === "refresh"
+  ) {
+    loadFilterOptions();
+
+    data.records = loadRecords(
+      input.filters || {}
+    );
+
+    data.success = true;
+    return;
+  }
+
+  /*
+   * Reset.
+   */
+  if (
+    input &amp;&amp;
+    input.action === "reset"
+  ) {
+    loadFilterOptions();
+
+    data.records = loadRecords({});
+
+    data.success = true;
+    return;
+  }
+
+  /*
+   * Initial widget load.
+   */
+  loadFilterOptions();
+  data.records = loadRecords({});
+})();]]&gt;&lt;/script&gt;&lt;servicenow&gt;false&lt;/servicenow&gt;&lt;sys_class_name&gt;sp_widget&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-17 12:45:06&lt;/sys_created_on&gt;&lt;sys_id&gt;c04e858747468710ff78de94116d432e&lt;/sys_id&gt;&lt;sys_mod_count&gt;2&lt;/sys_mod_count&gt;&lt;sys_name&gt;Check My Records ASEAN New&lt;/sys_name&gt;&lt;sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="ASEAN Learning Application"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_scope&gt;&lt;sys_update_name&gt;sp_widget_c04e858747468710ff78de94116d432e&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-20 03:43:26&lt;/sys_updated_on&gt;&lt;template&gt;&lt;![CDATA[&lt;div class="learning-records-page"&gt;
+
+  &lt;!-- Header --&gt;
+  &lt;div class="records-page-header"&gt;
+
+    &lt;div class="records-title"&gt;
+      Your Learning Applications
+    &lt;/div&gt;
+
+    &lt;div class="logged-in-user-details"&gt;
+
+      &lt;div class="user-detail-row"&gt;
+        &lt;span class="user-detail-label"&gt;User Login:&lt;/span&gt;
+        &lt;span class="user-detail-value"&gt;{{c.data.userEmail}}&lt;/span&gt;
+      &lt;/div&gt;
+
+      &lt;div class="user-detail-row"&gt;
+        &lt;span class="user-detail-label"&gt;Level:&lt;/span&gt;
+        &lt;span class="user-detail-value"&gt;{{c.data.userLevel}}&lt;/span&gt;
+      &lt;/div&gt;
+
+    &lt;/div&gt;
+
+    &lt;div class="healthineers-logo"&gt;
+      &lt;div class="siemens-text"&gt;SIEMENS&lt;/div&gt;
+      &lt;div class="healthineers-text"&gt;Healthineers&lt;/div&gt;
+
+      &lt;div class="healthineers-dots"&gt;
+        &lt;span&gt;&lt;/span&gt;
+        &lt;span&gt;&lt;/span&gt;
+        &lt;span&gt;&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+
+  &lt;/div&gt;
+
+  &lt;!-- Messages --&gt;
+  &lt;div class="alert alert-success main-message"
+       ng-if="c.successMessage"&gt;
+
+    &lt;i class="fa fa-check-circle"&gt;&lt;/i&gt;
+    {{c.successMessage}}
+
+  &lt;/div&gt;
+
+  &lt;div class="alert alert-danger main-message"
+       ng-if="c.errorMessage"&gt;
+
+    &lt;i class="fa fa-exclamation-circle"&gt;&lt;/i&gt;
+    {{c.errorMessage}}
+
+  &lt;/div&gt;
+
+  &lt;!-- Filters --&gt;
+  &lt;div class="records-filter-section"&gt;
+
+    &lt;div class="filter-section-title"&gt;
+      &lt;i class="fa fa-filter"&gt;&lt;/i&gt;
+      Filter Learning Applications
+    &lt;/div&gt;
+
+    &lt;div class="filter-fields-container"&gt;
+
+      &lt;!-- Request Number Autocomplete --&gt;
+      &lt;div class="filter-item request-filter-item"&gt;
+
+        &lt;label for="request-number-filter"&gt;
+          Request Number:
+        &lt;/label&gt;
+
+        &lt;div class="request-filter-container"&gt;
+
+          &lt;div class="request-input-wrapper"&gt;
+
+            &lt;input type="text"
+                   id="request-number-filter"
+                   class="form-control filter-control request-number-input"
+                   ng-model="c.requestSearch"
+                   ng-change="c.filterRequestNumbers()"
+                   ng-focus="c.openRequestDropdown()"
+                   ng-blur="c.hideRequestDropdown()"
+                   ng-keydown="c.handleRequestKeydown($event)"
+                   autocomplete="off"
+                   placeholder="All or type request number"&gt;
+
+            &lt;button type="button"
+                    class="request-dropdown-button"
+                    ng-mousedown="c.toggleRequestDropdown($event)"
+                    title="Show request numbers"&gt;
+
+              &lt;i class="fa"
+                 ng-class="c.showRequestDropdown ?
+                 'fa-chevron-up' : 'fa-chevron-down'"&gt;
+              &lt;/i&gt;
+
+            &lt;/button&gt;
+
+            &lt;button type="button"
+                    class="request-clear-button"
+                    ng-if="c.requestSearch"
+                    ng-mousedown="c.clearRequestNumber($event)"
+                    title="Clear request number"&gt;
+
+              &lt;i class="fa fa-times"&gt;&lt;/i&gt;
+
+            &lt;/button&gt;
+
+          &lt;/div&gt;
+
+          &lt;ul class="request-dropdown"
+              ng-show="c.showRequestDropdown"&gt;
+
+            &lt;li class="request-dropdown-all"
+                ng-mousedown="c.selectRequestNumber('', $event)"&gt;
+
+              All
+
+            &lt;/li&gt;
+
+            &lt;li ng-repeat="number in c.filteredRequestNumbers track by number"
+                ng-class="{
+                  'request-option-active':
+                  $index === c.activeRequestIndex
+                }"
+                ng-mousedown="c.selectRequestNumber(number, $event)"&gt;
+
+              &lt;i class="fa fa-file-text-o"&gt;&lt;/i&gt;
+              {{number}}
+
+            &lt;/li&gt;
+
+            &lt;li class="request-dropdown-empty"
+                ng-if="!c.filteredRequestNumbers ||
+                       c.filteredRequestNumbers.length === 0"&gt;
+
+              No matching request numbers found
+
+            &lt;/li&gt;
+
+          &lt;/ul&gt;
+
+        &lt;/div&gt;
+
+      &lt;/div&gt;
+
+      &lt;!-- Course Type --&gt;
+      &lt;div class="filter-item"&gt;
+
+        &lt;label for="course-type-filter"&gt;
+          Course Type:
+        &lt;/label&gt;
+
+        &lt;select id="course-type-filter"
+                class="form-control filter-control"
+                ng-model="c.filters.courseType"
+                ng-options="
+                  item.value as item.display
+                  for item in c.data.filterOptions.courseTypes
+                "&gt;
+
+          &lt;option value=""&gt;All&lt;/option&gt;
+
+        &lt;/select&gt;
+
+      &lt;/div&gt;
+
+      &lt;!-- Course Format --&gt;
+      &lt;div class="filter-item"&gt;
+
+        &lt;label for="course-format-filter"&gt;
+          Course Format:
+        &lt;/label&gt;
+
+        &lt;select id="course-format-filter"
+                class="form-control filter-control"
+                ng-model="c.filters.courseFormat"
+                ng-options="
+                  item.value as item.display
+                  for item in c.data.filterOptions.courseFormats
+                "&gt;
+
+          &lt;option value=""&gt;All&lt;/option&gt;
+
+        &lt;/select&gt;
+
+      &lt;/div&gt;
+
+      &lt;!-- Ticket Status --&gt;
+      &lt;div class="filter-item"&gt;
+
+        &lt;label for="status-filter"&gt;
+          Ticket Status:
+        &lt;/label&gt;
+
+        &lt;select id="status-filter"
+                class="form-control filter-control"
+                ng-model="c.filters.status"
+                ng-options="
+                  item.value as item.display
+                  for item in c.data.filterOptions.statuses
+                "&gt;
+
+          &lt;option value=""&gt;All&lt;/option&gt;
+
+        &lt;/select&gt;
+
+      &lt;/div&gt;
+
+    &lt;/div&gt;
+
+    &lt;!-- Filter Buttons --&gt;
+    &lt;div class="filter-buttons-row"&gt;
+
+      &lt;button type="button"
+              class="filter-action-button primary-filter-button"
+              ng-click="c.search()"
+              ng-disabled="c.loading || c.refreshing"&gt;
+
+        &lt;i class="fa fa-search"&gt;&lt;/i&gt;
+        Search
+
+      &lt;/button&gt;
+
+      &lt;button type="button"
+              class="filter-action-button reset-filter-button"
+              ng-click="c.reset()"
+              ng-disabled="c.loading || c.refreshing"&gt;
+
+        &lt;i class="fa fa-undo"&gt;&lt;/i&gt;
+        Reset
+
+      &lt;/button&gt;
+
+      &lt;button type="button"
+              class="filter-action-button secondary-filter-button"
+              ng-click="c.toggleSort()"
+              ng-disabled="c.loading || c.refreshing"&gt;
+
+        &lt;i class="fa fa-sort-amount-desc"
+           ng-if="c.sortDescending"&gt;
+        &lt;/i&gt;
+
+        &lt;i class="fa fa-sort-amount-asc"
+           ng-if="!c.sortDescending"&gt;
+        &lt;/i&gt;
+
+        Sort
+
+      &lt;/button&gt;
+
+      &lt;button type="button"
+              class="filter-action-button refresh-filter-button"
+              ng-click="c.refresh()"
+              ng-disabled="c.loading || c.refreshing"&gt;
+
+        &lt;i class="fa fa-refresh"
+           ng-class="{'fa-spin': c.refreshing}"&gt;
+        &lt;/i&gt;
+
+        &lt;span ng-if="!c.refreshing"&gt;
+          Refresh
+        &lt;/span&gt;
+
+        &lt;span ng-if="c.refreshing"&gt;
+          Refreshing...
+        &lt;/span&gt;
+
+      &lt;/button&gt;
+
+    &lt;/div&gt;
+
+  &lt;/div&gt;
+
+  &lt;!-- Loading --&gt;
+  &lt;div class="records-loading"
+       ng-if="c.loading"&gt;
+
+    &lt;i class="fa fa-spinner fa-spin fa-2x"&gt;&lt;/i&gt;
+
+    &lt;div&gt;
+      Loading learning applications...
+    &lt;/div&gt;
+
+  &lt;/div&gt;
+
+  &lt;!-- Empty --&gt;
+  &lt;div class="records-empty-message"
+       ng-if="!c.loading &amp;&amp;
+              (!c.displayRecords ||
+               c.displayRecords.length === 0)"&gt;
+
+    &lt;i class="fa fa-info-circle"&gt;&lt;/i&gt;
+    No learning applications found.
+
+  &lt;/div&gt;
+
+  &lt;!-- Table --&gt;
+  &lt;div class="records-table-wrapper"
+       ng-if="!c.loading &amp;&amp;
+              c.displayRecords &amp;&amp;
+              c.displayRecords.length &gt; 0"&gt;
+
+    &lt;table class="records-table"&gt;
+
+      &lt;thead&gt;
+        &lt;tr&gt;
+
+          &lt;th class="request-header"&gt;Number&lt;/th&gt;
+          &lt;th&gt;Employee Name&lt;/th&gt;
+          &lt;th&gt;Employee Email&lt;/th&gt;
+          &lt;th&gt;Country&lt;/th&gt;
+          &lt;th&gt;Manager&lt;/th&gt;
+          &lt;th&gt;Management L2&lt;/th&gt;
+          &lt;th&gt;L2 Approval Required&lt;/th&gt;
+          &lt;th&gt;Course Title&lt;/th&gt;
+          &lt;th&gt;Course Type&lt;/th&gt;
+          &lt;th&gt;Course Format&lt;/th&gt;
+          &lt;th&gt;Course Start Date&lt;/th&gt;
+          &lt;th&gt;Course End Date&lt;/th&gt;
+          &lt;th&gt;Total Training Hours&lt;/th&gt;
+          &lt;th&gt;Training Country&lt;/th&gt;
+          &lt;th&gt;Training Provider&lt;/th&gt;
+          &lt;th&gt;Payment Required&lt;/th&gt;
+          &lt;th&gt;Course Fee&lt;/th&gt;
+          &lt;th&gt;Other Expenses&lt;/th&gt;
+          &lt;th&gt;Specify Other Expenses&lt;/th&gt;
+          &lt;th&gt;Total Cost&lt;/th&gt;
+          &lt;th&gt;Currency&lt;/th&gt;
+          &lt;th class="large-text-header"&gt;Comment&lt;/th&gt;
+          &lt;th&gt;Approval&lt;/th&gt;
+          &lt;th&gt;Opened At&lt;/th&gt;
+          &lt;th class="status-header"&gt;Ticket Status&lt;/th&gt;
+          &lt;th class="actions-header"&gt;Actions&lt;/th&gt;
+
+        &lt;/tr&gt;
+      &lt;/thead&gt;
+
+      &lt;tbody&gt;
+
+        &lt;tr ng-repeat="
+          record in c.displayRecords
+          track by record.sys_id
+        "&gt;
+
+          &lt;td class="request-number-column"&gt;
+            &lt;strong&gt;
+              {{record.requestNumber || '-'}}
+            &lt;/strong&gt;
+          &lt;/td&gt;
+
+          &lt;td&gt;{{record.employeeName || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.employeeEmail || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.country || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.manager || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.managementL2 || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.managerL2Required || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.courseTitle || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.courseType || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.courseFormat || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.courseStartDate || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.courseEndDate || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.totalTrainingHours || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.trainingCountry || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.trainingProvider || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.paymentRequired || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.courseFee || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.otherExpenses || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.specifyOtherExpenses || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.totalCost || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.currency || '-'}}&lt;/td&gt;
+
+          &lt;td class="large-text-column"&gt;
+
+            &lt;div class="long-text-value"
+                 title="{{record.comment}}"&gt;
+
+              {{record.comment || '-'}}
+
+            &lt;/div&gt;
+
+          &lt;/td&gt;
+
+          &lt;td&gt;{{record.approval || '-'}}&lt;/td&gt;
+          &lt;td&gt;{{record.openedAt || '-'}}&lt;/td&gt;
+
+          &lt;td class="status-column"&gt;
+
+            &lt;span class="status-label"
+                  ng-class="
+                    c.getStatusClass(record.statusValue)
+                  "&gt;
+
+              {{record.status || '-'}}
+
+            &lt;/span&gt;
+
+          &lt;/td&gt;
+
+          &lt;td class="actions-column"&gt;
+
+            &lt;div class="record-actions"&gt;
+
+              &lt;button type="button"
+                      class="record-action-button view-button"
+                      ng-click="c.openView(record)"
+                      title="View learning application"&gt;
+
+                &lt;i class="fa fa-eye"&gt;&lt;/i&gt;
+
+              &lt;/button&gt;
+
+              &lt;button type="button"
+                      class="record-action-button edit-button"
+                      ng-if="record.statusValue === 'draft'"
+                      ng-click="c.openEdit(record)"
+                      title="Edit learning application"&gt;
+
+                &lt;i class="fa fa-pencil"&gt;&lt;/i&gt;
+
+              &lt;/button&gt;
+
+              &lt;button type="button"
+                      class="record-action-button certificate-button"
+                      ng-if="
+                        record.statusValue ===
+                        'learning_in_progress'
+                      "
+                      ng-click="c.openCompletionForm(record)"
+                      title="Upload completion certificate"&gt;
+
+                &lt;i class="fa fa-paperclip"&gt;&lt;/i&gt;
+
+              &lt;/button&gt;
+
+              &lt;button type="button"
+                      class="record-action-button feedback-button"
+                      ng-if="
+                        record.statusValue ===
+                        'pending_feedback'
+                      "
+                      ng-click="c.openFeedback(record)"
+                      title="Provide feedback"&gt;
+
+                &lt;i class="fa fa-file-text-o"&gt;&lt;/i&gt;
+
+              &lt;/button&gt;
+
+            &lt;/div&gt;
+
+          &lt;/td&gt;
+
+        &lt;/tr&gt;
+
+      &lt;/tbody&gt;
+
+    &lt;/table&gt;
+
+  &lt;/div&gt;
+
+  &lt;!-- Back --&gt;
+  &lt;div class="records-back-section"&gt;
+
+    &lt;button type="button"
+            class="records-back-button"
+            ng-click="c.goBack()"
+            title="Back to Employee Role"&gt;
+
+      &lt;i class="fa fa-chevron-left"&gt;&lt;/i&gt;
+
+    &lt;/button&gt;
+
+  &lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;!-- Certificate Popup --&gt;
+&lt;div class="completion-overlay"
+     ng-if="c.showCompletionForm"
+     ng-click="c.overlayClick($event)"&gt;
+
+  &lt;div class="completion-popup"
+       ng-click="$event.stopPropagation()"&gt;
+
+    &lt;div class="completion-popup-header"&gt;
+
+      &lt;div&gt;
+
+        &lt;h4&gt;
+          &lt;i class="fa fa-certificate"&gt;&lt;/i&gt;
+          Complete Learning Application
+        &lt;/h4&gt;
+
+        &lt;p&gt;
+          Request Number:
+          &lt;strong&gt;
+            {{c.selectedRecord.requestNumber}}
+          &lt;/strong&gt;
+        &lt;/p&gt;
+
+      &lt;/div&gt;
+
+      &lt;button type="button"
+              class="popup-close-button"
+              ng-click="c.closeCompletionForm()"
+              ng-disabled="c.submitting || c.uploading"
+              title="Close"&gt;
+
+        &amp;times;
+
+      &lt;/button&gt;
+
+    &lt;/div&gt;
+
+    &lt;div class="completion-popup-body"&gt;
+
+      &lt;div class="alert alert-danger"
+           ng-if="c.formError"&gt;
+
+        &lt;i class="fa fa-exclamation-circle"&gt;&lt;/i&gt;
+        {{c.formError}}
+
+      &lt;/div&gt;
+
+      &lt;div class="alert alert-success"
+           ng-if="c.uploadMessage"&gt;
+
+        &lt;i class="fa fa-check-circle"&gt;&lt;/i&gt;
+        {{c.uploadMessage}}
+
+      &lt;/div&gt;
+
+      &lt;div class="row"&gt;
+
+        &lt;div class="col-md-6"&gt;
+
+          &lt;div class="form-group"&gt;
+
+            &lt;label&gt;Request Number&lt;/label&gt;
+
+            &lt;input type="text"
+                   class="form-control"
+                   ng-model="c.completionForm.requestNumber"
+                   disabled&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+
+        &lt;div class="col-md-6"&gt;
+
+          &lt;div class="form-group"&gt;
+
+            &lt;label&gt;Employee Name&lt;/label&gt;
+
+            &lt;input type="text"
+                   class="form-control"
+                   ng-model="c.completionForm.employeeName"
+                   disabled&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+
+      &lt;/div&gt;
+
+      &lt;div class="form-group"&gt;
+
+        &lt;label&gt;Course Title&lt;/label&gt;
+
+        &lt;input type="text"
+               class="form-control"
+               ng-model="c.completionForm.courseTitle"
+               disabled&gt;
+
+      &lt;/div&gt;
+
+      &lt;div class="row"&gt;
+
+        &lt;div class="col-md-6"&gt;
+
+          &lt;div class="form-group"&gt;
+
+            &lt;label&gt;Course Start Date&lt;/label&gt;
+
+            &lt;input type="text"
+                   class="form-control"
+                   ng-model="c.completionForm.courseStartDate"
+                   disabled&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+
+        &lt;div class="col-md-6"&gt;
+
+          &lt;div class="form-group"&gt;
+
+            &lt;label&gt;Course End Date&lt;/label&gt;
+
+            &lt;input type="text"
+                   class="form-control"
+                   ng-model="c.completionForm.courseEndDate"
+                   disabled&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+
+      &lt;/div&gt;
+
+      &lt;div class="form-group"&gt;
+
+        &lt;label&gt;
+          Completion Comments
+          &lt;span class="mandatory"&gt;*&lt;/span&gt;
+        &lt;/label&gt;
+
+        &lt;textarea class="form-control"
+                  rows="4"
+                  ng-model="
+                    c.completionForm.completionComment
+                  "
+                  placeholder="Enter completion comments"&gt;
+        &lt;/textarea&gt;
+
+      &lt;/div&gt;
+
+      &lt;div class="certificate-section"&gt;
+
+        &lt;label class="certificate-label"&gt;
+          Completion Certificate
+          &lt;span class="mandatory"&gt;*&lt;/span&gt;
+        &lt;/label&gt;
+
+        &lt;p class="help-block"&gt;
+          Upload PDF, JPG, JPEG, PNG, DOC or DOCX.
+          Maximum file size is 10 MB.
+        &lt;/p&gt;
+
+        &lt;div class="native-attachment-container"
+             ng-if="
+               c.showCompletionForm &amp;&amp;
+               c.attachmentButtonVisible &amp;&amp;
+               c.selectedRecord.sys_id
+             "&gt;
+
+          &lt;sp-attachment-button modal="false"&gt;
+          &lt;/sp-attachment-button&gt;
+
+          &lt;span class="attach-certificate-label"&gt;
+            Attach Certificate
+          &lt;/span&gt;
+
+        &lt;/div&gt;
+
+        &lt;div class="certificate-uploading"
+             ng-if="c.uploading"&gt;
+
+          &lt;i class="fa fa-spinner fa-spin"&gt;&lt;/i&gt;
+          Uploading certificate...
+
+        &lt;/div&gt;
+
+        &lt;div class="uploaded-attachments"
+             ng-if="
+               c.attachments &amp;&amp;
+               c.attachments.length &gt; 0
+             "&gt;
+
+          &lt;h5&gt;Uploaded Certificate&lt;/h5&gt;
+
+          &lt;div class="uploaded-attachment-row"
+               ng-repeat="
+                 attachment in c.attachments
+                 track by attachment.sys_id
+               "&gt;
+
+            &lt;div class="uploaded-attachment-name"&gt;
+
+              &lt;i class="fa fa-paperclip"&gt;&lt;/i&gt;
+
+              &lt;a ng-href="
+                   /sys_attachment.do?sys_id={{
+                     attachment.sys_id
+                   }}
+                 "
+                 target="_blank"&gt;
+
+                {{attachment.file_name}}
+
+              &lt;/a&gt;
+
+              &lt;span class="uploaded-attachment-size"
+                    ng-if="attachment.size"&gt;
+
+                ({{attachment.size}})
+
+              &lt;/span&gt;
+
+            &lt;/div&gt;
+
+            &lt;button type="button"
+                    class="delete-attachment-button"
+                    ng-click="
+                      c.deleteAttachment(attachment)
+                    "
+                    ng-disabled="
+                      c.submitting || c.uploading
+                    "
+                    title="Delete attachment"&gt;
+
+              &lt;i class="fa fa-trash"&gt;&lt;/i&gt;
+
+            &lt;/button&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+
+        &lt;div class="no-certificate-message"
+             ng-if="
+               !c.uploading &amp;&amp;
+               (!c.attachments ||
+                c.attachments.length === 0)
+             "&gt;
+
+          &lt;i class="fa fa-info-circle"&gt;&lt;/i&gt;
+          No certificate uploaded yet.
+
+        &lt;/div&gt;
+
+      &lt;/div&gt;
+
+    &lt;/div&gt;
+
+    &lt;div class="completion-popup-footer"&gt;
+
+      &lt;button type="button"
+              class="btn btn-default"
+              ng-click="c.closeCompletionForm()"
+              ng-disabled="c.submitting || c.uploading"&gt;
+
+        Cancel
+
+      &lt;/button&gt;
+
+      &lt;button type="button"
+              class="btn submit-completion-button"
+              ng-click="c.submitForFeedback()"
+              ng-disabled="c.submitting || c.uploading"&gt;
+
+        &lt;i class="fa fa-spinner fa-spin"
+           ng-if="c.submitting"&gt;
+        &lt;/i&gt;
+
+        &lt;i class="fa fa-check"
+           ng-if="!c.submitting"&gt;
+        &lt;/i&gt;
+
+        &lt;span ng-if="!c.submitting"&gt;
+          Submit and Move to Pending Feedback
+        &lt;/span&gt;
+
+        &lt;span ng-if="c.submitting"&gt;
+          Submitting...
+        &lt;/span&gt;
+
+      &lt;/button&gt;
+
+    &lt;/div&gt;
+
+  &lt;/div&gt;
+
+&lt;/div&gt;]]&gt;&lt;/template&gt;&lt;/sp_widget&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>748163704</payload_hash>
+        <record_name>Check My Records ASEAN New</record_name>
+        <reverted_from/>
+        <source>6c8436d247ce0310ff78de94116d43c1</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-20 03:43:26</sys_created_on>
+        <sys_id>87df663f47024f10ff78de94116d43a7</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19f7d9f18540000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-20 03:43:26</sys_updated_on>
+        <type>Widget</type>
+        <update_guid>83df663f6e024f10e0c81a7ec4848ba6</update_guid>
+        <update_guid_history>83df663f6e024f10e0c81a7ec4848ba6:748163704,8d12118ff14687106203012ff2cccf09:-706752487,ec1f010b2a4687102d7490d473cd1d78:748163704</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete display_value="Check My Records ASEAN New">2bbfbf4c471ecf10ff78de94116d43ad</sys_audit_delete>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-21 04:10:56</sys_created_on>
+        <sys_db_object display_value="" name="sp_widget">sp_widget</sys_db_object>
+        <sys_id>385a827968d8438687562cda2cbc2764</sys_id>
+        <sys_metadata>c04e858747468710ff78de94116d432e</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Check My Records ASEAN New</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_scope_delete display_value="">150a93e03297447584ae8ab0fd980be9</sys_scope_delete>
+        <sys_update_name>sp_widget_c04e858747468710ff78de94116d432e</sys_update_name>
+        <sys_update_version display_value="sp_widget_c04e858747468710ff78de94116d432e">87df663f47024f10ff78de94116d43a7</sys_update_version>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-21 04:10:56</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

@@ -1,0 +1,5639 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="DELETE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($scope,spUtil,$window,$timeout,nowAttachmentHandler) {
+
+    var c = this;
+
+    c.submitting = false;
+    c.uploading = false;
+    c.attachments = c.data.attachments || [];
+
+    /*
+     * Record picker models
+     */
+    c.employeeField = {
+        displayValue: c.data.employeeDisplay || "",
+        value: c.data.employee || "",
+        name: "u_employee_name"
+    };
+
+    c.countryField = {
+        displayValue: c.data.countryDisplay || "",
+        value: c.data.country || "",
+        name: "u_country"
+    };
+
+    c.managerField = {
+        displayValue: c.data.managerDisplay || "",
+        value: c.data.manager || "",
+        name: "u_manager_email"
+    };
+
+    c.l2ManagerField = {
+        displayValue: c.data.l2ManagerDisplay || "",
+        value: c.data.l2Manager || "",
+        name: "u_management_l2"
+    };
+
+    c.trainingCountryField = {
+        displayValue:
+            c.data.trainingCountryDisplay || "",
+        value:
+            c.data.trainingCountry || "",
+        name:
+            "u_training_country"
+    };
+
+    /*
+     * Convert server date string to JavaScript Date.
+     */
+    function convertToDate(value) {
+
+        if (!value) {
+            return null;
+        }
+
+        if (angular.isDate(value)) {
+            return value;
+        }
+
+        var dateValue =
+            value.toString().substring(0, 10);
+
+        var parts =
+            dateValue.split("-");
+
+        if (parts.length !== 3) {
+            return null;
+        }
+
+        return new Date(
+            parseInt(parts[0], 10),
+            parseInt(parts[1], 10) - 1,
+            parseInt(parts[2], 10)
+        );
+    }
+
+    c.data.courseStartDate =
+        convertToDate(
+            c.data.courseStartDate
+        );
+
+    c.data.courseEndDate =
+        convertToDate(
+            c.data.courseEndDate
+        );
+
+    /*
+     * Store original values for Clear.
+     */
+    var originalData =
+        angular.copy(c.data);
+
+    var originalEmployee =
+        angular.copy(c.employeeField);
+
+    var originalCountry =
+        angular.copy(c.countryField);
+
+    var originalManager =
+        angular.copy(c.managerField);
+
+    var originalL2Manager =
+        angular.copy(c.l2ManagerField);
+
+    var originalTrainingCountry =
+        angular.copy(c.trainingCountryField);
+
+    /*
+     * Attachment upload success.
+     */
+    function attachmentSuccess(attachments) {
+
+        c.uploading = false;
+
+        if (angular.isArray(attachments)) {
+            c.attachments = attachments;
+        }
+
+        c.refreshAttachments();
+
+        spUtil.addInfoMessage(
+            "Attachment uploaded successfully."
+        );
+
+        $scope.$applyAsync();
+    }
+
+    /*
+     * Attachment upload failure.
+     */
+    function attachmentError(error) {
+
+        c.uploading = false;
+
+        spUtil.addErrorMessage(
+            error && error.message
+                ? error.message
+                : "Unable to upload the attachment."
+        );
+
+        $scope.$applyAsync();
+    }
+
+    /*
+     * Initialize attachment handler.
+     */
+    c.attachmentHandler =
+        new nowAttachmentHandler(
+            attachmentSuccess,
+            attachmentError
+        );
+
+    c.attachmentHandler.setParams(
+        c.data.table,
+        c.data.sys_id,
+        24 * 1024 * 1024
+    );
+
+    /*
+     * Open attachment picker.
+     */
+    c.openAttachmentPicker = function() {
+
+        var input =
+            document.getElementById(
+                "learningAttachmentInput"
+            );
+
+        if (input) {
+            input.value = "";
+            input.click();
+        }
+    };
+
+    /*
+     * Upload selected files.
+     */
+    c.uploadAttachments = function(files) {
+
+        if (!files || !files.length) {
+            return;
+        }
+
+        c.uploading = true;
+
+        angular.forEach(
+            files,
+            function(file) {
+                c.attachmentHandler
+                    .onFileSelect(file);
+            }
+        );
+
+        $scope.$applyAsync();
+    };
+
+    /*
+     * Reload attachments.
+     */
+    c.refreshAttachments = function() {
+
+        c.server.get({
+            action: "get_attachments",
+            sys_id: c.data.sys_id
+        }).then(function(response) {
+
+            c.attachments =
+                response.data.attachments || [];
+        });
+    };
+
+    /*
+     * Delete attachment.
+     */
+    c.deleteAttachment = function(
+        attachment
+    ) {
+
+        if (
+            !attachment ||
+            !attachment.sys_id
+        ) {
+            return;
+        }
+
+        if (
+            !$window.confirm(
+                "Do you want to delete this attachment?"
+            )
+        ) {
+            return;
+        }
+
+        c.server.get({
+            action: "delete_attachment",
+            sys_id: c.data.sys_id,
+            attachment_sys_id:
+                attachment.sys_id
+        }).then(function(response) {
+
+            if (response.data.success) {
+
+                spUtil.addInfoMessage(
+                    response.data.message
+                );
+
+                c.refreshAttachments();
+                return;
+            }
+
+            spUtil.addErrorMessage(
+                response.data.message ||
+                "Unable to delete the attachment."
+            );
+        });
+    };
+
+    /*
+     * Check whether payment is required.
+     */
+    c.paymentRequired = function() {
+
+        return (
+            c.data.isPaymentRequired || ""
+        ).toString().toLowerCase() === "yes";
+    };
+
+    /*
+     * Clear payment details when No is selected.
+     */
+    c.paymentChanged = function() {
+
+        if (!c.paymentRequired()) {
+
+            c.data.currency = "";
+            c.data.courseFee = null;
+            c.data.otherExpenses = null;
+            c.data.specifyOtherExpenses = "";
+            c.data.totalCost = null;
+        }
+    };
+
+    /*
+     * Calculate total cost.
+     */
+    c.calculateTotalCost = function() {
+
+        var courseFee =
+            parseFloat(
+                c.data.courseFee
+            ) || 0;
+
+        var otherExpenses =
+            parseFloat(
+                c.data.otherExpenses
+            ) || 0;
+
+        c.data.totalCost =
+            parseFloat(
+                (
+                    courseFee +
+                    otherExpenses
+                ).toFixed(2)
+            );
+    };
+
+    /*
+     * Clear L2 manager when L2 is not required.
+     */
+    c.l2RequirementChanged = function() {
+
+        if (
+            c.data.l2Required === "no"
+        ) {
+            c.l2ManagerField = {
+                displayValue: "",
+                value: "",
+                name: "u_management_l2"
+            };
+        }
+    };
+
+    /*
+     * Format Date as yyyy-MM-dd for server.
+     */
+    c.formatDate = function(value) {
+
+        if (!value) {
+            return "";
+        }
+
+        if (!angular.isDate(value)) {
+            return value
+                .toString()
+                .substring(0, 10);
+        }
+
+        var year =
+            value.getFullYear();
+
+        var month =
+            value.getMonth() + 1;
+
+        var day =
+            value.getDate();
+
+        month =
+            month < 10
+                ? "0" + month
+                : month;
+
+        day =
+            day < 10
+                ? "0" + day
+                : day;
+
+        return (
+            year +
+            "-" +
+            month +
+            "-" +
+            day
+        );
+    };
+
+    /*
+     * Update and submit the learning application.
+     */
+    c.update = function(form) {
+
+        if (c.submitting) {
+            return;
+        }
+
+        if (!c.data.canSubmit) {
+
+            spUtil.addErrorMessage(
+                "This learning application cannot be submitted from its current status."
+            );
+
+            return;
+        }
+
+        if (form) {
+            form.$setSubmitted();
+        }
+
+        /*
+         * Employee Name validation.
+         */
+        if (
+            !c.employeeField ||
+            !c.employeeField.value
+        ) {
+            spUtil.addErrorMessage(
+                "Please select Employee Name."
+            );
+            return;
+        }
+
+        /*
+         * Employee Email validation.
+         */
+        if (
+            !c.data.employeeEmail ||
+            !c.data.employeeEmail
+                .toString()
+                .trim()
+        ) {
+            spUtil.addErrorMessage(
+                "Please enter Employee Email."
+            );
+            return;
+        }
+
+        /*
+         * Country validation.
+         */
+        if (
+            !c.countryField ||
+            !c.countryField.value
+        ) {
+            spUtil.addErrorMessage(
+                "Please select Country."
+            );
+            return;
+        }
+
+        /*
+         * Manager validation.
+         */
+        if (
+            !c.managerField ||
+            !c.managerField.value
+        ) {
+            spUtil.addErrorMessage(
+                "Please select In Company Manager."
+            );
+            return;
+        }
+
+        /*
+         * L2 Manager validation.
+         */
+        if (
+            c.data.l2Required === "yes" &&
+            (
+                !c.l2ManagerField ||
+                !c.l2ManagerField.value
+            )
+        ) {
+            spUtil.addErrorMessage(
+                "Please select Management L2."
+            );
+            return;
+        }
+
+        /*
+         * Course Title validation.
+         */
+        if (
+            !c.data.courseTitle ||
+            !c.data.courseTitle
+                .toString()
+                .trim()
+        ) {
+            spUtil.addErrorMessage(
+                "Please enter Course Title."
+            );
+            return;
+        }
+
+        /*
+         * Course Type validation.
+         */
+        if (!c.data.courseType) {
+            spUtil.addErrorMessage(
+                "Please select Course Type."
+            );
+            return;
+        }
+
+        /*
+         * Course Format validation.
+         */
+        if (!c.data.courseFormat) {
+            spUtil.addErrorMessage(
+                "Please select Course Format."
+            );
+            return;
+        }
+
+        /*
+         * Training Country validation.
+         */
+        if (
+            !c.trainingCountryField ||
+            !c.trainingCountryField.value
+        ) {
+            spUtil.addErrorMessage(
+                "Please select Training Location Country."
+            );
+            return;
+        }
+
+        /*
+         * Course Start Date validation.
+         */
+        if (!c.data.courseStartDate) {
+            spUtil.addErrorMessage(
+                "Please select Course Start Date."
+            );
+            return;
+        }
+
+        /*
+         * Course End Date validation.
+         */
+        if (!c.data.courseEndDate) {
+            spUtil.addErrorMessage(
+                "Please select Course End Date."
+            );
+            return;
+        }
+
+        /*
+         * Date order validation.
+         */
+        var startDate =
+            new Date(
+                c.data.courseStartDate
+            );
+
+        var endDate =
+            new Date(
+                c.data.courseEndDate
+            );
+
+        startDate.setHours(
+            0,
+            0,
+            0,
+            0
+        );
+
+        endDate.setHours(
+            0,
+            0,
+            0,
+            0
+        );
+
+        if (endDate < startDate) {
+
+            spUtil.addErrorMessage(
+                "Course End Date must be after or equal to Course Start Date."
+            );
+
+            return;
+        }
+
+        /*
+         * Currency validation.
+         */
+        if (
+            c.paymentRequired() &&
+            !c.data.currency
+        ) {
+            spUtil.addErrorMessage(
+                "Please select Currency."
+            );
+            return;
+        }
+
+        /*
+         * Prevent duplicate submission.
+         */
+        c.submitting = true;
+
+        c.server.get({
+
+            action: "update_and_submit",
+            sys_id: c.data.sys_id,
+
+            employee:
+                c.employeeField.value,
+
+            employeeEmail:
+                c.data.employeeEmail
+                    .toString()
+                    .trim(),
+
+            country:
+                c.countryField.value,
+
+            manager:
+                c.managerField.value,
+
+            l2Manager:
+                c.l2ManagerField &&
+                c.l2ManagerField.value
+                    ? c.l2ManagerField.value
+                    : "",
+
+            l2Required:
+                c.data.l2Required || "no",
+
+            courseTitle:
+                c.data.courseTitle,
+
+            courseType:
+                c.data.courseType,
+
+            courseFormat:
+                c.data.courseFormat,
+
+            trainingCountry:
+                c.trainingCountryField.value,
+
+            trainingProviderName:
+                c.data.trainingProviderName || "",
+
+            courseStartDate:
+                c.formatDate(
+                    c.data.courseStartDate
+                ),
+
+            courseEndDate:
+                c.formatDate(
+                    c.data.courseEndDate
+                ),
+
+            totalTrainingHours:
+                c.data.totalTrainingHours || "",
+
+            isPaymentRequired:
+                c.data.isPaymentRequired || "no",
+
+            currency:
+                c.data.currency || "",
+
+            courseFee:
+                c.data.courseFee || "",
+
+            otherExpenses:
+                c.data.otherExpenses || "",
+
+            specifyOtherExpenses:
+                c.data.specifyOtherExpenses || "",
+
+            totalCost:
+                c.data.totalCost || "",
+
+            acknowledgement:
+                c.data.acknowledgement === true,
+
+            comment:
+                c.data.comment || ""
+
+        }).then(
+            function(response) {
+
+                c.submitting = false;
+
+                if (
+                    response.data.success
+                ) {
+
+                    spUtil.addInfoMessage(
+                        response.data.message ||
+                        "Learning application submitted successfully."
+                    );
+
+                    $timeout(
+                        function() {
+                            $window.location.href =
+                                "/esc?id=check_my_records_asean";
+                        },
+                        800
+                    );
+
+                    return;
+                }
+
+                spUtil.addErrorMessage(
+                    response.data.message ||
+                    "Unable to submit the learning application."
+                );
+            },
+            function() {
+
+                c.submitting = false;
+
+                spUtil.addErrorMessage(
+                    "An unexpected error occurred while submitting."
+                );
+            }
+        );
+    };
+
+    /*
+     * Restore original values.
+     */
+    c.clearForm = function() {
+
+        c.data =
+            angular.copy(originalData);
+
+        c.employeeField =
+            angular.copy(originalEmployee);
+
+        c.countryField =
+            angular.copy(originalCountry);
+
+        c.managerField =
+            angular.copy(originalManager);
+
+        c.l2ManagerField =
+            angular.copy(originalL2Manager);
+
+        c.trainingCountryField =
+            angular.copy(
+                originalTrainingCountry
+            );
+
+        spUtil.addInfoMessage(
+            "Changes have been cleared."
+        );
+    };
+
+    /*
+     * Return to My Records page.
+     */
+    c.cancel = function() {
+
+        $window.location.href =
+            "/esc?id=check_my_records_asean";
+    };
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.learning-page {&#13;
+  min-height: 100vh;&#13;
+  padding: 38px 25px;&#13;
+  background: #f3f7f9;&#13;
+  font-family: Arial, Helvetica, sans-serif;&#13;
+  color: #1f2937;&#13;
+}&#13;
+&#13;
+.learning-card {&#13;
+  max-width: 1470px;&#13;
+  margin: 0 auto;&#13;
+  overflow: hidden;&#13;
+  background: #ffffff;&#13;
+  border: 1px solid #d7dee5;&#13;
+  border-radius: 11px;&#13;
+  box-shadow: 0 6px 18px rgba(28, 45, 64, 0.12);&#13;
+}&#13;
+&#13;
+.learning-header {&#13;
+  padding: 34px 40px 32px;&#13;
+  border-bottom: 1px solid #e2e6ea;&#13;
+}&#13;
+&#13;
+.header-title {&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  gap: 15px;&#13;
+  margin-bottom: 18px;&#13;
+  color: #f47b20;&#13;
+  font-size: 29px;&#13;
+  font-weight: 500;&#13;
+}&#13;
+&#13;
+.header-title i {&#13;
+  font-size: 32px;&#13;
+}&#13;
+&#13;
+.application-number {&#13;
+  color: #3e4650;&#13;
+  font-size: 18px;&#13;
+}&#13;
+&#13;
+.learning-body {&#13;
+  padding: 38px 42px 42px;&#13;
+}&#13;
+&#13;
+.form-grid {&#13;
+  display: grid;&#13;
+  grid-template-columns: repeat(2, minmax(0, 1fr));&#13;
+  column-gap: 22px;&#13;
+  row-gap: 25px;&#13;
+}&#13;
+&#13;
+.field-block {&#13;
+  min-width: 0;&#13;
+}&#13;
+&#13;
+.field-block.full-width {&#13;
+  width: 100%;&#13;
+}&#13;
+&#13;
+.field-block label {&#13;
+  display: block;&#13;
+  margin-bottom: 10px;&#13;
+  color: #272d35;&#13;
+  font-size: 16px;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.required-label::before {&#13;
+  content: "* ";&#13;
+  color: #d9534f;&#13;
+}&#13;
+&#13;
+.form-control {&#13;
+  width: 100%;&#13;
+  height: 57px;&#13;
+  padding: 12px 16px;&#13;
+  border: 1px solid #cbd5df;&#13;
+  border-radius: 5px;&#13;
+  background: #ffffff;&#13;
+  color: #111827;&#13;
+  font-size: 16px;&#13;
+  box-shadow: none;&#13;
+}&#13;
+&#13;
+.form-control:focus {&#13;
+  border-color: #f47b20;&#13;
+  outline: none;&#13;
+  box-shadow: 0 0 0 2px rgba(244, 123, 32, 0.12);&#13;
+}&#13;
+&#13;
+.readonly-field {&#13;
+  background: #f7f9fb;&#13;
+  cursor: not-allowed;&#13;
+}&#13;
+&#13;
+.textarea-control {&#13;
+  height: auto;&#13;
+  min-height: 95px;&#13;
+  resize: vertical;&#13;
+}&#13;
+&#13;
+.section-title {&#13;
+  margin: 34px 0 18px;&#13;
+  color: #252b32;&#13;
+  font-size: 20px;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.acknowledgement-block {&#13;
+  padding: 4px 0 8px;&#13;
+  font-size: 15px;&#13;
+}&#13;
+&#13;
+.acknowledgement-block label {&#13;
+  display: flex;&#13;
+  align-items: flex-start;&#13;
+  gap: 9px;&#13;
+  font-weight: 400;&#13;
+  line-height: 1.5;&#13;
+}&#13;
+&#13;
+.acknowledgement-block input {&#13;
+  margin-top: 3px;&#13;
+}&#13;
+&#13;
+/* Record picker */&#13;
+&#13;
+sn-record-picker .select2-container {&#13;
+  width: 100% !important;&#13;
+}&#13;
+&#13;
+sn-record-picker .select2-choice {&#13;
+  height: 57px !important;&#13;
+  padding: 12px 42px 12px 16px !important;&#13;
+  border: 1px solid #cbd5df !important;&#13;
+  border-radius: 5px !important;&#13;
+  background: #ffffff !important;&#13;
+  box-shadow: none !important;&#13;
+}&#13;
+&#13;
+sn-record-picker .select2-choice:hover {&#13;
+  border-color: #aebbc7 !important;&#13;
+}&#13;
+&#13;
+sn-record-picker .select2-container-active .select2-choice {&#13;
+  border-color: #f47b20 !important;&#13;
+  box-shadow: 0 0 0 2px rgba(244, 123, 32, 0.12) !important;&#13;
+}&#13;
+&#13;
+sn-record-picker .select2-chosen {&#13;
+  line-height: 31px !important;&#13;
+  font-size: 16px !important;&#13;
+}&#13;
+&#13;
+sn-record-picker .select2-arrow {&#13;
+  width: 38px !important;&#13;
+  border-left: 1px solid #cbd5df !important;&#13;
+  background: #ffffff !important;&#13;
+}&#13;
+&#13;
+sn-record-picker .select2-arrow b {&#13;
+  background-position: 0 15px !important;&#13;
+}&#13;
+&#13;
+/* Attachment section */&#13;
+&#13;
+.attachment-heading {&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  justify-content: space-between;&#13;
+}&#13;
+&#13;
+.attachment-icon-button {&#13;
+  padding: 9px 15px;&#13;
+  border: 1px solid #f47b20;&#13;
+  border-radius: 5px;&#13;
+  background: #ffffff;&#13;
+  color: #f47b20;&#13;
+  font-size: 14px;&#13;
+  font-weight: 600;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.attachment-icon-button:hover {&#13;
+  background: #fff5ed;&#13;
+}&#13;
+&#13;
+.attachment-icon-button:focus {&#13;
+  outline: none;&#13;
+  box-shadow: 0 0 0 2px rgba(244, 123, 32, 0.15);&#13;
+}&#13;
+&#13;
+.attachment-icon-button i {&#13;
+  margin-right: 7px;&#13;
+}&#13;
+&#13;
+.hidden-file-input {&#13;
+  display: none;&#13;
+}&#13;
+&#13;
+.attachment-empty {&#13;
+  padding: 18px;&#13;
+  border: 1px dashed #ccd5de;&#13;
+  border-radius: 5px;&#13;
+  background: #fafbfc;&#13;
+  color: #6b7280;&#13;
+  text-align: center;&#13;
+}&#13;
+&#13;
+.attachment-list {&#13;
+  overflow: hidden;&#13;
+  border: 1px solid #dce2e8;&#13;
+  border-radius: 6px;&#13;
+}&#13;
+&#13;
+.attachment-row {&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  justify-content: space-between;&#13;
+  padding: 14px 16px;&#13;
+  border-bottom: 1px solid #e6eaee;&#13;
+  background: #ffffff;&#13;
+}&#13;
+&#13;
+.attachment-row:last-child {&#13;
+  border-bottom: 0;&#13;
+}&#13;
+&#13;
+.attachment-row:hover {&#13;
+  background: #fafbfc;&#13;
+}&#13;
+&#13;
+.attachment-information {&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  gap: 10px;&#13;
+  min-width: 0;&#13;
+}&#13;
+&#13;
+.attachment-information a {&#13;
+  overflow: hidden;&#13;
+  color: #0875b5;&#13;
+  font-size: 15px;&#13;
+  font-weight: 600;&#13;
+  text-overflow: ellipsis;&#13;
+  white-space: nowrap;&#13;
+}&#13;
+&#13;
+.attachment-information a:hover {&#13;
+  color: #055e91;&#13;
+  text-decoration: underline;&#13;
+}&#13;
+&#13;
+.attachment-file-icon {&#13;
+  flex-shrink: 0;&#13;
+  color: #f47b20;&#13;
+  font-size: 19px;&#13;
+}&#13;
+&#13;
+.attachment-size {&#13;
+  flex-shrink: 0;&#13;
+  color: #7b8490;&#13;
+  font-size: 13px;&#13;
+}&#13;
+&#13;
+.delete-attachment-button {&#13;
+  flex-shrink: 0;&#13;
+  padding: 5px 8px;&#13;
+  border: 0;&#13;
+  background: transparent;&#13;
+  color: #d9534f;&#13;
+  font-size: 16px;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.delete-attachment-button:hover {&#13;
+  color: #b52b27;&#13;
+}&#13;
+&#13;
+.delete-attachment-button:focus {&#13;
+  outline: none;&#13;
+}&#13;
+&#13;
+/* Action buttons */&#13;
+&#13;
+.form-actions {&#13;
+  display: flex;&#13;
+  justify-content: flex-end;&#13;
+  gap: 15px;&#13;
+  margin-top: 38px;&#13;
+  padding-top: 25px;&#13;
+  border-top: 1px solid #e2e6ea;&#13;
+}&#13;
+&#13;
+.btn-action {&#13;
+  min-width: 120px;&#13;
+  padding: 12px 22px;&#13;
+  border-radius: 5px;&#13;
+  font-size: 15px;&#13;
+  font-weight: 600;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.btn-cancel {&#13;
+  border: 1px solid #cbd5df;&#13;
+  background: #ffffff;&#13;
+  color: #4b5563;&#13;
+}&#13;
+&#13;
+.btn-cancel:hover {&#13;
+  background: #f7f9fb;&#13;
+}&#13;
+&#13;
+.btn-clear {&#13;
+  border: 1px solid #f47b20;&#13;
+  background: #ffffff;&#13;
+  color: #f47b20;&#13;
+}&#13;
+&#13;
+.btn-clear:hover {&#13;
+  background: #fff5ed;&#13;
+}&#13;
+&#13;
+.btn-update {&#13;
+  border: 1px solid #f47b20;&#13;
+  background: #f47b20;&#13;
+  color: #ffffff;&#13;
+}&#13;
+&#13;
+.btn-update:hover {&#13;
+  border-color: #dc6814;&#13;
+  background: #dc6814;&#13;
+}&#13;
+&#13;
+.btn-action:focus {&#13;
+  outline: none;&#13;
+  box-shadow: 0 0 0 2px rgba(244, 123, 32, 0.16);&#13;
+}&#13;
+&#13;
+.btn-action[disabled] {&#13;
+  cursor: not-allowed;&#13;
+  opacity: 0.6;&#13;
+}&#13;
+&#13;
+/* Unsupported status message */&#13;
+&#13;
+.submit-status-message {&#13;
+  margin-top: 18px;&#13;
+  margin-bottom: 0;&#13;
+  border: 1px solid #f0d58c;&#13;
+  background: #fff8df;&#13;
+  color: #725b18;&#13;
+}&#13;
+&#13;
+/* Record not found */&#13;
+&#13;
+.record-error-container {&#13;
+  max-width: 1200px;&#13;
+  margin: 30px auto;&#13;
+  padding: 0 20px;&#13;
+}&#13;
+&#13;
+/* Tablet */&#13;
+&#13;
+@media screen and (max-width: 991px) {&#13;
+  .learning-header {&#13;
+    padding: 28px 30px;&#13;
+  }&#13;
+&#13;
+  .learning-body {&#13;
+    padding: 30px;&#13;
+  }&#13;
+&#13;
+  .form-grid {&#13;
+    column-gap: 18px;&#13;
+    row-gap: 22px;&#13;
+  }&#13;
+}&#13;
+&#13;
+/* Mobile */&#13;
+&#13;
+@media screen and (max-width: 767px) {&#13;
+  .learning-page {&#13;
+    padding: 15px;&#13;
+  }&#13;
+&#13;
+  .learning-header,&#13;
+  .learning-body {&#13;
+    padding: 24px 18px;&#13;
+  }&#13;
+&#13;
+  .form-grid {&#13;
+    grid-template-columns: 1fr;&#13;
+  }&#13;
+&#13;
+  .header-title {&#13;
+    align-items: flex-start;&#13;
+    font-size: 23px;&#13;
+  }&#13;
+&#13;
+  .header-title i {&#13;
+    font-size: 26px;&#13;
+  }&#13;
+&#13;
+  .application-number {&#13;
+    font-size: 16px;&#13;
+  }&#13;
+&#13;
+  .attachment-heading {&#13;
+    align-items: flex-start;&#13;
+    flex-direction: column;&#13;
+    gap: 12px;&#13;
+  }&#13;
+&#13;
+  .attachment-icon-button {&#13;
+    width: 100%;&#13;
+  }&#13;
+&#13;
+  .attachment-row {&#13;
+    align-items: flex-start;&#13;
+    gap: 12px;&#13;
+  }&#13;
+&#13;
+  .attachment-information {&#13;
+    align-items: flex-start;&#13;
+    flex-wrap: wrap;&#13;
+  }&#13;
+&#13;
+  .attachment-information a {&#13;
+    max-width: 210px;&#13;
+  }&#13;
+&#13;
+  .attachment-size {&#13;
+    width: 100%;&#13;
+    padding-left: 29px;&#13;
+  }&#13;
+&#13;
+  .form-actions {&#13;
+    flex-direction: column-reverse;&#13;
+  }&#13;
+&#13;
+  .btn-action {&#13;
+    width: 100%;&#13;
+  }&#13;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>edit_registration_asean_new</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Edit Registration ASEAN New</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+
+    var TABLE_NAME =
+        "x_1549902_asean_0_learning_application";
+
+    data.table = TABLE_NAME;
+    data.notFound = false;
+    data.success = false;
+    data.message = "";
+    data.debugMessage = "";
+    data.attachments = [];
+
+    var sysId = "";
+
+    if (input && input.sys_id) {
+        sysId = input.sys_id.toString();
+    } else {
+        sysId = (
+            $sp.getParameter("sys_id") || ""
+        ).toString();
+    }
+
+    function getValue(record, fieldName) {
+        if (
+            !record ||
+            !record.isValidField(fieldName)
+        ) {
+            return "";
+        }
+
+        return record.getValue(fieldName) || "";
+    }
+
+    function getDisplayValue(record, fieldName) {
+        if (
+            !record ||
+            !record.isValidField(fieldName)
+        ) {
+            return "";
+        }
+
+        return record.getDisplayValue(fieldName) || "";
+    }
+
+    function setValue(record, fieldName, value) {
+        if (
+            !record ||
+            !record.isValidField(fieldName)
+        ) {
+            return;
+        }
+
+        record.setValue(
+            fieldName,
+            value === null ||
+            value === undefined
+                ? ""
+                : value
+        );
+    }
+
+    function getChoiceOptions(
+        tableName,
+        fieldName
+    ) {
+        var options = [];
+
+        var choiceGR =
+            new GlideRecord("sys_choice");
+
+        choiceGR.addQuery("name", tableName);
+        choiceGR.addQuery("element", fieldName);
+        choiceGR.addQuery("inactive", false);
+        choiceGR.orderBy("sequence");
+        choiceGR.orderBy("label");
+        choiceGR.query();
+
+        while (choiceGR.next()) {
+            options.push({
+                label: choiceGR.getValue("label"),
+                value: choiceGR.getValue("value")
+            });
+        }
+
+        return options;
+    }
+
+    function getCurrencyOptions() {
+        return [
+            {
+                label: "EUR",
+                value: "EUR"
+            },
+            {
+                label: "INR",
+                value: "INR"
+            },
+            {
+                label: "USD",
+                value: "USD"
+            },
+            {
+                label: "GBP",
+                value: "GBP"
+            },
+            {
+                label: "SGD",
+                value: "SGD"
+            },
+            {
+                label: "MYR",
+                value: "MYR"
+            },
+            {
+                label: "THB",
+                value: "THB"
+            },
+            {
+                label: "IDR",
+                value: "IDR"
+            },
+            {
+                label: "PHP",
+                value: "PHP"
+            },
+            {
+                label: "VND",
+                value: "VND"
+            }
+        ];
+    }
+
+    function formatFileSize(sizeBytes) {
+        var size = parseInt(sizeBytes, 10) || 0;
+
+        if (size < 1024) {
+            return size + " B";
+        }
+
+        if (size < 1024 * 1024) {
+            return (
+                size / 1024
+            ).toFixed(1) + " KB";
+        }
+
+        return (
+            size / (1024 * 1024)
+        ).toFixed(1) + " MB";
+    }
+
+    function getAttachments(recordSysId) {
+        var attachments = [];
+
+        var attachmentGR =
+            new GlideRecord("sys_attachment");
+
+        attachmentGR.addQuery(
+            "table_name",
+            TABLE_NAME
+        );
+
+        attachmentGR.addQuery(
+            "table_sys_id",
+            recordSysId
+        );
+
+        attachmentGR.orderByDesc("sys_created_on");
+        attachmentGR.query();
+
+        while (attachmentGR.next()) {
+
+            var attachmentSysId =
+                attachmentGR.getUniqueValue();
+
+            attachments.push({
+                sys_id: attachmentSysId,
+
+                file_name:
+                    attachmentGR.getValue(
+                        "file_name"
+                    ),
+
+                content_type:
+                    attachmentGR.getValue(
+                        "content_type"
+                    ),
+
+                size_bytes:
+                    attachmentGR.getValue(
+                        "size_bytes"
+                    ),
+
+                sizeDisplay:
+                    formatFileSize(
+                        attachmentGR.getValue(
+                            "size_bytes"
+                        )
+                    ),
+
+                downloadUrl:
+                    "/sys_attachment.do?sys_id=" +
+                    attachmentSysId
+            });
+        }
+
+        return attachments;
+    }
+
+    /*
+     * Get attachments after upload.
+     */
+    if (
+        input &&
+        input.action === "get_attachments"
+    ) {
+        data.attachments =
+            getAttachments(sysId);
+
+        return;
+    }
+
+    /*
+     * Delete attachment.
+     */
+    if (
+        input &&
+        input.action === "delete_attachment"
+    ) {
+        if (!input.attachment_sys_id) {
+            data.success = false;
+            data.message =
+                "Attachment ID is missing.";
+            return;
+        }
+
+        var attachment =
+            new GlideRecord("sys_attachment");
+
+        if (
+            !attachment.get(
+                input.attachment_sys_id
+            )
+        ) {
+            data.success = false;
+            data.message =
+                "Attachment could not be found.";
+            return;
+        }
+
+        if (
+            attachment.getValue("table_name") !==
+                TABLE_NAME ||
+            attachment.getValue("table_sys_id") !==
+                sysId
+        ) {
+            data.success = false;
+            data.message =
+                "The attachment does not belong to this application.";
+            return;
+        }
+
+        attachment.deleteRecord();
+
+        data.success = true;
+        data.message =
+            "Attachment deleted successfully.";
+
+        return;
+    }
+
+    /*
+     * Initial load.
+     */
+    if (!input) {
+
+        data.loggedInUserEmail =
+            gs.getUser().getEmail() || "";
+
+        data.userLevel = "Employee";
+
+        data.courseTypeOptions =
+            getChoiceOptions(
+                TABLE_NAME,
+                "u_course_type"
+            );
+
+        data.courseFormatOptions =
+            getChoiceOptions(
+                TABLE_NAME,
+                "u_course_format"
+            );
+
+        data.currencyOptions =
+            getCurrencyOptions();
+
+        if (!sysId) {
+            data.notFound = true;
+            data.debugMessage =
+                "The sys_id URL parameter is missing.";
+            return;
+        }
+
+        var gr = new GlideRecord(TABLE_NAME);
+
+        if (!gr.get(sysId)) {
+            data.notFound = true;
+            data.debugMessage =
+                "No record was found for sys_id: " +
+                sysId;
+            return;
+        }
+
+        data.sys_id = gr.getUniqueValue();
+
+        data.learningId =
+            getDisplayValue(gr, "number");
+
+        data.status =
+            getDisplayValue(gr, "u_status");
+
+        data.statusValue =
+            getValue(gr, "u_status");
+
+        /*
+         * These are the statuses where the
+         * Submit button is available.
+         */
+        data.canSubmit = [
+            "draft",
+            "return_by_manager",
+            "return_by_l2",
+            "return_by_hr"
+        ].indexOf(data.statusValue) > -1;
+
+        data.employee =
+            getValue(
+                gr,
+                "u_employee_name"
+            );
+
+        data.employeeDisplay =
+            getDisplayValue(
+                gr,
+                "u_employee_name"
+            );
+
+        data.employeeEmail =
+            getValue(
+                gr,
+                "u_employee_email"
+            );
+
+        data.country =
+            getValue(gr, "u_country");
+
+        data.countryDisplay =
+            getDisplayValue(
+                gr,
+                "u_country"
+            );
+
+        data.manager =
+            getValue(
+                gr,
+                "u_manager_email"
+            );
+
+        data.managerDisplay =
+            getDisplayValue(
+                gr,
+                "u_manager_email"
+            );
+
+        data.l2Manager =
+            getValue(
+                gr,
+                "u_management_l2"
+            );
+
+        data.l2ManagerDisplay =
+            getDisplayValue(
+                gr,
+                "u_management_l2"
+            );
+
+        data.l2Required =
+            getValue(
+                gr,
+                "manager_approval_l2_required"
+            );
+
+        data.courseTitle =
+            getValue(
+                gr,
+                "u_course_title"
+            );
+
+        data.courseType =
+            getValue(
+                gr,
+                "u_course_type"
+            );
+
+        data.courseFormat =
+            getValue(
+                gr,
+                "u_course_format"
+            );
+
+        data.trainingCountry =
+            getValue(
+                gr,
+                "u_training_country"
+            );
+
+        data.trainingCountryDisplay =
+            getDisplayValue(
+                gr,
+                "u_training_country"
+            );
+
+        /*
+         * If the training country is a string
+         * containing a core_country sys_id,
+         * resolve its display name.
+         */
+        if (
+            data.trainingCountry &&
+            data.trainingCountryDisplay ===
+                data.trainingCountry
+        ) {
+            var countryGR =
+                new GlideRecord("core_country");
+
+            if (
+                countryGR.get(
+                    data.trainingCountry
+                )
+            ) {
+                data.trainingCountryDisplay =
+                    countryGR.getDisplayValue(
+                        "name"
+                    );
+            }
+        }
+
+        data.trainingProviderName =
+            getValue(
+                gr,
+                "u_training_provider_name"
+            );
+
+        data.courseStartDate =
+            getValue(
+                gr,
+                "course_start_date"
+            );
+
+        data.courseEndDate =
+            getValue(
+                gr,
+                "u_course_end_date"
+            );
+
+        data.totalTrainingHours =
+            parseFloat(
+                getValue(
+                    gr,
+                    "u_total_training_hours"
+                ) || 0
+            );
+
+        data.isPaymentRequired =
+            getValue(
+                gr,
+                "is_payment_required"
+            );
+
+        data.currency =
+            getValue(gr, "currency");
+
+        data.courseFee =
+            parseFloat(
+                getValue(
+                    gr,
+                    "u_course_fee"
+                ) || 0
+            );
+
+        data.otherExpenses =
+            parseFloat(
+                getValue(
+                    gr,
+                    "u_other_expenses"
+                ) || 0
+            );
+
+        data.specifyOtherExpenses =
+            getValue(
+                gr,
+                "u_specify_other_expenses"
+            );
+
+        data.totalCost =
+            parseFloat(
+                getValue(
+                    gr,
+                    "u_total_cost"
+                ) || 0
+            );
+
+        data.acknowledgement =
+            getValue(
+                gr,
+                "acknowlegment"
+            ) === "true";
+
+        data.comment =
+            getValue(
+                gr,
+                "u_comment"
+            );
+
+        data.attachments =
+            getAttachments(
+                gr.getUniqueValue()
+            );
+
+        return;
+    }
+
+    /*
+     * Update and submit.
+     */
+    if (
+        input &&
+        input.action === "update_and_submit"
+    ) {
+
+        if (!sysId) {
+            data.success = false;
+            data.message =
+                "Learning Application ID is missing.";
+            return;
+        }
+
+        var reg =
+            new GlideRecord(TABLE_NAME);
+
+        if (!reg.get(sysId)) {
+            data.success = false;
+            data.message =
+                "Learning application could not be found.";
+            return;
+        }
+
+        /*
+         * Always get the current status directly
+         * from the database.
+         */
+        var currentStatus =
+            getValue(reg, "u_status");
+
+        var currentStatusDisplay =
+            getDisplayValue(
+                reg,
+                "u_status"
+            );
+
+        var nextStatus = "";
+        var successMessage = "";
+
+        /*
+         * State transition mapping.
+         */
+        switch (currentStatus) {
+
+            case "draft":
+
+                nextStatus = "submitted";
+
+                successMessage =
+                    "Learning application submitted successfully.";
+
+                break;
+
+            case "return_by_manager":
+
+                nextStatus =
+                    "pending_manager_approval";
+
+                successMessage =
+                    "Learning application submitted for Manager approval.";
+
+                break;
+
+            case "return_by_l2":
+
+                nextStatus =
+                    "pending_l2_approval";
+
+                successMessage =
+                    "Learning application submitted for L2 approval.";
+
+                break;
+
+            case "return_by_hr":
+
+                nextStatus =
+                    "pending_hr_review";
+
+                successMessage =
+                    "Learning application submitted for HR review.";
+
+                break;
+
+            default:
+
+                data.success = false;
+
+                data.message =
+                    "This learning application cannot be submitted from its current status: " +
+                    (
+                        currentStatusDisplay ||
+                        currentStatus
+                    ) +
+                    ".";
+
+                return;
+        }
+
+        /*
+         * Mandatory field validation.
+         */
+        if (
+            !input.employee ||
+            !input.employeeEmail ||
+            !input.country ||
+            !input.manager ||
+            !input.courseTitle ||
+            !input.courseType ||
+            !input.courseFormat ||
+            !input.trainingCountry ||
+            !input.courseStartDate ||
+            !input.courseEndDate
+        ) {
+            data.success = false;
+            data.message =
+                "Please complete all mandatory fields.";
+            return;
+        }
+
+        if (
+            input.l2Required === "yes" &&
+            !input.l2Manager
+        ) {
+            data.success = false;
+            data.message =
+                "Please select Management L2.";
+            return;
+        }
+
+        /*
+         * Date validation.
+         */
+        var startDate = new GlideDate();
+
+        startDate.setValue(
+            input.courseStartDate
+        );
+
+        var endDate = new GlideDate();
+
+        endDate.setValue(
+            input.courseEndDate
+        );
+
+        if (
+            endDate.getNumericValue() <
+            startDate.getNumericValue()
+        ) {
+            data.success = false;
+
+            data.message =
+                "Course End Date must be after or equal to Course Start Date.";
+
+            return;
+        }
+
+        /*
+         * Employee information.
+         */
+        setValue(
+            reg,
+            "u_employee_name",
+            input.employee
+        );
+
+        setValue(
+            reg,
+            "u_employee_email",
+            input.employeeEmail
+        );
+
+        setValue(
+            reg,
+            "u_country",
+            input.country
+        );
+
+        setValue(
+            reg,
+            "u_manager_email",
+            input.manager
+        );
+
+        setValue(
+            reg,
+            "u_management_l2",
+            input.l2Manager || ""
+        );
+
+        setValue(
+            reg,
+            "manager_approval_l2_required",
+            input.l2Required || "no"
+        );
+
+        /*
+         * Course information.
+         */
+        setValue(
+            reg,
+            "u_course_title",
+            input.courseTitle
+        );
+
+        setValue(
+            reg,
+            "short_description",
+            input.courseTitle
+        );
+
+        setValue(
+            reg,
+            "u_course_type",
+            input.courseType
+        );
+
+        setValue(
+            reg,
+            "u_course_format",
+            input.courseFormat
+        );
+
+        setValue(
+            reg,
+            "u_training_country",
+            input.trainingCountry
+        );
+
+        setValue(
+            reg,
+            "u_training_provider_name",
+            input.trainingProviderName || ""
+        );
+
+        setValue(
+            reg,
+            "course_start_date",
+            input.courseStartDate
+        );
+
+        setValue(
+            reg,
+            "u_course_end_date",
+            input.courseEndDate
+        );
+
+        setValue(
+            reg,
+            "u_total_training_hours",
+            input.totalTrainingHours || ""
+        );
+
+        /*
+         * Payment information.
+         */
+        setValue(
+            reg,
+            "is_payment_required",
+            input.isPaymentRequired || "no"
+        );
+
+        if (
+            input.isPaymentRequired === "yes"
+        ) {
+            setValue(
+                reg,
+                "currency",
+                input.currency || ""
+            );
+
+            setValue(
+                reg,
+                "u_course_fee",
+                input.courseFee || ""
+            );
+
+            setValue(
+                reg,
+                "u_other_expenses",
+                input.otherExpenses || ""
+            );
+
+            setValue(
+                reg,
+                "u_specify_other_expenses",
+                input.specifyOtherExpenses || ""
+            );
+
+            setValue(
+                reg,
+                "u_total_cost",
+                input.totalCost || ""
+            );
+
+        } else {
+
+            setValue(
+                reg,
+                "currency",
+                ""
+            );
+
+            setValue(
+                reg,
+                "u_course_fee",
+                ""
+            );
+
+            setValue(
+                reg,
+                "u_other_expenses",
+                ""
+            );
+
+            setValue(
+                reg,
+                "u_specify_other_expenses",
+                ""
+            );
+
+            setValue(
+                reg,
+                "u_total_cost",
+                ""
+            );
+        }
+
+        /*
+         * Acknowledgement and comment.
+         */
+        setValue(
+            reg,
+            "acknowlegment",
+            input.acknowledgement === true
+        );
+
+        setValue(
+            reg,
+            "u_comment",
+            input.comment || ""
+        );
+
+        /*
+         * Resolve new status display label.
+         */
+        var nextStatusDisplay =
+            nextStatus;
+
+        var statusChoiceGR =
+            new GlideRecord("sys_choice");
+
+        statusChoiceGR.addQuery(
+            "name",
+            TABLE_NAME
+        );
+
+        statusChoiceGR.addQuery(
+            "element",
+            "u_status"
+        );
+
+        statusChoiceGR.addQuery(
+            "value",
+            nextStatus
+        );
+
+        statusChoiceGR.addQuery(
+            "inactive",
+            false
+        );
+
+        statusChoiceGR.setLimit(1);
+        statusChoiceGR.query();
+
+        if (statusChoiceGR.next()) {
+            nextStatusDisplay =
+                statusChoiceGR.getValue(
+                    "label"
+                ) || nextStatus;
+        }
+
+        /*
+         * Add submission details to work notes.
+         */
+        if (
+            reg.isValidField("work_notes")
+        ) {
+            var workNote =
+                "Learning application submitted by " +
+                gs.getUserDisplayName() +
+                ".\nPrevious Status: " +
+                (
+                    currentStatusDisplay ||
+                    currentStatus
+                ) +
+                "\nNew Status: " +
+                nextStatusDisplay;
+
+            if (
+                input.comment &&
+                input.comment
+                    .toString()
+                    .trim()
+            ) {
+                workNote +=
+                    "\n\nComments:\n" +
+                    input.comment
+                        .toString()
+                        .trim();
+            }
+
+            reg.setValue(
+                "work_notes",
+                workNote
+            );
+        }
+
+        /*
+         * Apply status transition.
+         */
+        setValue(
+            reg,
+            "u_status",
+            nextStatus
+        );
+
+        /*
+         * Keep platform approval consistent.
+         */
+        if (
+            reg.isValidField("approval")
+        ) {
+            reg.setValue(
+                "approval",
+                "requested"
+            );
+        }
+
+        var updatedSysId =
+            reg.update();
+
+        if (updatedSysId) {
+
+            data.success = true;
+            data.message = successMessage;
+
+            data.previousStatus =
+                currentStatus;
+
+            data.newStatus =
+                nextStatus;
+
+        } else {
+
+            data.success = false;
+
+            data.message =
+                "Unable to submit the learning application.";
+        }
+
+        return;
+    }
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-17 11:52:00</sys_created_on>
+        <sys_id>4dbf74c747c28710ff78de94116d433a</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>Edit Registration ASEAN New</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sp_widget_4dbf74c747c28710ff78de94116d433a</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-17 11:56:23</sys_updated_on>
+        <template><![CDATA[<div class="learning-page" ng-if="!c.data.notFound">
+
+  <div class="learning-card">
+
+    <!-- Header -->
+    <div class="learning-header">
+
+      <div class="header-title">
+        <i class="fa fa-file-text-o"></i>
+        <span>Learning Application Details</span>
+      </div>
+
+      <div class="application-number">
+        <strong>Application Number:</strong>
+        {{c.data.learningId}}
+      </div>
+
+    </div>
+
+    <div class="learning-body">
+
+      <form name="editLearningForm"
+            ng-submit="c.update(editLearningForm)"
+            novalidate>
+
+        <!-- Request Information -->
+        <div class="form-grid">
+
+          <div class="field-block">
+            <label>Number</label>
+
+            <input type="text"
+                   class="form-control readonly-field"
+                   ng-model="c.data.learningId"
+                   readonly>
+          </div>
+
+          <div class="field-block">
+            <label>Ticket Status</label>
+
+            <input type="text"
+                   class="form-control readonly-field"
+                   ng-model="c.data.status"
+                   readonly>
+          </div>
+
+          <!-- Employee Name -->
+          <div class="field-block">
+
+            <label class="required-label">
+              Employee Name
+            </label>
+
+            <sn-record-picker
+              field="c.employeeField"
+              table="'sys_user'"
+              display-field="'name'"
+              value-field="'sys_id'"
+              search-fields="'name,email,user_name'"
+              default-query="'active=true'"
+              page-size="20">
+            </sn-record-picker>
+
+          </div>
+
+          <!-- Employee Email -->
+          <div class="field-block">
+
+            <label class="required-label">
+              Employee Email
+            </label>
+
+            <input type="email"
+                   class="form-control"
+                   ng-model="c.data.employeeEmail"
+                   name="employeeEmail"
+                   required>
+
+          </div>
+
+          <!-- Country -->
+          <div class="field-block">
+
+            <label class="required-label">
+              Country
+            </label>
+
+            <sn-record-picker
+              field="c.countryField"
+              table="'core_country'"
+              display-field="'name'"
+              value-field="'sys_id'"
+              search-fields="'name,iso3166_2,iso3166_3'"
+              page-size="20">
+            </sn-record-picker>
+
+          </div>
+
+          <!-- Manager -->
+          <div class="field-block">
+
+            <label class="required-label">
+              In Company Manager Email
+            </label>
+
+            <sn-record-picker
+              field="c.managerField"
+              table="'sys_user'"
+              display-field="'name'"
+              value-field="'sys_id'"
+              search-fields="'name,email,user_name'"
+              default-query="'active=true^emailISNOTEMPTY'"
+              page-size="20">
+            </sn-record-picker>
+
+          </div>
+
+          <!-- L2 Required -->
+          <div class="field-block">
+
+            <label>
+              Manager Approval (L2 Required)
+            </label>
+
+            <select class="form-control"
+                    ng-model="c.data.l2Required"
+                    ng-change="c.l2RequirementChanged()">
+
+              <option value="">
+                -- Select --
+              </option>
+
+              <option value="yes">
+                Yes
+              </option>
+
+              <option value="no">
+                No
+              </option>
+
+            </select>
+
+          </div>
+
+          <!-- L2 Manager -->
+          <div class="field-block"
+               ng-if="c.data.l2Required === 'yes'">
+
+            <label class="required-label">
+              Management L2
+            </label>
+
+            <sn-record-picker
+              field="c.l2ManagerField"
+              table="'sys_user'"
+              display-field="'name'"
+              value-field="'sys_id'"
+              search-fields="'name,email,user_name'"
+              default-query="'active=true^emailISNOTEMPTY'"
+              page-size="20">
+            </sn-record-picker>
+
+          </div>
+
+        </div>
+
+        <!-- Course Details -->
+        <div class="section-title">
+          Course Details
+        </div>
+
+        <div class="form-grid">
+
+          <div class="field-block">
+
+            <label class="required-label">
+              Course Title
+            </label>
+
+            <input type="text"
+                   class="form-control"
+                   ng-model="c.data.courseTitle"
+                   name="courseTitle"
+                   required>
+
+          </div>
+
+          <div class="field-block">
+
+            <label>
+              Training Provider Name
+            </label>
+
+            <input type="text"
+                   class="form-control"
+                   ng-model="c.data.trainingProviderName">
+
+          </div>
+
+          <div class="field-block">
+
+            <label class="required-label">
+              Course Type
+            </label>
+
+            <select class="form-control"
+                    ng-model="c.data.courseType"
+                    name="courseType"
+                    ng-options="option.value as option.label for option in c.data.courseTypeOptions"
+                    required>
+
+              <option value="">
+                -- Select --
+              </option>
+
+            </select>
+
+          </div>
+
+          <div class="field-block">
+
+            <label class="required-label">
+              Training Location - Country
+            </label>
+
+            <sn-record-picker
+              field="c.trainingCountryField"
+              table="'core_country'"
+              display-field="'name'"
+              value-field="'sys_id'"
+              search-fields="'name,iso3166_2,iso3166_3'"
+              page-size="20">
+            </sn-record-picker>
+
+          </div>
+
+          <div class="field-block">
+
+            <label class="required-label">
+              Course Format
+            </label>
+
+            <select class="form-control"
+                    ng-model="c.data.courseFormat"
+                    name="courseFormat"
+                    ng-options="option.value as option.label for option in c.data.courseFormatOptions"
+                    required>
+
+              <option value="">
+                -- Select --
+              </option>
+
+            </select>
+
+          </div>
+
+          <div class="field-block">
+
+            <label>
+              Total Training Hours
+            </label>
+
+            <input type="number"
+                   class="form-control"
+                   min="0"
+                   step="0.5"
+                   ng-model="c.data.totalTrainingHours">
+
+          </div>
+
+          <div class="field-block">
+
+            <label class="required-label">
+              Course Start Date
+            </label>
+
+            <input type="date"
+                   class="form-control"
+                   ng-model="c.data.courseStartDate"
+                   name="courseStartDate"
+                   required>
+
+          </div>
+
+          <div class="field-block">
+
+            <label class="required-label">
+              Course End Date
+            </label>
+
+            <input type="date"
+                   class="form-control"
+                   ng-model="c.data.courseEndDate"
+                   name="courseEndDate"
+                   required>
+
+          </div>
+
+        </div>
+
+        <!-- Payment Details -->
+        <div class="section-title">
+          Payment Details
+        </div>
+
+        <div class="form-grid">
+
+          <div class="field-block">
+
+            <label>
+              Is Payment Required
+            </label>
+
+            <select class="form-control"
+                    ng-model="c.data.isPaymentRequired"
+                    ng-change="c.paymentChanged()">
+
+              <option value="">
+                -- Select --
+              </option>
+
+              <option value="yes">
+                Yes
+              </option>
+
+              <option value="no">
+                No
+              </option>
+
+            </select>
+
+          </div>
+
+          <div class="field-block"
+               ng-if="c.paymentRequired()">
+
+            <label>
+              Course Fee
+            </label>
+
+            <input type="number"
+                   class="form-control"
+                   min="0"
+                   step="0.01"
+                   ng-model="c.data.courseFee"
+                   ng-change="c.calculateTotalCost()">
+
+          </div>
+
+          <div class="field-block"
+               ng-if="c.paymentRequired()">
+
+            <label>
+              Currency
+            </label>
+
+            <select class="form-control"
+                    ng-model="c.data.currency">
+
+              <option value="">
+                -- Select --
+              </option>
+
+              <option ng-repeat="currency in c.data.currencyOptions"
+                      value="{{currency.value}}">
+                {{currency.label}}
+              </option>
+
+            </select>
+
+          </div>
+
+          <div class="field-block"
+               ng-if="c.paymentRequired()">
+
+            <label>
+              Other Expenses
+            </label>
+
+            <input type="number"
+                   class="form-control"
+                   min="0"
+                   step="0.01"
+                   ng-model="c.data.otherExpenses"
+                   ng-change="c.calculateTotalCost()">
+
+          </div>
+
+          <div class="field-block"
+               ng-if="c.paymentRequired()">
+
+            <label>
+              Specify Other Expenses
+            </label>
+
+            <textarea class="form-control textarea-control"
+                      rows="3"
+                      ng-model="c.data.specifyOtherExpenses">
+            </textarea>
+
+          </div>
+
+          <div class="field-block"
+               ng-if="c.paymentRequired()">
+
+            <label>
+              Total Cost
+            </label>
+
+            <input type="number"
+                   class="form-control"
+                   min="0"
+                   step="0.01"
+                   ng-model="c.data.totalCost"
+                   readonly>
+
+          </div>
+
+        </div>
+
+        <!-- Acknowledgement -->
+        <div class="section-title">
+          Acknowledgement
+        </div>
+
+        <div class="acknowledgement-block">
+
+          <label>
+
+            <input type="checkbox"
+                   ng-model="c.data.acknowledgement">
+
+            By submitting the Learning Application Form, I acknowledge
+            that the information provided is correct.
+
+          </label>
+
+        </div>
+
+        <!-- Notes -->
+        <div class="section-title">
+          Notes
+        </div>
+
+        <div class="field-block full-width">
+
+          <label>
+            Comments
+          </label>
+
+          <textarea class="form-control textarea-control"
+                    rows="3"
+                    ng-model="c.data.comment">
+          </textarea>
+
+        </div>
+
+        <!-- Attachments -->
+        <div class="section-title attachment-heading">
+
+          <span>
+            Attachments
+          </span>
+
+          <button type="button"
+                  class="attachment-icon-button"
+                  title="Add Attachment"
+                  ng-click="c.openAttachmentPicker()">
+
+            <i class="fa fa-paperclip"></i>
+            Add Attachment
+
+          </button>
+
+          <input id="learningAttachmentInput"
+                 type="file"
+                 multiple
+                 class="hidden-file-input"
+                 onchange="angular.element(this).scope().c.uploadAttachments(this.files)">
+
+        </div>
+
+        <div class="attachment-empty"
+             ng-if="!c.attachments.length">
+
+          No attachments are available.
+
+        </div>
+
+        <div class="attachment-list"
+             ng-if="c.attachments.length">
+
+          <div class="attachment-row"
+               ng-repeat="attachment in c.attachments track by attachment.sys_id">
+
+            <div class="attachment-information">
+
+              <i class="fa fa-file-o attachment-file-icon"></i>
+
+              <a ng-href="{{attachment.downloadUrl}}"
+                 target="_blank"
+                 title="Download attachment">
+
+                {{attachment.file_name}}
+
+              </a>
+
+              <span class="attachment-size">
+                {{attachment.sizeDisplay}}
+              </span>
+
+            </div>
+
+            <button type="button"
+                    class="delete-attachment-button"
+                    title="Delete Attachment"
+                    ng-click="c.deleteAttachment(attachment)">
+
+              <i class="fa fa-trash"></i>
+
+            </button>
+
+          </div>
+
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+
+          <button type="button"
+                  class="btn-action btn-cancel"
+                  ng-click="c.cancel()"
+                  ng-disabled="c.submitting">
+
+            CANCEL
+
+          </button>
+
+          <button type="button"
+                  class="btn-action btn-clear"
+                  ng-click="c.clearForm()"
+                  ng-disabled="c.submitting">
+
+            CLEAR
+
+          </button>
+
+          <button type="submit"
+                  class="btn-action btn-update"
+                  ng-if="c.data.canSubmit"
+                  ng-disabled="c.submitting || c.uploading">
+
+            <span ng-if="!c.submitting">
+              SUBMIT
+            </span>
+
+            <span ng-if="c.submitting">
+
+              <i class="fa fa-spinner fa-spin"></i>
+              SUBMITTING
+
+            </span>
+
+          </button>
+
+        </div>
+
+        <div class="alert alert-warning submit-status-message"
+             ng-if="!c.data.canSubmit">
+
+          This learning application cannot be edited or submitted
+          from its current status.
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Record Not Found -->
+<div class="record-error-container"
+     ng-if="c.data.notFound">
+
+  <div class="alert alert-danger">
+
+    <strong>
+      The requested learning application record could not be found.
+    </strong>
+
+    <div ng-if="c.data.debugMessage">
+      {{c.data.debugMessage}}
+    </div>
+
+  </div>
+
+</div>]]></template>
+    </sp_widget>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</application>
+        <file_path/>
+        <instance_id>1342adfb3b190fd8baf6048aa4e45a41</instance_id>
+        <instance_name>dev404202</instance_name>
+        <name>sp_widget_4dbf74c747c28710ff78de94116d433a</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sp_widget"&gt;&lt;sp_widget action="INSERT_OR_UPDATE"&gt;&lt;category&gt;custom&lt;/category&gt;&lt;client_script&gt;&lt;![CDATA[api.controller = function($scope,spUtil,$window,$timeout,nowAttachmentHandler) {
+
+    var c = this;
+
+    c.submitting = false;
+    c.uploading = false;
+    c.attachments = c.data.attachments || [];
+
+    /*
+     * Record picker models
+     */
+    c.employeeField = {
+        displayValue: c.data.employeeDisplay || "",
+        value: c.data.employee || "",
+        name: "u_employee_name"
+    };
+
+    c.countryField = {
+        displayValue: c.data.countryDisplay || "",
+        value: c.data.country || "",
+        name: "u_country"
+    };
+
+    c.managerField = {
+        displayValue: c.data.managerDisplay || "",
+        value: c.data.manager || "",
+        name: "u_manager_email"
+    };
+
+    c.l2ManagerField = {
+        displayValue: c.data.l2ManagerDisplay || "",
+        value: c.data.l2Manager || "",
+        name: "u_management_l2"
+    };
+
+    c.trainingCountryField = {
+        displayValue:
+            c.data.trainingCountryDisplay || "",
+        value:
+            c.data.trainingCountry || "",
+        name:
+            "u_training_country"
+    };
+
+    /*
+     * Convert server date string to JavaScript Date.
+     */
+    function convertToDate(value) {
+
+        if (!value) {
+            return null;
+        }
+
+        if (angular.isDate(value)) {
+            return value;
+        }
+
+        var dateValue =
+            value.toString().substring(0, 10);
+
+        var parts =
+            dateValue.split("-");
+
+        if (parts.length !== 3) {
+            return null;
+        }
+
+        return new Date(
+            parseInt(parts[0], 10),
+            parseInt(parts[1], 10) - 1,
+            parseInt(parts[2], 10)
+        );
+    }
+
+    c.data.courseStartDate =
+        convertToDate(
+            c.data.courseStartDate
+        );
+
+    c.data.courseEndDate =
+        convertToDate(
+            c.data.courseEndDate
+        );
+
+    /*
+     * Store original values for Clear.
+     */
+    var originalData =
+        angular.copy(c.data);
+
+    var originalEmployee =
+        angular.copy(c.employeeField);
+
+    var originalCountry =
+        angular.copy(c.countryField);
+
+    var originalManager =
+        angular.copy(c.managerField);
+
+    var originalL2Manager =
+        angular.copy(c.l2ManagerField);
+
+    var originalTrainingCountry =
+        angular.copy(c.trainingCountryField);
+
+    /*
+     * Attachment upload success.
+     */
+    function attachmentSuccess(attachments) {
+
+        c.uploading = false;
+
+        if (angular.isArray(attachments)) {
+            c.attachments = attachments;
+        }
+
+        c.refreshAttachments();
+
+        spUtil.addInfoMessage(
+            "Attachment uploaded successfully."
+        );
+
+        $scope.$applyAsync();
+    }
+
+    /*
+     * Attachment upload failure.
+     */
+    function attachmentError(error) {
+
+        c.uploading = false;
+
+        spUtil.addErrorMessage(
+            error &amp;&amp; error.message
+                ? error.message
+                : "Unable to upload the attachment."
+        );
+
+        $scope.$applyAsync();
+    }
+
+    /*
+     * Initialize attachment handler.
+     */
+    c.attachmentHandler =
+        new nowAttachmentHandler(
+            attachmentSuccess,
+            attachmentError
+        );
+
+    c.attachmentHandler.setParams(
+        c.data.table,
+        c.data.sys_id,
+        24 * 1024 * 1024
+    );
+
+    /*
+     * Open attachment picker.
+     */
+    c.openAttachmentPicker = function() {
+
+        var input =
+            document.getElementById(
+                "learningAttachmentInput"
+            );
+
+        if (input) {
+            input.value = "";
+            input.click();
+        }
+    };
+
+    /*
+     * Upload selected files.
+     */
+    c.uploadAttachments = function(files) {
+
+        if (!files || !files.length) {
+            return;
+        }
+
+        c.uploading = true;
+
+        angular.forEach(
+            files,
+            function(file) {
+                c.attachmentHandler
+                    .onFileSelect(file);
+            }
+        );
+
+        $scope.$applyAsync();
+    };
+
+    /*
+     * Reload attachments.
+     */
+    c.refreshAttachments = function() {
+
+        c.server.get({
+            action: "get_attachments",
+            sys_id: c.data.sys_id
+        }).then(function(response) {
+
+            c.attachments =
+                response.data.attachments || [];
+        });
+    };
+
+    /*
+     * Delete attachment.
+     */
+    c.deleteAttachment = function(
+        attachment
+    ) {
+
+        if (
+            !attachment ||
+            !attachment.sys_id
+        ) {
+            return;
+        }
+
+        if (
+            !$window.confirm(
+                "Do you want to delete this attachment?"
+            )
+        ) {
+            return;
+        }
+
+        c.server.get({
+            action: "delete_attachment",
+            sys_id: c.data.sys_id,
+            attachment_sys_id:
+                attachment.sys_id
+        }).then(function(response) {
+
+            if (response.data.success) {
+
+                spUtil.addInfoMessage(
+                    response.data.message
+                );
+
+                c.refreshAttachments();
+                return;
+            }
+
+            spUtil.addErrorMessage(
+                response.data.message ||
+                "Unable to delete the attachment."
+            );
+        });
+    };
+
+    /*
+     * Check whether payment is required.
+     */
+    c.paymentRequired = function() {
+
+        return (
+            c.data.isPaymentRequired || ""
+        ).toString().toLowerCase() === "yes";
+    };
+
+    /*
+     * Clear payment details when No is selected.
+     */
+    c.paymentChanged = function() {
+
+        if (!c.paymentRequired()) {
+
+            c.data.currency = "";
+            c.data.courseFee = null;
+            c.data.otherExpenses = null;
+            c.data.specifyOtherExpenses = "";
+            c.data.totalCost = null;
+        }
+    };
+
+    /*
+     * Calculate total cost.
+     */
+    c.calculateTotalCost = function() {
+
+        var courseFee =
+            parseFloat(
+                c.data.courseFee
+            ) || 0;
+
+        var otherExpenses =
+            parseFloat(
+                c.data.otherExpenses
+            ) || 0;
+
+        c.data.totalCost =
+            parseFloat(
+                (
+                    courseFee +
+                    otherExpenses
+                ).toFixed(2)
+            );
+    };
+
+    /*
+     * Clear L2 manager when L2 is not required.
+     */
+    c.l2RequirementChanged = function() {
+
+        if (
+            c.data.l2Required === "no"
+        ) {
+            c.l2ManagerField = {
+                displayValue: "",
+                value: "",
+                name: "u_management_l2"
+            };
+        }
+    };
+
+    /*
+     * Format Date as yyyy-MM-dd for server.
+     */
+    c.formatDate = function(value) {
+
+        if (!value) {
+            return "";
+        }
+
+        if (!angular.isDate(value)) {
+            return value
+                .toString()
+                .substring(0, 10);
+        }
+
+        var year =
+            value.getFullYear();
+
+        var month =
+            value.getMonth() + 1;
+
+        var day =
+            value.getDate();
+
+        month =
+            month &lt; 10
+                ? "0" + month
+                : month;
+
+        day =
+            day &lt; 10
+                ? "0" + day
+                : day;
+
+        return (
+            year +
+            "-" +
+            month +
+            "-" +
+            day
+        );
+    };
+
+    /*
+     * Update and submit the learning application.
+     */
+    c.update = function(form) {
+
+        if (c.submitting) {
+            return;
+        }
+
+        if (!c.data.canSubmit) {
+
+            spUtil.addErrorMessage(
+                "This learning application cannot be submitted from its current status."
+            );
+
+            return;
+        }
+
+        if (form) {
+            form.$setSubmitted();
+        }
+
+        /*
+         * Employee Name validation.
+         */
+        if (
+            !c.employeeField ||
+            !c.employeeField.value
+        ) {
+            spUtil.addErrorMessage(
+                "Please select Employee Name."
+            );
+            return;
+        }
+
+        /*
+         * Employee Email validation.
+         */
+        if (
+            !c.data.employeeEmail ||
+            !c.data.employeeEmail
+                .toString()
+                .trim()
+        ) {
+            spUtil.addErrorMessage(
+                "Please enter Employee Email."
+            );
+            return;
+        }
+
+        /*
+         * Country validation.
+         */
+        if (
+            !c.countryField ||
+            !c.countryField.value
+        ) {
+            spUtil.addErrorMessage(
+                "Please select Country."
+            );
+            return;
+        }
+
+        /*
+         * Manager validation.
+         */
+        if (
+            !c.managerField ||
+            !c.managerField.value
+        ) {
+            spUtil.addErrorMessage(
+                "Please select In Company Manager."
+            );
+            return;
+        }
+
+        /*
+         * L2 Manager validation.
+         */
+        if (
+            c.data.l2Required === "yes" &amp;&amp;
+            (
+                !c.l2ManagerField ||
+                !c.l2ManagerField.value
+            )
+        ) {
+            spUtil.addErrorMessage(
+                "Please select Management L2."
+            );
+            return;
+        }
+
+        /*
+         * Course Title validation.
+         */
+        if (
+            !c.data.courseTitle ||
+            !c.data.courseTitle
+                .toString()
+                .trim()
+        ) {
+            spUtil.addErrorMessage(
+                "Please enter Course Title."
+            );
+            return;
+        }
+
+        /*
+         * Course Type validation.
+         */
+        if (!c.data.courseType) {
+            spUtil.addErrorMessage(
+                "Please select Course Type."
+            );
+            return;
+        }
+
+        /*
+         * Course Format validation.
+         */
+        if (!c.data.courseFormat) {
+            spUtil.addErrorMessage(
+                "Please select Course Format."
+            );
+            return;
+        }
+
+        /*
+         * Training Country validation.
+         */
+        if (
+            !c.trainingCountryField ||
+            !c.trainingCountryField.value
+        ) {
+            spUtil.addErrorMessage(
+                "Please select Training Location Country."
+            );
+            return;
+        }
+
+        /*
+         * Course Start Date validation.
+         */
+        if (!c.data.courseStartDate) {
+            spUtil.addErrorMessage(
+                "Please select Course Start Date."
+            );
+            return;
+        }
+
+        /*
+         * Course End Date validation.
+         */
+        if (!c.data.courseEndDate) {
+            spUtil.addErrorMessage(
+                "Please select Course End Date."
+            );
+            return;
+        }
+
+        /*
+         * Date order validation.
+         */
+        var startDate =
+            new Date(
+                c.data.courseStartDate
+            );
+
+        var endDate =
+            new Date(
+                c.data.courseEndDate
+            );
+
+        startDate.setHours(
+            0,
+            0,
+            0,
+            0
+        );
+
+        endDate.setHours(
+            0,
+            0,
+            0,
+            0
+        );
+
+        if (endDate &lt; startDate) {
+
+            spUtil.addErrorMessage(
+                "Course End Date must be after or equal to Course Start Date."
+            );
+
+            return;
+        }
+
+        /*
+         * Currency validation.
+         */
+        if (
+            c.paymentRequired() &amp;&amp;
+            !c.data.currency
+        ) {
+            spUtil.addErrorMessage(
+                "Please select Currency."
+            );
+            return;
+        }
+
+        /*
+         * Prevent duplicate submission.
+         */
+        c.submitting = true;
+
+        c.server.get({
+
+            action: "update_and_submit",
+            sys_id: c.data.sys_id,
+
+            employee:
+                c.employeeField.value,
+
+            employeeEmail:
+                c.data.employeeEmail
+                    .toString()
+                    .trim(),
+
+            country:
+                c.countryField.value,
+
+            manager:
+                c.managerField.value,
+
+            l2Manager:
+                c.l2ManagerField &amp;&amp;
+                c.l2ManagerField.value
+                    ? c.l2ManagerField.value
+                    : "",
+
+            l2Required:
+                c.data.l2Required || "no",
+
+            courseTitle:
+                c.data.courseTitle,
+
+            courseType:
+                c.data.courseType,
+
+            courseFormat:
+                c.data.courseFormat,
+
+            trainingCountry:
+                c.trainingCountryField.value,
+
+            trainingProviderName:
+                c.data.trainingProviderName || "",
+
+            courseStartDate:
+                c.formatDate(
+                    c.data.courseStartDate
+                ),
+
+            courseEndDate:
+                c.formatDate(
+                    c.data.courseEndDate
+                ),
+
+            totalTrainingHours:
+                c.data.totalTrainingHours || "",
+
+            isPaymentRequired:
+                c.data.isPaymentRequired || "no",
+
+            currency:
+                c.data.currency || "",
+
+            courseFee:
+                c.data.courseFee || "",
+
+            otherExpenses:
+                c.data.otherExpenses || "",
+
+            specifyOtherExpenses:
+                c.data.specifyOtherExpenses || "",
+
+            totalCost:
+                c.data.totalCost || "",
+
+            acknowledgement:
+                c.data.acknowledgement === true,
+
+            comment:
+                c.data.comment || ""
+
+        }).then(
+            function(response) {
+
+                c.submitting = false;
+
+                if (
+                    response.data.success
+                ) {
+
+                    spUtil.addInfoMessage(
+                        response.data.message ||
+                        "Learning application submitted successfully."
+                    );
+
+                    $timeout(
+                        function() {
+                            $window.location.href =
+                                "/esc?id=check_my_records_asean";
+                        },
+                        800
+                    );
+
+                    return;
+                }
+
+                spUtil.addErrorMessage(
+                    response.data.message ||
+                    "Unable to submit the learning application."
+                );
+            },
+            function() {
+
+                c.submitting = false;
+
+                spUtil.addErrorMessage(
+                    "An unexpected error occurred while submitting."
+                );
+            }
+        );
+    };
+
+    /*
+     * Restore original values.
+     */
+    c.clearForm = function() {
+
+        c.data =
+            angular.copy(originalData);
+
+        c.employeeField =
+            angular.copy(originalEmployee);
+
+        c.countryField =
+            angular.copy(originalCountry);
+
+        c.managerField =
+            angular.copy(originalManager);
+
+        c.l2ManagerField =
+            angular.copy(originalL2Manager);
+
+        c.trainingCountryField =
+            angular.copy(
+                originalTrainingCountry
+            );
+
+        spUtil.addInfoMessage(
+            "Changes have been cleared."
+        );
+    };
+
+    /*
+     * Return to My Records page.
+     */
+    c.cancel = function() {
+
+        $window.location.href =
+            "/esc?id=check_my_records_asean";
+    };
+};]]&gt;&lt;/client_script&gt;&lt;controller_as&gt;c&lt;/controller_as&gt;&lt;css&gt;.learning-page {&amp;#13;
+  min-height: 100vh;&amp;#13;
+  padding: 38px 25px;&amp;#13;
+  background: #f3f7f9;&amp;#13;
+  font-family: Arial, Helvetica, sans-serif;&amp;#13;
+  color: #1f2937;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.learning-card {&amp;#13;
+  max-width: 1470px;&amp;#13;
+  margin: 0 auto;&amp;#13;
+  overflow: hidden;&amp;#13;
+  background: #ffffff;&amp;#13;
+  border: 1px solid #d7dee5;&amp;#13;
+  border-radius: 11px;&amp;#13;
+  box-shadow: 0 6px 18px rgba(28, 45, 64, 0.12);&amp;#13;
+}&amp;#13;
+&amp;#13;
+.learning-header {&amp;#13;
+  padding: 34px 40px 32px;&amp;#13;
+  border-bottom: 1px solid #e2e6ea;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.header-title {&amp;#13;
+  display: flex;&amp;#13;
+  align-items: center;&amp;#13;
+  gap: 15px;&amp;#13;
+  margin-bottom: 18px;&amp;#13;
+  color: #f47b20;&amp;#13;
+  font-size: 29px;&amp;#13;
+  font-weight: 500;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.header-title i {&amp;#13;
+  font-size: 32px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.application-number {&amp;#13;
+  color: #3e4650;&amp;#13;
+  font-size: 18px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.learning-body {&amp;#13;
+  padding: 38px 42px 42px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.form-grid {&amp;#13;
+  display: grid;&amp;#13;
+  grid-template-columns: repeat(2, minmax(0, 1fr));&amp;#13;
+  column-gap: 22px;&amp;#13;
+  row-gap: 25px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.field-block {&amp;#13;
+  min-width: 0;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.field-block.full-width {&amp;#13;
+  width: 100%;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.field-block label {&amp;#13;
+  display: block;&amp;#13;
+  margin-bottom: 10px;&amp;#13;
+  color: #272d35;&amp;#13;
+  font-size: 16px;&amp;#13;
+  font-weight: 600;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.required-label::before {&amp;#13;
+  content: "* ";&amp;#13;
+  color: #d9534f;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.form-control {&amp;#13;
+  width: 100%;&amp;#13;
+  height: 57px;&amp;#13;
+  padding: 12px 16px;&amp;#13;
+  border: 1px solid #cbd5df;&amp;#13;
+  border-radius: 5px;&amp;#13;
+  background: #ffffff;&amp;#13;
+  color: #111827;&amp;#13;
+  font-size: 16px;&amp;#13;
+  box-shadow: none;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.form-control:focus {&amp;#13;
+  border-color: #f47b20;&amp;#13;
+  outline: none;&amp;#13;
+  box-shadow: 0 0 0 2px rgba(244, 123, 32, 0.12);&amp;#13;
+}&amp;#13;
+&amp;#13;
+.readonly-field {&amp;#13;
+  background: #f7f9fb;&amp;#13;
+  cursor: not-allowed;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.textarea-control {&amp;#13;
+  height: auto;&amp;#13;
+  min-height: 95px;&amp;#13;
+  resize: vertical;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.section-title {&amp;#13;
+  margin: 34px 0 18px;&amp;#13;
+  color: #252b32;&amp;#13;
+  font-size: 20px;&amp;#13;
+  font-weight: 600;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.acknowledgement-block {&amp;#13;
+  padding: 4px 0 8px;&amp;#13;
+  font-size: 15px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.acknowledgement-block label {&amp;#13;
+  display: flex;&amp;#13;
+  align-items: flex-start;&amp;#13;
+  gap: 9px;&amp;#13;
+  font-weight: 400;&amp;#13;
+  line-height: 1.5;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.acknowledgement-block input {&amp;#13;
+  margin-top: 3px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+/* Record picker */&amp;#13;
+&amp;#13;
+sn-record-picker .select2-container {&amp;#13;
+  width: 100% !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+sn-record-picker .select2-choice {&amp;#13;
+  height: 57px !important;&amp;#13;
+  padding: 12px 42px 12px 16px !important;&amp;#13;
+  border: 1px solid #cbd5df !important;&amp;#13;
+  border-radius: 5px !important;&amp;#13;
+  background: #ffffff !important;&amp;#13;
+  box-shadow: none !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+sn-record-picker .select2-choice:hover {&amp;#13;
+  border-color: #aebbc7 !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+sn-record-picker .select2-container-active .select2-choice {&amp;#13;
+  border-color: #f47b20 !important;&amp;#13;
+  box-shadow: 0 0 0 2px rgba(244, 123, 32, 0.12) !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+sn-record-picker .select2-chosen {&amp;#13;
+  line-height: 31px !important;&amp;#13;
+  font-size: 16px !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+sn-record-picker .select2-arrow {&amp;#13;
+  width: 38px !important;&amp;#13;
+  border-left: 1px solid #cbd5df !important;&amp;#13;
+  background: #ffffff !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+sn-record-picker .select2-arrow b {&amp;#13;
+  background-position: 0 15px !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+/* Attachment section */&amp;#13;
+&amp;#13;
+.attachment-heading {&amp;#13;
+  display: flex;&amp;#13;
+  align-items: center;&amp;#13;
+  justify-content: space-between;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-icon-button {&amp;#13;
+  padding: 9px 15px;&amp;#13;
+  border: 1px solid #f47b20;&amp;#13;
+  border-radius: 5px;&amp;#13;
+  background: #ffffff;&amp;#13;
+  color: #f47b20;&amp;#13;
+  font-size: 14px;&amp;#13;
+  font-weight: 600;&amp;#13;
+  cursor: pointer;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-icon-button:hover {&amp;#13;
+  background: #fff5ed;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-icon-button:focus {&amp;#13;
+  outline: none;&amp;#13;
+  box-shadow: 0 0 0 2px rgba(244, 123, 32, 0.15);&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-icon-button i {&amp;#13;
+  margin-right: 7px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.hidden-file-input {&amp;#13;
+  display: none;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-empty {&amp;#13;
+  padding: 18px;&amp;#13;
+  border: 1px dashed #ccd5de;&amp;#13;
+  border-radius: 5px;&amp;#13;
+  background: #fafbfc;&amp;#13;
+  color: #6b7280;&amp;#13;
+  text-align: center;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-list {&amp;#13;
+  overflow: hidden;&amp;#13;
+  border: 1px solid #dce2e8;&amp;#13;
+  border-radius: 6px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-row {&amp;#13;
+  display: flex;&amp;#13;
+  align-items: center;&amp;#13;
+  justify-content: space-between;&amp;#13;
+  padding: 14px 16px;&amp;#13;
+  border-bottom: 1px solid #e6eaee;&amp;#13;
+  background: #ffffff;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-row:last-child {&amp;#13;
+  border-bottom: 0;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-row:hover {&amp;#13;
+  background: #fafbfc;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-information {&amp;#13;
+  display: flex;&amp;#13;
+  align-items: center;&amp;#13;
+  gap: 10px;&amp;#13;
+  min-width: 0;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-information a {&amp;#13;
+  overflow: hidden;&amp;#13;
+  color: #0875b5;&amp;#13;
+  font-size: 15px;&amp;#13;
+  font-weight: 600;&amp;#13;
+  text-overflow: ellipsis;&amp;#13;
+  white-space: nowrap;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-information a:hover {&amp;#13;
+  color: #055e91;&amp;#13;
+  text-decoration: underline;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-file-icon {&amp;#13;
+  flex-shrink: 0;&amp;#13;
+  color: #f47b20;&amp;#13;
+  font-size: 19px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.attachment-size {&amp;#13;
+  flex-shrink: 0;&amp;#13;
+  color: #7b8490;&amp;#13;
+  font-size: 13px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.delete-attachment-button {&amp;#13;
+  flex-shrink: 0;&amp;#13;
+  padding: 5px 8px;&amp;#13;
+  border: 0;&amp;#13;
+  background: transparent;&amp;#13;
+  color: #d9534f;&amp;#13;
+  font-size: 16px;&amp;#13;
+  cursor: pointer;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.delete-attachment-button:hover {&amp;#13;
+  color: #b52b27;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.delete-attachment-button:focus {&amp;#13;
+  outline: none;&amp;#13;
+}&amp;#13;
+&amp;#13;
+/* Action buttons */&amp;#13;
+&amp;#13;
+.form-actions {&amp;#13;
+  display: flex;&amp;#13;
+  justify-content: flex-end;&amp;#13;
+  gap: 15px;&amp;#13;
+  margin-top: 38px;&amp;#13;
+  padding-top: 25px;&amp;#13;
+  border-top: 1px solid #e2e6ea;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.btn-action {&amp;#13;
+  min-width: 120px;&amp;#13;
+  padding: 12px 22px;&amp;#13;
+  border-radius: 5px;&amp;#13;
+  font-size: 15px;&amp;#13;
+  font-weight: 600;&amp;#13;
+  cursor: pointer;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.btn-cancel {&amp;#13;
+  border: 1px solid #cbd5df;&amp;#13;
+  background: #ffffff;&amp;#13;
+  color: #4b5563;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.btn-cancel:hover {&amp;#13;
+  background: #f7f9fb;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.btn-clear {&amp;#13;
+  border: 1px solid #f47b20;&amp;#13;
+  background: #ffffff;&amp;#13;
+  color: #f47b20;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.btn-clear:hover {&amp;#13;
+  background: #fff5ed;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.btn-update {&amp;#13;
+  border: 1px solid #f47b20;&amp;#13;
+  background: #f47b20;&amp;#13;
+  color: #ffffff;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.btn-update:hover {&amp;#13;
+  border-color: #dc6814;&amp;#13;
+  background: #dc6814;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.btn-action:focus {&amp;#13;
+  outline: none;&amp;#13;
+  box-shadow: 0 0 0 2px rgba(244, 123, 32, 0.16);&amp;#13;
+}&amp;#13;
+&amp;#13;
+.btn-action[disabled] {&amp;#13;
+  cursor: not-allowed;&amp;#13;
+  opacity: 0.6;&amp;#13;
+}&amp;#13;
+&amp;#13;
+/* Unsupported status message */&amp;#13;
+&amp;#13;
+.submit-status-message {&amp;#13;
+  margin-top: 18px;&amp;#13;
+  margin-bottom: 0;&amp;#13;
+  border: 1px solid #f0d58c;&amp;#13;
+  background: #fff8df;&amp;#13;
+  color: #725b18;&amp;#13;
+}&amp;#13;
+&amp;#13;
+/* Record not found */&amp;#13;
+&amp;#13;
+.record-error-container {&amp;#13;
+  max-width: 1200px;&amp;#13;
+  margin: 30px auto;&amp;#13;
+  padding: 0 20px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+/* Tablet */&amp;#13;
+&amp;#13;
+@media screen and (max-width: 991px) {&amp;#13;
+  .learning-header {&amp;#13;
+    padding: 28px 30px;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .learning-body {&amp;#13;
+    padding: 30px;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .form-grid {&amp;#13;
+    column-gap: 18px;&amp;#13;
+    row-gap: 22px;&amp;#13;
+  }&amp;#13;
+}&amp;#13;
+&amp;#13;
+/* Mobile */&amp;#13;
+&amp;#13;
+@media screen and (max-width: 767px) {&amp;#13;
+  .learning-page {&amp;#13;
+    padding: 15px;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .learning-header,&amp;#13;
+  .learning-body {&amp;#13;
+    padding: 24px 18px;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .form-grid {&amp;#13;
+    grid-template-columns: 1fr;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .header-title {&amp;#13;
+    align-items: flex-start;&amp;#13;
+    font-size: 23px;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .header-title i {&amp;#13;
+    font-size: 26px;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .application-number {&amp;#13;
+    font-size: 16px;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .attachment-heading {&amp;#13;
+    align-items: flex-start;&amp;#13;
+    flex-direction: column;&amp;#13;
+    gap: 12px;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .attachment-icon-button {&amp;#13;
+    width: 100%;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .attachment-row {&amp;#13;
+    align-items: flex-start;&amp;#13;
+    gap: 12px;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .attachment-information {&amp;#13;
+    align-items: flex-start;&amp;#13;
+    flex-wrap: wrap;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .attachment-information a {&amp;#13;
+    max-width: 210px;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .attachment-size {&amp;#13;
+    width: 100%;&amp;#13;
+    padding-left: 29px;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .form-actions {&amp;#13;
+    flex-direction: column-reverse;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .btn-action {&amp;#13;
+    width: 100%;&amp;#13;
+  }&amp;#13;
+}&lt;/css&gt;&lt;data_table&gt;sp_instance&lt;/data_table&gt;&lt;demo_data/&gt;&lt;description/&gt;&lt;docs/&gt;&lt;field_list/&gt;&lt;has_preview&gt;false&lt;/has_preview&gt;&lt;id&gt;edit_registration_asean_new&lt;/id&gt;&lt;internal&gt;false&lt;/internal&gt;&lt;link&gt;&lt;![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]&gt;&lt;/link&gt;&lt;name&gt;Edit Registration ASEAN New&lt;/name&gt;&lt;option_schema/&gt;&lt;public&gt;false&lt;/public&gt;&lt;roles/&gt;&lt;script&gt;&lt;![CDATA[(function() {
+
+    var TABLE_NAME =
+        "x_1549902_asean_0_learning_application";
+
+    data.table = TABLE_NAME;
+    data.notFound = false;
+    data.success = false;
+    data.message = "";
+    data.debugMessage = "";
+    data.attachments = [];
+
+    var sysId = "";
+
+    if (input &amp;&amp; input.sys_id) {
+        sysId = input.sys_id.toString();
+    } else {
+        sysId = (
+            $sp.getParameter("sys_id") || ""
+        ).toString();
+    }
+
+    function getValue(record, fieldName) {
+        if (
+            !record ||
+            !record.isValidField(fieldName)
+        ) {
+            return "";
+        }
+
+        return record.getValue(fieldName) || "";
+    }
+
+    function getDisplayValue(record, fieldName) {
+        if (
+            !record ||
+            !record.isValidField(fieldName)
+        ) {
+            return "";
+        }
+
+        return record.getDisplayValue(fieldName) || "";
+    }
+
+    function setValue(record, fieldName, value) {
+        if (
+            !record ||
+            !record.isValidField(fieldName)
+        ) {
+            return;
+        }
+
+        record.setValue(
+            fieldName,
+            value === null ||
+            value === undefined
+                ? ""
+                : value
+        );
+    }
+
+    function getChoiceOptions(
+        tableName,
+        fieldName
+    ) {
+        var options = [];
+
+        var choiceGR =
+            new GlideRecord("sys_choice");
+
+        choiceGR.addQuery("name", tableName);
+        choiceGR.addQuery("element", fieldName);
+        choiceGR.addQuery("inactive", false);
+        choiceGR.orderBy("sequence");
+        choiceGR.orderBy("label");
+        choiceGR.query();
+
+        while (choiceGR.next()) {
+            options.push({
+                label: choiceGR.getValue("label"),
+                value: choiceGR.getValue("value")
+            });
+        }
+
+        return options;
+    }
+
+    function getCurrencyOptions() {
+        return [
+            {
+                label: "EUR",
+                value: "EUR"
+            },
+            {
+                label: "INR",
+                value: "INR"
+            },
+            {
+                label: "USD",
+                value: "USD"
+            },
+            {
+                label: "GBP",
+                value: "GBP"
+            },
+            {
+                label: "SGD",
+                value: "SGD"
+            },
+            {
+                label: "MYR",
+                value: "MYR"
+            },
+            {
+                label: "THB",
+                value: "THB"
+            },
+            {
+                label: "IDR",
+                value: "IDR"
+            },
+            {
+                label: "PHP",
+                value: "PHP"
+            },
+            {
+                label: "VND",
+                value: "VND"
+            }
+        ];
+    }
+
+    function formatFileSize(sizeBytes) {
+        var size = parseInt(sizeBytes, 10) || 0;
+
+        if (size &lt; 1024) {
+            return size + " B";
+        }
+
+        if (size &lt; 1024 * 1024) {
+            return (
+                size / 1024
+            ).toFixed(1) + " KB";
+        }
+
+        return (
+            size / (1024 * 1024)
+        ).toFixed(1) + " MB";
+    }
+
+    function getAttachments(recordSysId) {
+        var attachments = [];
+
+        var attachmentGR =
+            new GlideRecord("sys_attachment");
+
+        attachmentGR.addQuery(
+            "table_name",
+            TABLE_NAME
+        );
+
+        attachmentGR.addQuery(
+            "table_sys_id",
+            recordSysId
+        );
+
+        attachmentGR.orderByDesc("sys_created_on");
+        attachmentGR.query();
+
+        while (attachmentGR.next()) {
+
+            var attachmentSysId =
+                attachmentGR.getUniqueValue();
+
+            attachments.push({
+                sys_id: attachmentSysId,
+
+                file_name:
+                    attachmentGR.getValue(
+                        "file_name"
+                    ),
+
+                content_type:
+                    attachmentGR.getValue(
+                        "content_type"
+                    ),
+
+                size_bytes:
+                    attachmentGR.getValue(
+                        "size_bytes"
+                    ),
+
+                sizeDisplay:
+                    formatFileSize(
+                        attachmentGR.getValue(
+                            "size_bytes"
+                        )
+                    ),
+
+                downloadUrl:
+                    "/sys_attachment.do?sys_id=" +
+                    attachmentSysId
+            });
+        }
+
+        return attachments;
+    }
+
+    /*
+     * Get attachments after upload.
+     */
+    if (
+        input &amp;&amp;
+        input.action === "get_attachments"
+    ) {
+        data.attachments =
+            getAttachments(sysId);
+
+        return;
+    }
+
+    /*
+     * Delete attachment.
+     */
+    if (
+        input &amp;&amp;
+        input.action === "delete_attachment"
+    ) {
+        if (!input.attachment_sys_id) {
+            data.success = false;
+            data.message =
+                "Attachment ID is missing.";
+            return;
+        }
+
+        var attachment =
+            new GlideRecord("sys_attachment");
+
+        if (
+            !attachment.get(
+                input.attachment_sys_id
+            )
+        ) {
+            data.success = false;
+            data.message =
+                "Attachment could not be found.";
+            return;
+        }
+
+        if (
+            attachment.getValue("table_name") !==
+                TABLE_NAME ||
+            attachment.getValue("table_sys_id") !==
+                sysId
+        ) {
+            data.success = false;
+            data.message =
+                "The attachment does not belong to this application.";
+            return;
+        }
+
+        attachment.deleteRecord();
+
+        data.success = true;
+        data.message =
+            "Attachment deleted successfully.";
+
+        return;
+    }
+
+    /*
+     * Initial load.
+     */
+    if (!input) {
+
+        data.loggedInUserEmail =
+            gs.getUser().getEmail() || "";
+
+        data.userLevel = "Employee";
+
+        data.courseTypeOptions =
+            getChoiceOptions(
+                TABLE_NAME,
+                "u_course_type"
+            );
+
+        data.courseFormatOptions =
+            getChoiceOptions(
+                TABLE_NAME,
+                "u_course_format"
+            );
+
+        data.currencyOptions =
+            getCurrencyOptions();
+
+        if (!sysId) {
+            data.notFound = true;
+            data.debugMessage =
+                "The sys_id URL parameter is missing.";
+            return;
+        }
+
+        var gr = new GlideRecord(TABLE_NAME);
+
+        if (!gr.get(sysId)) {
+            data.notFound = true;
+            data.debugMessage =
+                "No record was found for sys_id: " +
+                sysId;
+            return;
+        }
+
+        data.sys_id = gr.getUniqueValue();
+
+        data.learningId =
+            getDisplayValue(gr, "number");
+
+        data.status =
+            getDisplayValue(gr, "u_status");
+
+        data.statusValue =
+            getValue(gr, "u_status");
+
+        /*
+         * These are the statuses where the
+         * Submit button is available.
+         */
+        data.canSubmit = [
+            "draft",
+            "return_by_manager",
+            "return_by_l2",
+            "return_by_hr"
+        ].indexOf(data.statusValue) &gt; -1;
+
+        data.employee =
+            getValue(
+                gr,
+                "u_employee_name"
+            );
+
+        data.employeeDisplay =
+            getDisplayValue(
+                gr,
+                "u_employee_name"
+            );
+
+        data.employeeEmail =
+            getValue(
+                gr,
+                "u_employee_email"
+            );
+
+        data.country =
+            getValue(gr, "u_country");
+
+        data.countryDisplay =
+            getDisplayValue(
+                gr,
+                "u_country"
+            );
+
+        data.manager =
+            getValue(
+                gr,
+                "u_manager_email"
+            );
+
+        data.managerDisplay =
+            getDisplayValue(
+                gr,
+                "u_manager_email"
+            );
+
+        data.l2Manager =
+            getValue(
+                gr,
+                "u_management_l2"
+            );
+
+        data.l2ManagerDisplay =
+            getDisplayValue(
+                gr,
+                "u_management_l2"
+            );
+
+        data.l2Required =
+            getValue(
+                gr,
+                "manager_approval_l2_required"
+            );
+
+        data.courseTitle =
+            getValue(
+                gr,
+                "u_course_title"
+            );
+
+        data.courseType =
+            getValue(
+                gr,
+                "u_course_type"
+            );
+
+        data.courseFormat =
+            getValue(
+                gr,
+                "u_course_format"
+            );
+
+        data.trainingCountry =
+            getValue(
+                gr,
+                "u_training_country"
+            );
+
+        data.trainingCountryDisplay =
+            getDisplayValue(
+                gr,
+                "u_training_country"
+            );
+
+        /*
+         * If the training country is a string
+         * containing a core_country sys_id,
+         * resolve its display name.
+         */
+        if (
+            data.trainingCountry &amp;&amp;
+            data.trainingCountryDisplay ===
+                data.trainingCountry
+        ) {
+            var countryGR =
+                new GlideRecord("core_country");
+
+            if (
+                countryGR.get(
+                    data.trainingCountry
+                )
+            ) {
+                data.trainingCountryDisplay =
+                    countryGR.getDisplayValue(
+                        "name"
+                    );
+            }
+        }
+
+        data.trainingProviderName =
+            getValue(
+                gr,
+                "u_training_provider_name"
+            );
+
+        data.courseStartDate =
+            getValue(
+                gr,
+                "course_start_date"
+            );
+
+        data.courseEndDate =
+            getValue(
+                gr,
+                "u_course_end_date"
+            );
+
+        data.totalTrainingHours =
+            parseFloat(
+                getValue(
+                    gr,
+                    "u_total_training_hours"
+                ) || 0
+            );
+
+        data.isPaymentRequired =
+            getValue(
+                gr,
+                "is_payment_required"
+            );
+
+        data.currency =
+            getValue(gr, "currency");
+
+        data.courseFee =
+            parseFloat(
+                getValue(
+                    gr,
+                    "u_course_fee"
+                ) || 0
+            );
+
+        data.otherExpenses =
+            parseFloat(
+                getValue(
+                    gr,
+                    "u_other_expenses"
+                ) || 0
+            );
+
+        data.specifyOtherExpenses =
+            getValue(
+                gr,
+                "u_specify_other_expenses"
+            );
+
+        data.totalCost =
+            parseFloat(
+                getValue(
+                    gr,
+                    "u_total_cost"
+                ) || 0
+            );
+
+        data.acknowledgement =
+            getValue(
+                gr,
+                "acknowlegment"
+            ) === "true";
+
+        data.comment =
+            getValue(
+                gr,
+                "u_comment"
+            );
+
+        data.attachments =
+            getAttachments(
+                gr.getUniqueValue()
+            );
+
+        return;
+    }
+
+    /*
+     * Update and submit.
+     */
+    if (
+        input &amp;&amp;
+        input.action === "update_and_submit"
+    ) {
+
+        if (!sysId) {
+            data.success = false;
+            data.message =
+                "Learning Application ID is missing.";
+            return;
+        }
+
+        var reg =
+            new GlideRecord(TABLE_NAME);
+
+        if (!reg.get(sysId)) {
+            data.success = false;
+            data.message =
+                "Learning application could not be found.";
+            return;
+        }
+
+        /*
+         * Always get the current status directly
+         * from the database.
+         */
+        var currentStatus =
+            getValue(reg, "u_status");
+
+        var currentStatusDisplay =
+            getDisplayValue(
+                reg,
+                "u_status"
+            );
+
+        var nextStatus = "";
+        var successMessage = "";
+
+        /*
+         * State transition mapping.
+         */
+        switch (currentStatus) {
+
+            case "draft":
+
+                nextStatus = "submitted";
+
+                successMessage =
+                    "Learning application submitted successfully.";
+
+                break;
+
+            case "return_by_manager":
+
+                nextStatus =
+                    "pending_manager_approval";
+
+                successMessage =
+                    "Learning application submitted for Manager approval.";
+
+                break;
+
+            case "return_by_l2":
+
+                nextStatus =
+                    "pending_l2_approval";
+
+                successMessage =
+                    "Learning application submitted for L2 approval.";
+
+                break;
+
+            case "return_by_hr":
+
+                nextStatus =
+                    "pending_hr_review";
+
+                successMessage =
+                    "Learning application submitted for HR review.";
+
+                break;
+
+            default:
+
+                data.success = false;
+
+                data.message =
+                    "This learning application cannot be submitted from its current status: " +
+                    (
+                        currentStatusDisplay ||
+                        currentStatus
+                    ) +
+                    ".";
+
+                return;
+        }
+
+        /*
+         * Mandatory field validation.
+         */
+        if (
+            !input.employee ||
+            !input.employeeEmail ||
+            !input.country ||
+            !input.manager ||
+            !input.courseTitle ||
+            !input.courseType ||
+            !input.courseFormat ||
+            !input.trainingCountry ||
+            !input.courseStartDate ||
+            !input.courseEndDate
+        ) {
+            data.success = false;
+            data.message =
+                "Please complete all mandatory fields.";
+            return;
+        }
+
+        if (
+            input.l2Required === "yes" &amp;&amp;
+            !input.l2Manager
+        ) {
+            data.success = false;
+            data.message =
+                "Please select Management L2.";
+            return;
+        }
+
+        /*
+         * Date validation.
+         */
+        var startDate = new GlideDate();
+
+        startDate.setValue(
+            input.courseStartDate
+        );
+
+        var endDate = new GlideDate();
+
+        endDate.setValue(
+            input.courseEndDate
+        );
+
+        if (
+            endDate.getNumericValue() &lt;
+            startDate.getNumericValue()
+        ) {
+            data.success = false;
+
+            data.message =
+                "Course End Date must be after or equal to Course Start Date.";
+
+            return;
+        }
+
+        /*
+         * Employee information.
+         */
+        setValue(
+            reg,
+            "u_employee_name",
+            input.employee
+        );
+
+        setValue(
+            reg,
+            "u_employee_email",
+            input.employeeEmail
+        );
+
+        setValue(
+            reg,
+            "u_country",
+            input.country
+        );
+
+        setValue(
+            reg,
+            "u_manager_email",
+            input.manager
+        );
+
+        setValue(
+            reg,
+            "u_management_l2",
+            input.l2Manager || ""
+        );
+
+        setValue(
+            reg,
+            "manager_approval_l2_required",
+            input.l2Required || "no"
+        );
+
+        /*
+         * Course information.
+         */
+        setValue(
+            reg,
+            "u_course_title",
+            input.courseTitle
+        );
+
+        setValue(
+            reg,
+            "short_description",
+            input.courseTitle
+        );
+
+        setValue(
+            reg,
+            "u_course_type",
+            input.courseType
+        );
+
+        setValue(
+            reg,
+            "u_course_format",
+            input.courseFormat
+        );
+
+        setValue(
+            reg,
+            "u_training_country",
+            input.trainingCountry
+        );
+
+        setValue(
+            reg,
+            "u_training_provider_name",
+            input.trainingProviderName || ""
+        );
+
+        setValue(
+            reg,
+            "course_start_date",
+            input.courseStartDate
+        );
+
+        setValue(
+            reg,
+            "u_course_end_date",
+            input.courseEndDate
+        );
+
+        setValue(
+            reg,
+            "u_total_training_hours",
+            input.totalTrainingHours || ""
+        );
+
+        /*
+         * Payment information.
+         */
+        setValue(
+            reg,
+            "is_payment_required",
+            input.isPaymentRequired || "no"
+        );
+
+        if (
+            input.isPaymentRequired === "yes"
+        ) {
+            setValue(
+                reg,
+                "currency",
+                input.currency || ""
+            );
+
+            setValue(
+                reg,
+                "u_course_fee",
+                input.courseFee || ""
+            );
+
+            setValue(
+                reg,
+                "u_other_expenses",
+                input.otherExpenses || ""
+            );
+
+            setValue(
+                reg,
+                "u_specify_other_expenses",
+                input.specifyOtherExpenses || ""
+            );
+
+            setValue(
+                reg,
+                "u_total_cost",
+                input.totalCost || ""
+            );
+
+        } else {
+
+            setValue(
+                reg,
+                "currency",
+                ""
+            );
+
+            setValue(
+                reg,
+                "u_course_fee",
+                ""
+            );
+
+            setValue(
+                reg,
+                "u_other_expenses",
+                ""
+            );
+
+            setValue(
+                reg,
+                "u_specify_other_expenses",
+                ""
+            );
+
+            setValue(
+                reg,
+                "u_total_cost",
+                ""
+            );
+        }
+
+        /*
+         * Acknowledgement and comment.
+         */
+        setValue(
+            reg,
+            "acknowlegment",
+            input.acknowledgement === true
+        );
+
+        setValue(
+            reg,
+            "u_comment",
+            input.comment || ""
+        );
+
+        /*
+         * Resolve new status display label.
+         */
+        var nextStatusDisplay =
+            nextStatus;
+
+        var statusChoiceGR =
+            new GlideRecord("sys_choice");
+
+        statusChoiceGR.addQuery(
+            "name",
+            TABLE_NAME
+        );
+
+        statusChoiceGR.addQuery(
+            "element",
+            "u_status"
+        );
+
+        statusChoiceGR.addQuery(
+            "value",
+            nextStatus
+        );
+
+        statusChoiceGR.addQuery(
+            "inactive",
+            false
+        );
+
+        statusChoiceGR.setLimit(1);
+        statusChoiceGR.query();
+
+        if (statusChoiceGR.next()) {
+            nextStatusDisplay =
+                statusChoiceGR.getValue(
+                    "label"
+                ) || nextStatus;
+        }
+
+        /*
+         * Add submission details to work notes.
+         */
+        if (
+            reg.isValidField("work_notes")
+        ) {
+            var workNote =
+                "Learning application submitted by " +
+                gs.getUserDisplayName() +
+                ".\nPrevious Status: " +
+                (
+                    currentStatusDisplay ||
+                    currentStatus
+                ) +
+                "\nNew Status: " +
+                nextStatusDisplay;
+
+            if (
+                input.comment &amp;&amp;
+                input.comment
+                    .toString()
+                    .trim()
+            ) {
+                workNote +=
+                    "\n\nComments:\n" +
+                    input.comment
+                        .toString()
+                        .trim();
+            }
+
+            reg.setValue(
+                "work_notes",
+                workNote
+            );
+        }
+
+        /*
+         * Apply status transition.
+         */
+        setValue(
+            reg,
+            "u_status",
+            nextStatus
+        );
+
+        /*
+         * Keep platform approval consistent.
+         */
+        if (
+            reg.isValidField("approval")
+        ) {
+            reg.setValue(
+                "approval",
+                "requested"
+            );
+        }
+
+        var updatedSysId =
+            reg.update();
+
+        if (updatedSysId) {
+
+            data.success = true;
+            data.message = successMessage;
+
+            data.previousStatus =
+                currentStatus;
+
+            data.newStatus =
+                nextStatus;
+
+        } else {
+
+            data.success = false;
+
+            data.message =
+                "Unable to submit the learning application.";
+        }
+
+        return;
+    }
+
+})();]]&gt;&lt;/script&gt;&lt;servicenow&gt;false&lt;/servicenow&gt;&lt;sys_class_name&gt;sp_widget&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-17 11:52:00&lt;/sys_created_on&gt;&lt;sys_id&gt;4dbf74c747c28710ff78de94116d433a&lt;/sys_id&gt;&lt;sys_mod_count&gt;2&lt;/sys_mod_count&gt;&lt;sys_name&gt;Edit Registration ASEAN New&lt;/sys_name&gt;&lt;sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="ASEAN Learning Application"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_scope&gt;&lt;sys_update_name&gt;sp_widget_4dbf74c747c28710ff78de94116d433a&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-17 11:56:23&lt;/sys_updated_on&gt;&lt;template&gt;&lt;![CDATA[&lt;div class="learning-page" ng-if="!c.data.notFound"&gt;
+
+  &lt;div class="learning-card"&gt;
+
+    &lt;!-- Header --&gt;
+    &lt;div class="learning-header"&gt;
+
+      &lt;div class="header-title"&gt;
+        &lt;i class="fa fa-file-text-o"&gt;&lt;/i&gt;
+        &lt;span&gt;Learning Application Details&lt;/span&gt;
+      &lt;/div&gt;
+
+      &lt;div class="application-number"&gt;
+        &lt;strong&gt;Application Number:&lt;/strong&gt;
+        {{c.data.learningId}}
+      &lt;/div&gt;
+
+    &lt;/div&gt;
+
+    &lt;div class="learning-body"&gt;
+
+      &lt;form name="editLearningForm"
+            ng-submit="c.update(editLearningForm)"
+            novalidate&gt;
+
+        &lt;!-- Request Information --&gt;
+        &lt;div class="form-grid"&gt;
+
+          &lt;div class="field-block"&gt;
+            &lt;label&gt;Number&lt;/label&gt;
+
+            &lt;input type="text"
+                   class="form-control readonly-field"
+                   ng-model="c.data.learningId"
+                   readonly&gt;
+          &lt;/div&gt;
+
+          &lt;div class="field-block"&gt;
+            &lt;label&gt;Ticket Status&lt;/label&gt;
+
+            &lt;input type="text"
+                   class="form-control readonly-field"
+                   ng-model="c.data.status"
+                   readonly&gt;
+          &lt;/div&gt;
+
+          &lt;!-- Employee Name --&gt;
+          &lt;div class="field-block"&gt;
+
+            &lt;label class="required-label"&gt;
+              Employee Name
+            &lt;/label&gt;
+
+            &lt;sn-record-picker
+              field="c.employeeField"
+              table="'sys_user'"
+              display-field="'name'"
+              value-field="'sys_id'"
+              search-fields="'name,email,user_name'"
+              default-query="'active=true'"
+              page-size="20"&gt;
+            &lt;/sn-record-picker&gt;
+
+          &lt;/div&gt;
+
+          &lt;!-- Employee Email --&gt;
+          &lt;div class="field-block"&gt;
+
+            &lt;label class="required-label"&gt;
+              Employee Email
+            &lt;/label&gt;
+
+            &lt;input type="email"
+                   class="form-control"
+                   ng-model="c.data.employeeEmail"
+                   name="employeeEmail"
+                   required&gt;
+
+          &lt;/div&gt;
+
+          &lt;!-- Country --&gt;
+          &lt;div class="field-block"&gt;
+
+            &lt;label class="required-label"&gt;
+              Country
+            &lt;/label&gt;
+
+            &lt;sn-record-picker
+              field="c.countryField"
+              table="'core_country'"
+              display-field="'name'"
+              value-field="'sys_id'"
+              search-fields="'name,iso3166_2,iso3166_3'"
+              page-size="20"&gt;
+            &lt;/sn-record-picker&gt;
+
+          &lt;/div&gt;
+
+          &lt;!-- Manager --&gt;
+          &lt;div class="field-block"&gt;
+
+            &lt;label class="required-label"&gt;
+              In Company Manager Email
+            &lt;/label&gt;
+
+            &lt;sn-record-picker
+              field="c.managerField"
+              table="'sys_user'"
+              display-field="'name'"
+              value-field="'sys_id'"
+              search-fields="'name,email,user_name'"
+              default-query="'active=true^emailISNOTEMPTY'"
+              page-size="20"&gt;
+            &lt;/sn-record-picker&gt;
+
+          &lt;/div&gt;
+
+          &lt;!-- L2 Required --&gt;
+          &lt;div class="field-block"&gt;
+
+            &lt;label&gt;
+              Manager Approval (L2 Required)
+            &lt;/label&gt;
+
+            &lt;select class="form-control"
+                    ng-model="c.data.l2Required"
+                    ng-change="c.l2RequirementChanged()"&gt;
+
+              &lt;option value=""&gt;
+                -- Select --
+              &lt;/option&gt;
+
+              &lt;option value="yes"&gt;
+                Yes
+              &lt;/option&gt;
+
+              &lt;option value="no"&gt;
+                No
+              &lt;/option&gt;
+
+            &lt;/select&gt;
+
+          &lt;/div&gt;
+
+          &lt;!-- L2 Manager --&gt;
+          &lt;div class="field-block"
+               ng-if="c.data.l2Required === 'yes'"&gt;
+
+            &lt;label class="required-label"&gt;
+              Management L2
+            &lt;/label&gt;
+
+            &lt;sn-record-picker
+              field="c.l2ManagerField"
+              table="'sys_user'"
+              display-field="'name'"
+              value-field="'sys_id'"
+              search-fields="'name,email,user_name'"
+              default-query="'active=true^emailISNOTEMPTY'"
+              page-size="20"&gt;
+            &lt;/sn-record-picker&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+
+        &lt;!-- Course Details --&gt;
+        &lt;div class="section-title"&gt;
+          Course Details
+        &lt;/div&gt;
+
+        &lt;div class="form-grid"&gt;
+
+          &lt;div class="field-block"&gt;
+
+            &lt;label class="required-label"&gt;
+              Course Title
+            &lt;/label&gt;
+
+            &lt;input type="text"
+                   class="form-control"
+                   ng-model="c.data.courseTitle"
+                   name="courseTitle"
+                   required&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="field-block"&gt;
+
+            &lt;label&gt;
+              Training Provider Name
+            &lt;/label&gt;
+
+            &lt;input type="text"
+                   class="form-control"
+                   ng-model="c.data.trainingProviderName"&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="field-block"&gt;
+
+            &lt;label class="required-label"&gt;
+              Course Type
+            &lt;/label&gt;
+
+            &lt;select class="form-control"
+                    ng-model="c.data.courseType"
+                    name="courseType"
+                    ng-options="option.value as option.label for option in c.data.courseTypeOptions"
+                    required&gt;
+
+              &lt;option value=""&gt;
+                -- Select --
+              &lt;/option&gt;
+
+            &lt;/select&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="field-block"&gt;
+
+            &lt;label class="required-label"&gt;
+              Training Location - Country
+            &lt;/label&gt;
+
+            &lt;sn-record-picker
+              field="c.trainingCountryField"
+              table="'core_country'"
+              display-field="'name'"
+              value-field="'sys_id'"
+              search-fields="'name,iso3166_2,iso3166_3'"
+              page-size="20"&gt;
+            &lt;/sn-record-picker&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="field-block"&gt;
+
+            &lt;label class="required-label"&gt;
+              Course Format
+            &lt;/label&gt;
+
+            &lt;select class="form-control"
+                    ng-model="c.data.courseFormat"
+                    name="courseFormat"
+                    ng-options="option.value as option.label for option in c.data.courseFormatOptions"
+                    required&gt;
+
+              &lt;option value=""&gt;
+                -- Select --
+              &lt;/option&gt;
+
+            &lt;/select&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="field-block"&gt;
+
+            &lt;label&gt;
+              Total Training Hours
+            &lt;/label&gt;
+
+            &lt;input type="number"
+                   class="form-control"
+                   min="0"
+                   step="0.5"
+                   ng-model="c.data.totalTrainingHours"&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="field-block"&gt;
+
+            &lt;label class="required-label"&gt;
+              Course Start Date
+            &lt;/label&gt;
+
+            &lt;input type="date"
+                   class="form-control"
+                   ng-model="c.data.courseStartDate"
+                   name="courseStartDate"
+                   required&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="field-block"&gt;
+
+            &lt;label class="required-label"&gt;
+              Course End Date
+            &lt;/label&gt;
+
+            &lt;input type="date"
+                   class="form-control"
+                   ng-model="c.data.courseEndDate"
+                   name="courseEndDate"
+                   required&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+
+        &lt;!-- Payment Details --&gt;
+        &lt;div class="section-title"&gt;
+          Payment Details
+        &lt;/div&gt;
+
+        &lt;div class="form-grid"&gt;
+
+          &lt;div class="field-block"&gt;
+
+            &lt;label&gt;
+              Is Payment Required
+            &lt;/label&gt;
+
+            &lt;select class="form-control"
+                    ng-model="c.data.isPaymentRequired"
+                    ng-change="c.paymentChanged()"&gt;
+
+              &lt;option value=""&gt;
+                -- Select --
+              &lt;/option&gt;
+
+              &lt;option value="yes"&gt;
+                Yes
+              &lt;/option&gt;
+
+              &lt;option value="no"&gt;
+                No
+              &lt;/option&gt;
+
+            &lt;/select&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="field-block"
+               ng-if="c.paymentRequired()"&gt;
+
+            &lt;label&gt;
+              Course Fee
+            &lt;/label&gt;
+
+            &lt;input type="number"
+                   class="form-control"
+                   min="0"
+                   step="0.01"
+                   ng-model="c.data.courseFee"
+                   ng-change="c.calculateTotalCost()"&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="field-block"
+               ng-if="c.paymentRequired()"&gt;
+
+            &lt;label&gt;
+              Currency
+            &lt;/label&gt;
+
+            &lt;select class="form-control"
+                    ng-model="c.data.currency"&gt;
+
+              &lt;option value=""&gt;
+                -- Select --
+              &lt;/option&gt;
+
+              &lt;option ng-repeat="currency in c.data.currencyOptions"
+                      value="{{currency.value}}"&gt;
+                {{currency.label}}
+              &lt;/option&gt;
+
+            &lt;/select&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="field-block"
+               ng-if="c.paymentRequired()"&gt;
+
+            &lt;label&gt;
+              Other Expenses
+            &lt;/label&gt;
+
+            &lt;input type="number"
+                   class="form-control"
+                   min="0"
+                   step="0.01"
+                   ng-model="c.data.otherExpenses"
+                   ng-change="c.calculateTotalCost()"&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="field-block"
+               ng-if="c.paymentRequired()"&gt;
+
+            &lt;label&gt;
+              Specify Other Expenses
+            &lt;/label&gt;
+
+            &lt;textarea class="form-control textarea-control"
+                      rows="3"
+                      ng-model="c.data.specifyOtherExpenses"&gt;
+            &lt;/textarea&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="field-block"
+               ng-if="c.paymentRequired()"&gt;
+
+            &lt;label&gt;
+              Total Cost
+            &lt;/label&gt;
+
+            &lt;input type="number"
+                   class="form-control"
+                   min="0"
+                   step="0.01"
+                   ng-model="c.data.totalCost"
+                   readonly&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+
+        &lt;!-- Acknowledgement --&gt;
+        &lt;div class="section-title"&gt;
+          Acknowledgement
+        &lt;/div&gt;
+
+        &lt;div class="acknowledgement-block"&gt;
+
+          &lt;label&gt;
+
+            &lt;input type="checkbox"
+                   ng-model="c.data.acknowledgement"&gt;
+
+            By submitting the Learning Application Form, I acknowledge
+            that the information provided is correct.
+
+          &lt;/label&gt;
+
+        &lt;/div&gt;
+
+        &lt;!-- Notes --&gt;
+        &lt;div class="section-title"&gt;
+          Notes
+        &lt;/div&gt;
+
+        &lt;div class="field-block full-width"&gt;
+
+          &lt;label&gt;
+            Comments
+          &lt;/label&gt;
+
+          &lt;textarea class="form-control textarea-control"
+                    rows="3"
+                    ng-model="c.data.comment"&gt;
+          &lt;/textarea&gt;
+
+        &lt;/div&gt;
+
+        &lt;!-- Attachments --&gt;
+        &lt;div class="section-title attachment-heading"&gt;
+
+          &lt;span&gt;
+            Attachments
+          &lt;/span&gt;
+
+          &lt;button type="button"
+                  class="attachment-icon-button"
+                  title="Add Attachment"
+                  ng-click="c.openAttachmentPicker()"&gt;
+
+            &lt;i class="fa fa-paperclip"&gt;&lt;/i&gt;
+            Add Attachment
+
+          &lt;/button&gt;
+
+          &lt;input id="learningAttachmentInput"
+                 type="file"
+                 multiple
+                 class="hidden-file-input"
+                 onchange="angular.element(this).scope().c.uploadAttachments(this.files)"&gt;
+
+        &lt;/div&gt;
+
+        &lt;div class="attachment-empty"
+             ng-if="!c.attachments.length"&gt;
+
+          No attachments are available.
+
+        &lt;/div&gt;
+
+        &lt;div class="attachment-list"
+             ng-if="c.attachments.length"&gt;
+
+          &lt;div class="attachment-row"
+               ng-repeat="attachment in c.attachments track by attachment.sys_id"&gt;
+
+            &lt;div class="attachment-information"&gt;
+
+              &lt;i class="fa fa-file-o attachment-file-icon"&gt;&lt;/i&gt;
+
+              &lt;a ng-href="{{attachment.downloadUrl}}"
+                 target="_blank"
+                 title="Download attachment"&gt;
+
+                {{attachment.file_name}}
+
+              &lt;/a&gt;
+
+              &lt;span class="attachment-size"&gt;
+                {{attachment.sizeDisplay}}
+              &lt;/span&gt;
+
+            &lt;/div&gt;
+
+            &lt;button type="button"
+                    class="delete-attachment-button"
+                    title="Delete Attachment"
+                    ng-click="c.deleteAttachment(attachment)"&gt;
+
+              &lt;i class="fa fa-trash"&gt;&lt;/i&gt;
+
+            &lt;/button&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+
+        &lt;!-- Actions --&gt;
+        &lt;div class="form-actions"&gt;
+
+          &lt;button type="button"
+                  class="btn-action btn-cancel"
+                  ng-click="c.cancel()"
+                  ng-disabled="c.submitting"&gt;
+
+            CANCEL
+
+          &lt;/button&gt;
+
+          &lt;button type="button"
+                  class="btn-action btn-clear"
+                  ng-click="c.clearForm()"
+                  ng-disabled="c.submitting"&gt;
+
+            CLEAR
+
+          &lt;/button&gt;
+
+          &lt;button type="submit"
+                  class="btn-action btn-update"
+                  ng-if="c.data.canSubmit"
+                  ng-disabled="c.submitting || c.uploading"&gt;
+
+            &lt;span ng-if="!c.submitting"&gt;
+              SUBMIT
+            &lt;/span&gt;
+
+            &lt;span ng-if="c.submitting"&gt;
+
+              &lt;i class="fa fa-spinner fa-spin"&gt;&lt;/i&gt;
+              SUBMITTING
+
+            &lt;/span&gt;
+
+          &lt;/button&gt;
+
+        &lt;/div&gt;
+
+        &lt;div class="alert alert-warning submit-status-message"
+             ng-if="!c.data.canSubmit"&gt;
+
+          This learning application cannot be edited or submitted
+          from its current status.
+
+        &lt;/div&gt;
+
+      &lt;/form&gt;
+
+    &lt;/div&gt;
+
+  &lt;/div&gt;
+
+&lt;/div&gt;
+
+&lt;!-- Record Not Found --&gt;
+&lt;div class="record-error-container"
+     ng-if="c.data.notFound"&gt;
+
+  &lt;div class="alert alert-danger"&gt;
+
+    &lt;strong&gt;
+      The requested learning application record could not be found.
+    &lt;/strong&gt;
+
+    &lt;div ng-if="c.data.debugMessage"&gt;
+      {{c.data.debugMessage}}
+    &lt;/div&gt;
+
+  &lt;/div&gt;
+
+&lt;/div&gt;]]&gt;&lt;/template&gt;&lt;/sp_widget&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>1684653859</payload_hash>
+        <record_name>Edit Registration ASEAN New</record_name>
+        <reverted_from/>
+        <source>6c8436d247ce0310ff78de94116d43c1</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-17 11:56:23</sys_created_on>
+        <sys_id>fae3cdcf47c28710ff78de94116d4327</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19f6fef54f50000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-17 11:56:23</sys_updated_on>
+        <type>Widget</type>
+        <update_guid>bae3cdcf11c28710a6e079913f25ff26</update_guid>
+        <update_guid_history>bae3cdcf11c28710a6e079913f25ff26:1684653859,e8e38dcfaac2871069bf600bd53cab17:1057061828,6ee28d4f2ac2871021d25a695d0c2a4d:28828548</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete display_value="Edit Registration ASEAN New">57bf7f4c471ecf10ff78de94116d43f3</sys_audit_delete>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-21 04:10:55</sys_created_on>
+        <sys_db_object display_value="" name="sp_widget">sp_widget</sys_db_object>
+        <sys_id>5fd73f4b735543248dcf02c6170f9dc4</sys_id>
+        <sys_metadata>4dbf74c747c28710ff78de94116d433a</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Edit Registration ASEAN New</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_scope_delete display_value="">150a93e03297447584ae8ab0fd980be9</sys_scope_delete>
+        <sys_update_name>sp_widget_4dbf74c747c28710ff78de94116d433a</sys_update_name>
+        <sys_update_version display_value="sp_widget_4dbf74c747c28710ff78de94116d433a">fae3cdcf47c28710ff78de94116d4327</sys_update_version>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-21 04:10:55</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

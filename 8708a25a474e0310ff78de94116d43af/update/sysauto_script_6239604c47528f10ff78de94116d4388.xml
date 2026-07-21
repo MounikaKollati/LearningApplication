@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sysauto_script">
+    <sysauto_script action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <advanced>false</advanced>
+        <business_calendar/>
+        <condition/>
+        <conditional>false</conditional>
+        <entered_run_end/>
+        <entered_run_start/>
+        <entered_time>1970-01-01 00:00:00</entered_time>
+        <max_drift/>
+        <name>ASEAN Complete Learning Requests</name>
+        <offset/>
+        <offset_type>0</offset_type>
+        <repeat_every/>
+        <run_as display_value="System Administrator">6816f79cc0a8016401c5a33be04be441</run_as>
+        <run_as_tz/>
+        <run_dayofmonth>1</run_dayofmonth>
+        <run_dayofweek>1</run_dayofweek>
+        <run_daysofweek/>
+        <run_end/>
+        <run_month>1</run_month>
+        <run_period/>
+        <run_start>2026-07-20 12:33:42</run_start>
+        <run_time>1970-01-01 08:00:00</run_time>
+        <run_type>daily</run_type>
+        <run_weekinmonth>1</run_weekinmonth>
+        <script><![CDATA[(function autoCompleteLearningRequests() {
+
+    var TABLE_NAME =
+        'x_1549902_asean_0_learning_application';
+
+    var STATE_FIELD = 'state';
+    var COURSE_END_DATE_FIELD = 'course_end_date';
+    var COMMENTS_FIELD = 'comments';
+
+    var APPROVED_STATE = 'approved';
+    var COMPLETED_STATE = 'completed';
+
+    /*
+     * Calculate the date exactly 30 days before today.
+     *
+     * Example:
+     * Today       : 2026-07-20
+     * Cutoff date : 2026-06-20
+     */
+    var cutoffGDT = new GlideDateTime();
+    cutoffGDT.addDaysLocalTime(-30);
+
+    /*
+     * getLocalDate() returns a GlideDate.
+     * getValue() returns yyyy-MM-dd, suitable for a Date field query.
+     */
+    var cutoffDate = cutoffGDT.getLocalDate().getValue();
+
+    gs.info(
+        '[ASEAN Learning Auto Complete] Today: ' +
+        new GlideDate().getValue() +
+        ', cutoff date: ' +
+        cutoffDate
+    );
+
+    var learningGR = new GlideRecord(TABLE_NAME);
+
+    /*
+     * Fetch approved records where course end date is
+     * exactly 30 days ago or more than 30 days ago.
+     */
+    learningGR.addQuery(
+        STATE_FIELD,
+        APPROVED_STATE
+    );
+
+    learningGR.addNotNullQuery(
+        COURSE_END_DATE_FIELD
+    );
+
+    learningGR.addQuery(
+        COURSE_END_DATE_FIELD,
+        '<=',
+        cutoffDate
+    );
+
+    learningGR.query();
+
+    gs.info(
+        '[ASEAN Learning Auto Complete] Matching record count: ' +
+        learningGR.getRowCount()
+    );
+
+    var completedCount = 0;
+
+    while (learningGR.next()) {
+
+        var requestNumber =
+            learningGR.getDisplayValue('number');
+
+        var courseEndDate =
+            learningGR.getDisplayValue(
+                COURSE_END_DATE_FIELD
+            );
+
+        /*
+         * Reconfirm that the record is still approved.
+         */
+        if (
+            learningGR.getValue(STATE_FIELD) !==
+            APPROVED_STATE
+        ) {
+            continue;
+        }
+
+        learningGR.setValue(
+            STATE_FIELD,
+            COMPLETED_STATE
+        );
+
+        /*
+         * Add the message to Comments.
+         */
+        learningGR.setValue(
+            COMMENTS_FIELD,
+            'System Update: This learning request has been ' +
+            'automatically marked as Completed because 30 days ' +
+            'have elapsed since the course end date (' +
+            courseEndDate +
+            ').'
+        );
+
+        var updatedSysId = learningGR.update();
+
+        if (updatedSysId) {
+
+            completedCount++;
+
+            gs.info(
+                '[ASEAN Learning Auto Complete] Request ' +
+                requestNumber +
+                ' completed successfully. Course end date: ' +
+                courseEndDate
+            );
+
+        } else {
+
+            gs.error(
+                '[ASEAN Learning Auto Complete] Failed to update request ' +
+                requestNumber
+            );
+        }
+    }
+
+    gs.info(
+        '[ASEAN Learning Auto Complete] Total records completed: ' +
+        completedCount
+    );
+
+})();]]></script>
+        <sys_class_name>sysauto_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-20 12:36:26</sys_created_on>
+        <sys_id>6239604c47528f10ff78de94116d4388</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_name>ASEAN Complete Learning Requests</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sysauto_script_6239604c47528f10ff78de94116d4388</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-20 12:37:33</sys_updated_on>
+        <time_zone/>
+        <upgrade_safe>false</upgrade_safe>
+    </sysauto_script>
+</record_update>
