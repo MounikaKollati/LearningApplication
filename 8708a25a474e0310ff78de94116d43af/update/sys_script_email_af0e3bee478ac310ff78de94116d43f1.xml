@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_script_email">
+    <sys_script_email action="INSERT_OR_UPDATE">
+        <name>asean_learning_approval_reminder_details</name>
+        <new_lines_to_html>false</new_lines_to_html>
+        <script><![CDATA[(function runMailScript(current, template, email, email_action, event) {
+
+    var appGR = new GlideRecord('x_1549902_asean_0_learning_application');
+
+    if (!appGR.get(current.sysapproval))
+        return;
+
+    // Employee Name
+    var employeeName = '';
+    if (appGR.isValidField('u_employee_name'))
+        employeeName = appGR.getDisplayValue('u_employee_name');
+
+    // Program Title
+    var programTitle = '';
+    if (appGR.isValidField('u_program_title'))
+        programTitle = appGR.getDisplayValue('u_program_title');
+
+    // Course Dates
+    var startDate = '';
+    if (appGR.isValidField('u_course_start_date'))
+        startDate = appGR.getDisplayValue('u_course_start_date');
+
+    var endDate = '';
+    if (appGR.isValidField('u_course_end_date'))
+        endDate = appGR.getDisplayValue('u_course_end_date');
+
+    // Total Cost
+    var totalCost = '';
+    if (appGR.isValidField('u_total_cost'))
+        totalCost = appGR.getDisplayValue('u_total_cost');
+
+    // Learning Request Number
+    var requestNumber = appGR.getDisplayValue('number');
+
+    // Approval Link
+    var approvalLink =
+        gs.getProperty('glide.servlet.uri') +
+        'esc?id=approval_asean_new';
+
+    // View Request Link
+    var portalLink =
+        gs.getProperty('glide.servlet.uri') +
+        'esc?id=view_record_asean&sys_id=' +
+        appGR.getUniqueValue();
+
+    template.print(
+        '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333;">' +
+
+        '<p>Dear <strong>' + current.approver.getDisplayValue() + ',</strong></p>' +
+
+        '<p>This is a friendly reminder that the following Learning Request has been pending for your approval for more than <strong>' +
+        gs.getProperty('x_1549902_asean_0.approval_reminder_days', '5') +
+        '</strong> days.</p>' +
+
+        '<table style="width:100%;border-collapse:collapse;border:1px solid #ddd;">' +
+
+        '<tr>' +
+        '<td style="padding:8px;background:#f5f5f5;border:1px solid #ddd;"><strong>Learning Request Number</strong></td>' +
+        '<td style="padding:8px;border:1px solid #ddd;">' + requestNumber + '</td>' +
+        '</tr>' +
+
+        '<tr>' +
+        '<td style="padding:8px;background:#f5f5f5;border:1px solid #ddd;"><strong>Employee Name</strong></td>' +
+        '<td style="padding:8px;border:1px solid #ddd;">' + employeeName + '</td>' +
+        '</tr>' +
+
+        '<tr>' +
+        '<td style="padding:8px;background:#f5f5f5;border:1px solid #ddd;"><strong>Program Title</strong></td>' +
+        '<td style="padding:8px;border:1px solid #ddd;">' + programTitle + '</td>' +
+        '</tr>' +
+
+        '<tr>' +
+        '<td style="padding:8px;background:#f5f5f5;border:1px solid #ddd;"><strong>Program Date</strong></td>' +
+        '<td style="padding:8px;border:1px solid #ddd;">' + startDate + ' to ' + endDate + '</td>' +
+        '</tr>' +
+
+        '<tr>' +
+        '<td style="padding:8px;background:#f5f5f5;border:1px solid #ddd;"><strong>Total Cost</strong></td>' +
+        '<td style="padding:8px;border:1px solid #ddd;">' + totalCost + '</td>' +
+        '</tr>' +
+
+        '</table>' +
+
+        '<br/>' +
+
+        '<p>Please click <a href="' + approvalLink + '">here</a> to approve or reject this learning request.</p>' +
+
+        '<p>Please click <a href="' + portalLink + '">here</a> to view the learning request details.</p>' +
+
+        '<br/>' +
+
+        '<p>Please review and take the appropriate action at your earliest convenience.</p>' +
+
+        '<p>Thank you.</p>' +
+
+        '<p><strong>Best Regards,<br/>ASEAN HR Learning</strong></p>' +
+
+        '</div>'
+    );
+
+})(current, template, email, email_action, event);]]></script>
+        <sys_class_name>sys_script_email</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 12:14:51</sys_created_on>
+        <sys_id>af0e3bee478ac310ff78de94116d43f1</sys_id>
+        <sys_mod_count>8</sys_mod_count>
+        <sys_name>asean_learning_approval_reminder_details</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sys_script_email_af0e3bee478ac310ff78de94116d43f1</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-20 12:42:53</sys_updated_on>
+    </sys_script_email>
+</record_update>

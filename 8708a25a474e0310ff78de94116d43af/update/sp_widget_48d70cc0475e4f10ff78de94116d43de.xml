@@ -1,0 +1,2507 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($timeout,$location,spUtil) {
+    var c = this;
+
+    c.filters = {};
+    c.loading = false;
+    c.refreshing = false;
+
+    c.sortDescending = true;
+
+    c.successMessage = "";
+    c.errorMessage = "";
+
+    c.requestSearch = "";
+    c.showRequestDropdown = false;
+    c.filteredRequestNumbers = [];
+    c.activeRequestIndex = -1;
+
+    c.displayRecords = angular.copy(
+        c.data.records || []
+    );
+
+    initialiseRequestNumbers();
+
+    function initialiseRequestNumbers() {
+        var requestNumbers = [];
+
+        if (
+            c.data.filterOptions &&
+            c.data.filterOptions.requestNumbers
+        ) {
+            requestNumbers =
+                c.data.filterOptions.requestNumbers;
+        }
+
+        c.filteredRequestNumbers =
+            angular.copy(requestNumbers);
+    }
+
+    function clearMessages() {
+        c.successMessage = "";
+        c.errorMessage = "";
+    }
+
+    function updateWidgetData(responseData) {
+        responseData = responseData || {};
+
+        if (responseData.records) {
+            c.data.records = responseData.records;
+
+            c.displayRecords =
+                responseData.records.slice(0);
+
+            if (!c.sortDescending) {
+                c.displayRecords.reverse();
+            }
+        }
+
+        if (responseData.filterOptions) {
+            c.data.filterOptions =
+                responseData.filterOptions;
+
+            initialiseRequestNumbers();
+        }
+
+        if (responseData.counts) {
+            c.data.counts = responseData.counts;
+        }
+    }
+
+    /*
+     * Request number typeahead
+     */
+    c.filterRequestNumbers = function() {
+        var searchValue = String(
+            c.requestSearch || ""
+        )
+            .trim()
+            .toLowerCase();
+
+        var requestNumbers =
+            c.data.filterOptions &&
+            c.data.filterOptions.requestNumbers
+                ? c.data.filterOptions.requestNumbers
+                : [];
+
+        c.filters.requestNumber = String(
+            c.requestSearch || ""
+        ).trim();
+
+        if (!searchValue) {
+            c.filteredRequestNumbers =
+                angular.copy(requestNumbers);
+        } else {
+            c.filteredRequestNumbers =
+                requestNumbers.filter(
+                    function(requestNumber) {
+                        return String(requestNumber)
+                            .toLowerCase()
+                            .indexOf(searchValue) !== -1;
+                    }
+                );
+        }
+
+        c.activeRequestIndex = -1;
+        c.showRequestDropdown = true;
+    };
+
+    c.openRequestDropdown = function() {
+        c.filterRequestNumbers();
+        c.showRequestDropdown = true;
+    };
+
+    c.toggleRequestDropdown = function(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        c.showRequestDropdown =
+            !c.showRequestDropdown;
+
+        if (c.showRequestDropdown) {
+            c.filterRequestNumbers();
+        }
+    };
+
+    c.hideRequestDropdown = function() {
+        $timeout(function() {
+            c.showRequestDropdown = false;
+            c.activeRequestIndex = -1;
+        }, 200);
+    };
+
+    c.selectRequestNumber = function(
+        requestNumber,
+        event
+    ) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        c.requestSearch = requestNumber || "";
+        c.filters.requestNumber =
+            requestNumber || "";
+
+        c.showRequestDropdown = false;
+        c.activeRequestIndex = -1;
+    };
+
+    c.clearRequestNumber = function(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        c.requestSearch = "";
+        c.filters.requestNumber = "";
+        c.activeRequestIndex = -1;
+
+        initialiseRequestNumbers();
+
+        c.showRequestDropdown = true;
+    };
+
+    c.handleRequestKeydown = function(event) {
+        if (!event) {
+            return;
+        }
+
+        var keyCode =
+            event.which || event.keyCode;
+
+        var requestNumbers =
+            c.filteredRequestNumbers || [];
+
+        /*
+         * Down arrow
+         */
+        if (keyCode === 40) {
+            event.preventDefault();
+
+            c.showRequestDropdown = true;
+
+            if (!requestNumbers.length) {
+                return;
+            }
+
+            c.activeRequestIndex++;
+
+            if (
+                c.activeRequestIndex >=
+                requestNumbers.length
+            ) {
+                c.activeRequestIndex = 0;
+            }
+
+            return;
+        }
+
+        /*
+         * Up arrow
+         */
+        if (keyCode === 38) {
+            event.preventDefault();
+
+            if (!requestNumbers.length) {
+                return;
+            }
+
+            c.activeRequestIndex--;
+
+            if (c.activeRequestIndex < 0) {
+                c.activeRequestIndex =
+                    requestNumbers.length - 1;
+            }
+
+            return;
+        }
+
+        /*
+         * Enter
+         */
+        if (keyCode === 13) {
+            event.preventDefault();
+
+            if (
+                c.showRequestDropdown &&
+                c.activeRequestIndex >= 0 &&
+                requestNumbers[
+                    c.activeRequestIndex
+                ]
+            ) {
+                c.selectRequestNumber(
+                    requestNumbers[
+                        c.activeRequestIndex
+                    ]
+                );
+            }
+
+            c.search();
+            return;
+        }
+
+        /*
+         * Escape
+         */
+        if (keyCode === 27) {
+            c.showRequestDropdown = false;
+            c.activeRequestIndex = -1;
+        }
+    };
+
+    /*
+     * View action
+     */
+    c.openView = function(record) {
+        clearMessages();
+
+        if (!record || !record.sys_id) {
+            c.errorMessage =
+                "The request identifier is missing.";
+            return;
+        }
+
+        $location.url(
+            "?id=view_record_asean" +
+            "&sys_id=" +
+            encodeURIComponent(record.sys_id)
+        );
+    };
+
+    /*
+     * Edit action:
+     * Available only for returned statuses.
+     */
+    c.openEdit = function(record) {
+        clearMessages();
+
+        if (!record || !record.sys_id) {
+            c.errorMessage =
+                "The request identifier is missing.";
+            return;
+        }
+
+        if (!record.canEdit) {
+            c.errorMessage =
+                "Only returned requests can be edited.";
+
+            spUtil.addErrorMessage(
+                c.errorMessage
+            );
+
+            return;
+        }
+
+        $location.url(
+            "?id=edit_registration_asean" +
+            "&sys_id=" +
+            encodeURIComponent(record.sys_id)
+        );
+    };
+
+    /*
+     * Feedback action:
+     * Available only for Approved status.
+     */
+    c.openFeedback = function(record) {
+        clearMessages();
+
+        if (!record || !record.sys_id) {
+            c.errorMessage =
+                "The request identifier is missing.";
+            return;
+        }
+
+        if (!record.canProvideFeedback) {
+            c.errorMessage =
+                "Feedback can be provided only for approved requests.";
+
+            spUtil.addErrorMessage(
+                c.errorMessage
+            );
+
+            return;
+        }
+
+        $location.url(
+            "?id=feedback_asean" +
+            "&sys_id=" +
+            encodeURIComponent(record.sys_id)
+        );
+    };
+
+    /*
+     * Search
+     */
+    c.search = function() {
+        if (c.loading) {
+            return;
+        }
+
+        clearMessages();
+
+        c.filters.requestNumber = String(
+            c.requestSearch || ""
+        ).trim();
+
+        c.showRequestDropdown = false;
+        c.loading = true;
+
+        c.server.get({
+            action: "search",
+            filters: angular.copy(c.filters)
+        }).then(
+            function(response) {
+                c.loading = false;
+
+                updateWidgetData(
+                    response.data
+                );
+
+                if (
+                    response.data.success === false
+                ) {
+                    c.errorMessage =
+                        response.data.message ||
+                        "Unable to search pending actions.";
+                }
+            },
+            function() {
+                c.loading = false;
+                c.errorMessage =
+                    "Unable to search pending actions.";
+            }
+        );
+    };
+
+    /*
+     * Reset
+     */
+    c.reset = function() {
+        if (c.loading) {
+            return;
+        }
+
+        clearMessages();
+
+        c.filters = {};
+        c.requestSearch = "";
+        c.showRequestDropdown = false;
+        c.activeRequestIndex = -1;
+        c.sortDescending = true;
+        c.loading = true;
+
+        c.server.get({
+            action: "reset"
+        }).then(
+            function(response) {
+                c.loading = false;
+
+                updateWidgetData(
+                    response.data
+                );
+            },
+            function() {
+                c.loading = false;
+                c.errorMessage =
+                    "Unable to reset pending actions.";
+            }
+        );
+    };
+
+    /*
+     * Refresh
+     */
+    c.refresh = function() {
+        if (
+            c.loading ||
+            c.refreshing
+        ) {
+            return;
+        }
+
+        clearMessages();
+
+        c.filters.requestNumber = String(
+            c.requestSearch || ""
+        ).trim();
+
+        c.showRequestDropdown = false;
+        c.refreshing = true;
+
+        c.server.get({
+            action: "refresh",
+            filters: angular.copy(c.filters)
+        }).then(
+            function(response) {
+                c.refreshing = false;
+
+                updateWidgetData(
+                    response.data
+                );
+            },
+            function() {
+                c.refreshing = false;
+                c.errorMessage =
+                    "Unable to refresh pending actions.";
+            }
+        );
+    };
+
+    /*
+     * Sort records
+     */
+    c.toggleSort = function() {
+        if (c.loading) {
+            return;
+        }
+
+        c.sortDescending =
+            !c.sortDescending;
+
+        c.displayRecords.reverse();
+    };
+
+    /*
+     * Status CSS class
+     */
+    c.getStatusClass = function(
+        statusValue
+    ) {
+        switch (statusValue) {
+            case "return_by_manager":
+                return "status-return-manager";
+
+            case "return_by_l2":
+                return "status-return-l2";
+
+            case "return_by_hr":
+                return "status-return-hr";
+
+            case "approved":
+                return "status-approved";
+
+            default:
+                return "status-default";
+        }
+    };
+
+    /*
+     * Back action
+     */
+    c.goBack = function() {
+        $location.url(
+            "?id=employee_role_asean"
+        );
+    };
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.pending-actions-page {&#13;
+  position: relative;&#13;
+  width: 100%;&#13;
+  min-height: 600px;&#13;
+  overflow: visible;&#13;
+  background: #ffffff;&#13;
+  border: 1px solid #d9d9d9;&#13;
+  border-radius: 6px;&#13;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);&#13;
+  font-family: Arial, Helvetica, sans-serif;&#13;
+}&#13;
+&#13;
+/* Header */&#13;
+&#13;
+.pending-actions-header {&#13;
+  display: flex;&#13;
+  min-height: 90px;&#13;
+  padding: 20px 28px;&#13;
+  align-items: center;&#13;
+  justify-content: space-between;&#13;
+  background: #ffffff;&#13;
+  border-bottom: 1px solid #e4e4e4;&#13;
+}&#13;
+&#13;
+.header-left h2 {&#13;
+  margin: 0 0 6px;&#13;
+  color: #ed6b21;&#13;
+  font-size: 28px;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.header-left p {&#13;
+  margin: 0;&#13;
+  color: #666666;&#13;
+  font-size: 14px;&#13;
+}&#13;
+&#13;
+.header-user-information {&#13;
+  min-width: 330px;&#13;
+}&#13;
+&#13;
+.user-information-row {&#13;
+  display: flex;&#13;
+  margin-bottom: 6px;&#13;
+  align-items: center;&#13;
+}&#13;
+&#13;
+.user-information-row:last-child {&#13;
+  margin-bottom: 0;&#13;
+}&#13;
+&#13;
+.user-information-label {&#13;
+  width: 85px;&#13;
+  color: #777777;&#13;
+  font-size: 12px;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.user-information-value {&#13;
+  color: #333333;&#13;
+  font-size: 13px;&#13;
+}&#13;
+&#13;
+/* Messages */&#13;
+&#13;
+.widget-message {&#13;
+  margin: 14px 20px 0;&#13;
+}&#13;
+&#13;
+.widget-message i {&#13;
+  margin-right: 6px;&#13;
+}&#13;
+&#13;
+/* Summary cards */&#13;
+&#13;
+.summary-card-container {&#13;
+  display: grid;&#13;
+  padding: 20px 25px;&#13;
+  background: #f7f8fa;&#13;
+  border-bottom: 1px solid #e4e4e4;&#13;
+  grid-template-columns:&#13;
+    repeat(4, minmax(180px, 1fr));&#13;
+  gap: 16px;&#13;
+}&#13;
+&#13;
+.summary-card {&#13;
+  display: flex;&#13;
+  min-height: 85px;&#13;
+  padding: 15px;&#13;
+  align-items: center;&#13;
+  background: #ffffff;&#13;
+  border: 1px solid #e1e1e1;&#13;
+  border-radius: 6px;&#13;
+  box-shadow:&#13;
+    0 2px 6px rgba(0, 0, 0, 0.05);&#13;
+}&#13;
+&#13;
+.summary-card-icon {&#13;
+  display: flex;&#13;
+  width: 48px;&#13;
+  height: 48px;&#13;
+  margin-right: 14px;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  border-radius: 50%;&#13;
+  font-size: 20px;&#13;
+}&#13;
+&#13;
+.returned-manager-icon {&#13;
+  color: #9a6700;&#13;
+  background: #fff3cd;&#13;
+}&#13;
+&#13;
+.returned-l2-icon {&#13;
+  color: #8a4b08;&#13;
+  background: #fde9d9;&#13;
+}&#13;
+&#13;
+.returned-hr-icon {&#13;
+  color: #7b2cbf;&#13;
+  background: #eee2fa;&#13;
+}&#13;
+&#13;
+.feedback-icon {&#13;
+  color: #0f6674;&#13;
+  background: #d1ecf1;&#13;
+}&#13;
+&#13;
+.summary-card-count {&#13;
+  color: #333333;&#13;
+  font-size: 24px;&#13;
+  font-weight: 700;&#13;
+}&#13;
+&#13;
+.summary-card-title {&#13;
+  color: #666666;&#13;
+  font-size: 12px;&#13;
+}&#13;
+&#13;
+/* Filter section */&#13;
+&#13;
+.pending-actions-filter-section {&#13;
+  position: relative;&#13;
+  z-index: 30;&#13;
+  padding: 20px 30px;&#13;
+  overflow: visible;&#13;
+  background: #eeeeee;&#13;
+  border-bottom: 1px solid #d5d5d5;&#13;
+}&#13;
+&#13;
+.filter-section-heading {&#13;
+  padding-bottom: 12px;&#13;
+  margin-bottom: 17px;&#13;
+  color: #444444;&#13;
+  border-bottom: 1px solid #d0d0d0;&#13;
+  font-size: 16px;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.filter-section-heading i {&#13;
+  margin-right: 7px;&#13;
+  color: #ed6b21;&#13;
+}&#13;
+&#13;
+.filter-field-container {&#13;
+  display: grid;&#13;
+  max-width: 1100px;&#13;
+  margin: 0 auto;&#13;
+  overflow: visible;&#13;
+  grid-template-columns:&#13;
+    repeat(2, minmax(300px, 1fr));&#13;
+  column-gap: 40px;&#13;
+  row-gap: 16px;&#13;
+}&#13;
+&#13;
+.filter-field {&#13;
+  position: relative;&#13;
+  display: flex;&#13;
+  min-width: 0;&#13;
+  overflow: visible;&#13;
+  align-items: center;&#13;
+}&#13;
+&#13;
+.filter-field label {&#13;
+  width: 145px;&#13;
+  margin: 0 12px 0 0;&#13;
+  color: #444444;&#13;
+  font-size: 13px;&#13;
+  font-weight: 600;&#13;
+  text-align: right;&#13;
+}&#13;
+&#13;
+.filter-field .form-control {&#13;
+  flex: 1;&#13;
+  height: 38px;&#13;
+  min-width: 0;&#13;
+  color: #333333;&#13;
+  background: #ffffff;&#13;
+  border: 1px solid #bcbcbc;&#13;
+  border-radius: 3px;&#13;
+  box-shadow: none;&#13;
+}&#13;
+&#13;
+/* Request number typeahead */&#13;
+&#13;
+.request-number-filter {&#13;
+  z-index: 60;&#13;
+}&#13;
+&#13;
+.request-number-wrapper {&#13;
+  position: relative;&#13;
+  flex: 1;&#13;
+  overflow: visible;&#13;
+}&#13;
+&#13;
+.request-number-input-wrapper {&#13;
+  position: relative;&#13;
+}&#13;
+&#13;
+.request-number-input-wrapper .form-control {&#13;
+  width: 100%;&#13;
+  padding-right: 66px;&#13;
+}&#13;
+&#13;
+.request-clear-button {&#13;
+  position: absolute;&#13;
+  top: 1px;&#13;
+  right: 35px;&#13;
+  width: 30px;&#13;
+  height: 36px;&#13;
+  padding: 0;&#13;
+  color: #888888;&#13;
+  background: transparent;&#13;
+  border: 0;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.request-clear-button:hover {&#13;
+  color: #d9534f;&#13;
+}&#13;
+&#13;
+.request-dropdown-toggle {&#13;
+  position: absolute;&#13;
+  top: 1px;&#13;
+  right: 1px;&#13;
+  width: 34px;&#13;
+  height: 36px;&#13;
+  padding: 0;&#13;
+  color: #555555;&#13;
+  background: transparent;&#13;
+  border: 0;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.request-dropdown-toggle:hover {&#13;
+  color: #ed6b21;&#13;
+  background: #f7f7f7;&#13;
+}&#13;
+&#13;
+.request-number-dropdown {&#13;
+  position: absolute;&#13;
+  z-index: 9999;&#13;
+  top: calc(100% + 2px);&#13;
+  right: 0;&#13;
+  left: 0;&#13;
+  max-height: 230px;&#13;
+  padding: 0;&#13;
+  margin: 0;&#13;
+  overflow-x: hidden;&#13;
+  overflow-y: auto;&#13;
+  background: #ffffff;&#13;
+  border: 1px solid #aaaaaa;&#13;
+  border-radius: 3px;&#13;
+  box-shadow:&#13;
+    0 5px 14px rgba(0, 0, 0, 0.18);&#13;
+  list-style: none;&#13;
+}&#13;
+&#13;
+.request-number-dropdown li {&#13;
+  padding: 10px 12px;&#13;
+  color: #333333;&#13;
+  background: #ffffff;&#13;
+  border-bottom: 1px solid #eeeeee;&#13;
+  font-size: 13px;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.request-number-dropdown li:hover,&#13;
+.request-number-dropdown&#13;
+.active-request-option {&#13;
+  background: #fff2e9;&#13;
+}&#13;
+&#13;
+.request-number-dropdown li i {&#13;
+  margin-right: 7px;&#13;
+  color: #ed6b21;&#13;
+}&#13;
+&#13;
+.request-number-dropdown&#13;
+.all-request-option {&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.request-number-dropdown&#13;
+.no-request-option {&#13;
+  color: #777777;&#13;
+  background: #fafafa;&#13;
+  font-style: italic;&#13;
+  text-align: center;&#13;
+  cursor: default;&#13;
+}&#13;
+&#13;
+/* Filter buttons */&#13;
+&#13;
+.filter-button-container {&#13;
+  display: flex;&#13;
+  margin-top: 22px;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  flex-wrap: wrap;&#13;
+  gap: 12px;&#13;
+}&#13;
+&#13;
+.filter-button {&#13;
+  display: inline-flex;&#13;
+  min-width: 120px;&#13;
+  height: 40px;&#13;
+  padding: 0 18px;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  border: 1px solid transparent;&#13;
+  border-radius: 4px;&#13;
+  font-size: 13px;&#13;
+  font-weight: 600;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.filter-button i {&#13;
+  margin-right: 7px;&#13;
+}&#13;
+&#13;
+.filter-button[disabled] {&#13;
+  cursor: not-allowed;&#13;
+  opacity: 0.6;&#13;
+}&#13;
+&#13;
+.search-button {&#13;
+  color: #ffffff;&#13;
+  background: #40ae58;&#13;
+  border-color: #359a4a;&#13;
+}&#13;
+&#13;
+.search-button:hover {&#13;
+  background: #359a4a;&#13;
+}&#13;
+&#13;
+.reset-button {&#13;
+  color: #444444;&#13;
+  background: #ffffff;&#13;
+  border-color: #aaaaaa;&#13;
+}&#13;
+&#13;
+.reset-button:hover {&#13;
+  background: #f5f5f5;&#13;
+}&#13;
+&#13;
+.sort-button {&#13;
+  color: #ffffff;&#13;
+  background: #687783;&#13;
+  border-color: #586771;&#13;
+}&#13;
+&#13;
+.sort-button:hover {&#13;
+  background: #586771;&#13;
+}&#13;
+&#13;
+.refresh-button {&#13;
+  color: #ffffff;&#13;
+  background: #168b99;&#13;
+  border-color: #117682;&#13;
+}&#13;
+&#13;
+.refresh-button:hover {&#13;
+  background: #117682;&#13;
+}&#13;
+&#13;
+/* Loading */&#13;
+&#13;
+.pending-actions-loading {&#13;
+  padding: 50px 20px;&#13;
+  color: #666666;&#13;
+  text-align: center;&#13;
+}&#13;
+&#13;
+.pending-actions-loading p {&#13;
+  margin-top: 10px;&#13;
+}&#13;
+&#13;
+/* Empty state */&#13;
+&#13;
+.pending-actions-empty {&#13;
+  padding: 55px 20px;&#13;
+  color: #666666;&#13;
+  text-align: center;&#13;
+}&#13;
+&#13;
+.empty-state-icon {&#13;
+  margin-bottom: 14px;&#13;
+  color: #40ae58;&#13;
+  font-size: 48px;&#13;
+}&#13;
+&#13;
+.pending-actions-empty h3 {&#13;
+  margin: 0 0 8px;&#13;
+  color: #444444;&#13;
+  font-size: 20px;&#13;
+}&#13;
+&#13;
+.pending-actions-empty p {&#13;
+  margin: 0;&#13;
+}&#13;
+&#13;
+/* Table */&#13;
+&#13;
+.pending-actions-table-wrapper {&#13;
+  position: relative;&#13;
+  z-index: 1;&#13;
+  width: 100%;&#13;
+  max-height: 520px;&#13;
+  overflow: auto;&#13;
+  background: #ffffff;&#13;
+}&#13;
+&#13;
+.pending-actions-table {&#13;
+  width: 100%;&#13;
+  min-width: 2900px;&#13;
+  table-layout: fixed;&#13;
+  border-collapse: separate;&#13;
+  border-spacing: 0;&#13;
+}&#13;
+&#13;
+.pending-actions-table thead th {&#13;
+  position: sticky;&#13;
+  z-index: 5;&#13;
+  top: 0;&#13;
+  width: 155px;&#13;
+  min-width: 155px;&#13;
+  max-width: 155px;&#13;
+  padding: 11px 12px;&#13;
+  color: #ffffff;&#13;
+  background: #919191;&#13;
+  border-right: 1px solid #b4b4b4;&#13;
+  border-bottom: 1px solid #707070;&#13;
+  font-size: 13px;&#13;
+  font-weight: 700;&#13;
+  text-align: center;&#13;
+  vertical-align: middle;&#13;
+}&#13;
+&#13;
+.pending-actions-table tbody td {&#13;
+  width: 155px;&#13;
+  min-width: 155px;&#13;
+  max-width: 155px;&#13;
+  padding: 12px;&#13;
+  color: #4c4c4c;&#13;
+  background: #ffffff;&#13;
+  border-right: 1px solid #eeeeee;&#13;
+  border-bottom: 2px solid #d6ebf5;&#13;
+  font-size: 12px;&#13;
+  text-align: center;&#13;
+  vertical-align: top;&#13;
+  word-break: break-word;&#13;
+}&#13;
+&#13;
+.pending-actions-table tbody tr:hover td {&#13;
+  background: #fafafa;&#13;
+}&#13;
+&#13;
+/* Sticky columns */&#13;
+&#13;
+.sticky-number-header {&#13;
+  position: sticky !important;&#13;
+  z-index: 15 !important;&#13;
+  left: 0;&#13;
+  width: 175px !important;&#13;
+  min-width: 175px !important;&#13;
+  max-width: 175px !important;&#13;
+  background: #858585 !important;&#13;
+}&#13;
+&#13;
+.sticky-number-column {&#13;
+  position: sticky;&#13;
+  z-index: 8;&#13;
+  left: 0;&#13;
+  width: 175px !important;&#13;
+  min-width: 175px !important;&#13;
+  max-width: 175px !important;&#13;
+  background: #ffffff !important;&#13;
+}&#13;
+&#13;
+.sticky-status-header {&#13;
+  position: sticky !important;&#13;
+  z-index: 14 !important;&#13;
+  right: 185px;&#13;
+  width: 180px !important;&#13;
+  min-width: 180px !important;&#13;
+  max-width: 180px !important;&#13;
+  background: #858585 !important;&#13;
+}&#13;
+&#13;
+.sticky-status-column {&#13;
+  position: sticky;&#13;
+  z-index: 9;&#13;
+  right: 185px;&#13;
+  width: 180px !important;&#13;
+  min-width: 180px !important;&#13;
+  max-width: 180px !important;&#13;
+  background: #ffffff !important;&#13;
+  vertical-align: middle !important;&#13;
+}&#13;
+&#13;
+.sticky-actions-header {&#13;
+  position: sticky !important;&#13;
+  z-index: 15 !important;&#13;
+  right: 0;&#13;
+  width: 185px !important;&#13;
+  min-width: 185px !important;&#13;
+  max-width: 185px !important;&#13;
+  background: #7d7d7d !important;&#13;
+}&#13;
+&#13;
+.sticky-actions-column {&#13;
+  position: sticky;&#13;
+  z-index: 10;&#13;
+  right: 0;&#13;
+  width: 185px !important;&#13;
+  min-width: 185px !important;&#13;
+  max-width: 185px !important;&#13;
+  background: #ffffff !important;&#13;
+  vertical-align: middle !important;&#13;
+}&#13;
+&#13;
+/* Comments */&#13;
+&#13;
+.comments-column {&#13;
+  width: 230px !important;&#13;
+  min-width: 230px !important;&#13;
+  max-width: 230px !important;&#13;
+  text-align: left !important;&#13;
+}&#13;
+&#13;
+.comments-content {&#13;
+  display: -webkit-box;&#13;
+  overflow: hidden;&#13;
+  line-height: 18px;&#13;
+  text-overflow: ellipsis;&#13;
+  white-space: normal;&#13;
+  -webkit-box-orient: vertical;&#13;
+  -webkit-line-clamp: 4;&#13;
+}&#13;
+&#13;
+/* Required action */&#13;
+&#13;
+.required-action-label {&#13;
+  display: inline-block;&#13;
+  padding: 6px 10px;&#13;
+  color: #684009;&#13;
+  background: #fff3cd;&#13;
+  border: 1px solid #ffe69c;&#13;
+  border-radius: 12px;&#13;
+  font-size: 11px;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+/* Status badges */&#13;
+&#13;
+.status-badge {&#13;
+  display: inline-block;&#13;
+  min-width: 120px;&#13;
+  max-width: 165px;&#13;
+  padding: 7px 10px;&#13;
+  border-radius: 14px;&#13;
+  font-size: 11px;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.status-return-manager {&#13;
+  color: #856404;&#13;
+  background: #fff3cd;&#13;
+}&#13;
+&#13;
+.status-return-l2 {&#13;
+  color: #8a4b08;&#13;
+  background: #fde9d9;&#13;
+}&#13;
+&#13;
+.status-return-hr {&#13;
+  color: #6f2da8;&#13;
+  background: #eee2fa;&#13;
+}&#13;
+&#13;
+.status-approved {&#13;
+  color: #155724;&#13;
+  background: #d4edda;&#13;
+}&#13;
+&#13;
+.status-default {&#13;
+  color: #383d41;&#13;
+  background: #e2e3e5;&#13;
+}&#13;
+&#13;
+/* Record actions */&#13;
+&#13;
+.record-action-container {&#13;
+  display: flex;&#13;
+  min-height: 40px;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  flex-wrap: wrap;&#13;
+  gap: 8px;&#13;
+}&#13;
+&#13;
+.record-action-button {&#13;
+  display: inline-flex;&#13;
+  width: 36px;&#13;
+  height: 36px;&#13;
+  padding: 0;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  background: #ffffff;&#13;
+  border-radius: 4px;&#13;
+  font-size: 17px;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.view-action-button {&#13;
+  color: #ed6b21;&#13;
+  border: 2px solid #ed6b21;&#13;
+}&#13;
+&#13;
+.view-action-button:hover {&#13;
+  color: #ffffff;&#13;
+  background: #ed6b21;&#13;
+}&#13;
+&#13;
+.edit-action-button {&#13;
+  color: #333333;&#13;
+  border: 2px solid #333333;&#13;
+}&#13;
+&#13;
+.edit-action-button:hover {&#13;
+  color: #ffffff;&#13;
+  background: #333333;&#13;
+}&#13;
+&#13;
+.feedback-action-button {&#13;
+  color: #168b99;&#13;
+  border: 2px solid #168b99;&#13;
+}&#13;
+&#13;
+.feedback-action-button:hover {&#13;
+  color: #ffffff;&#13;
+  background: #168b99;&#13;
+}&#13;
+&#13;
+/* Footer */&#13;
+&#13;
+.pending-actions-footer {&#13;
+  padding: 10px 14px;&#13;
+  background: #ffffff;&#13;
+  border-top: 1px solid #eeeeee;&#13;
+}&#13;
+&#13;
+.back-button {&#13;
+  display: inline-flex;&#13;
+  width: 42px;&#13;
+  height: 42px;&#13;
+  padding: 0;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  color: #111111;&#13;
+  background: #ffffff;&#13;
+  border: 3px solid #111111;&#13;
+  border-radius: 50%;&#13;
+  font-size: 20px;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.back-button:hover {&#13;
+  color: #ffffff;&#13;
+  background: #111111;&#13;
+}&#13;
+&#13;
+/* Responsive */&#13;
+&#13;
+@media screen and (max-width: 1050px) {&#13;
+  .summary-card-container {&#13;
+    grid-template-columns:&#13;
+      repeat(2, minmax(180px, 1fr));&#13;
+  }&#13;
+&#13;
+  .filter-field-container {&#13;
+    grid-template-columns: 1fr;&#13;
+  }&#13;
+}&#13;
+&#13;
+@media screen and (max-width: 700px) {&#13;
+  .pending-actions-header {&#13;
+    display: block;&#13;
+  }&#13;
+&#13;
+  .header-user-information {&#13;
+    min-width: 0;&#13;
+    margin-top: 18px;&#13;
+  }&#13;
+&#13;
+  .summary-card-container {&#13;
+    grid-template-columns: 1fr;&#13;
+  }&#13;
+&#13;
+  .pending-actions-filter-section {&#13;
+    padding: 16px;&#13;
+  }&#13;
+&#13;
+  .filter-field {&#13;
+    display: block;&#13;
+  }&#13;
+&#13;
+  .filter-field label {&#13;
+    display: block;&#13;
+    width: auto;&#13;
+    margin: 0 0 6px;&#13;
+    text-align: left;&#13;
+  }&#13;
+&#13;
+  .filter-button-container {&#13;
+    display: block;&#13;
+  }&#13;
+&#13;
+  .filter-button {&#13;
+    width: 100%;&#13;
+    margin-bottom: 8px;&#13;
+  }&#13;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>pending_actions_asean</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Pending Actions ASEAN</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+
+    /*
+     * =====================================================
+     * Configuration
+     * =====================================================
+     */
+
+    var TABLE =
+        "x_1549902_asean_0_learning_application";
+
+    var STATUS_FIELD =
+        "u_status";
+
+    var STATUS_RETURN_MANAGER =
+        "return_by_manager";
+
+    var STATUS_RETURN_L2 =
+        "return_by_l2";
+
+    var STATUS_RETURN_HR =
+        "return_by_hr";
+
+    var STATUS_APPROVED =
+        "approved";
+
+    /*
+     * Only these records will appear in this widget.
+     */
+    var PENDING_ACTION_STATUSES = [
+        STATUS_RETURN_MANAGER,
+        STATUS_RETURN_L2,
+        STATUS_RETURN_HR,
+        STATUS_APPROVED
+    ];
+
+    /*
+     * =====================================================
+     * Initial Data
+     * =====================================================
+     */
+
+    data.success = true;
+    data.message = "";
+    data.records = [];
+
+    data.userName =
+        gs.getUserDisplayName() || "";
+
+    data.userEmail =
+        gs.getUser().getEmail() || "";
+
+    data.tableName = TABLE;
+
+    data.filterOptions = {
+        requestNumbers: [],
+        courseTypes: [],
+        courseFormats: [],
+        statuses: []
+    };
+
+    data.counts = {
+        returnByManager: 0,
+        returnByL2: 0,
+        returnByHR: 0,
+        approved: 0
+    };
+
+    /*
+     * =====================================================
+     * Utility Functions
+     * =====================================================
+     */
+
+    function getValue(
+        glideRecord,
+        fieldName
+    ) {
+        if (
+            !glideRecord ||
+            !glideRecord.isValidField(
+                fieldName
+            )
+        ) {
+            return "";
+        }
+
+        return glideRecord.getValue(
+            fieldName
+        ) || "";
+    }
+
+    function getDisplayValue(
+        glideRecord,
+        fieldName
+    ) {
+        if (
+            !glideRecord ||
+            !glideRecord.isValidField(
+                fieldName
+            )
+        ) {
+            return "";
+        }
+
+        return glideRecord.getDisplayValue(
+            fieldName
+        ) || "";
+    }
+
+    function addUnique(
+        array,
+        value
+    ) {
+        if (
+            value &&
+            array.indexOf(value) === -1
+        ) {
+            array.push(value);
+        }
+    }
+
+    function addUniqueObject(
+        array,
+        value,
+        displayValue
+    ) {
+        if (!value) {
+            return;
+        }
+
+        for (
+            var index = 0;
+            index < array.length;
+            index++
+        ) {
+            if (
+                array[index].value === value
+            ) {
+                return;
+            }
+        }
+
+        array.push({
+            value: value,
+            display:
+                displayValue || value
+        });
+    }
+
+    function sortDisplayObjects(
+        firstObject,
+        secondObject
+    ) {
+        return String(
+            firstObject.display || ""
+        ).localeCompare(
+            String(
+                secondObject.display || ""
+            )
+        );
+    }
+
+    function isPendingActionStatus(
+        statusValue
+    ) {
+        return (
+            PENDING_ACTION_STATUSES
+                .indexOf(statusValue) !== -1
+        );
+    }
+
+    function isReturnedStatus(
+        statusValue
+    ) {
+        return (
+            statusValue ===
+                STATUS_RETURN_MANAGER ||
+            statusValue ===
+                STATUS_RETURN_L2 ||
+            statusValue ===
+                STATUS_RETURN_HR
+        );
+    }
+
+    /*
+     * =====================================================
+     * Employee Security
+     * =====================================================
+     */
+
+    function addEmployeeQuery(
+        glideRecord
+    ) {
+        var employeeCondition = null;
+
+        /*
+         * Employee reference field.
+         */
+        if (
+            glideRecord.isValidField(
+                "u_employee_name"
+            )
+        ) {
+            employeeCondition =
+                glideRecord.addQuery(
+                    "u_employee_name",
+                    gs.getUserID()
+                );
+        }
+
+        /*
+         * Employee email fallback.
+         */
+        if (
+            data.userEmail &&
+            glideRecord.isValidField(
+                "u_employee_email"
+            )
+        ) {
+            if (employeeCondition) {
+                employeeCondition
+                    .addOrCondition(
+                        "u_employee_email",
+                        data.userEmail
+                    );
+            } else {
+                glideRecord.addQuery(
+                    "u_employee_email",
+                    data.userEmail
+                );
+            }
+        }
+    }
+
+    /*
+     * =====================================================
+     * Filter Options
+     * =====================================================
+     */
+
+    function loadFilterOptions() {
+        data.filterOptions = {
+            requestNumbers: [],
+            courseTypes: [],
+            courseFormats: [],
+            statuses: []
+        };
+
+        var filterGr =
+            new GlideRecordSecure(TABLE);
+
+        addEmployeeQuery(filterGr);
+
+        filterGr.addQuery(
+            STATUS_FIELD,
+            "IN",
+            PENDING_ACTION_STATUSES.join(",")
+        );
+
+        filterGr.orderByDesc(
+            "sys_created_on"
+        );
+
+        filterGr.query();
+
+        while (filterGr.next()) {
+
+            addUnique(
+                data.filterOptions
+                    .requestNumbers,
+                getDisplayValue(
+                    filterGr,
+                    "number"
+                )
+            );
+
+            addUniqueObject(
+                data.filterOptions
+                    .courseTypes,
+                getValue(
+                    filterGr,
+                    "u_course_type"
+                ),
+                getDisplayValue(
+                    filterGr,
+                    "u_course_type"
+                )
+            );
+
+            addUniqueObject(
+                data.filterOptions
+                    .courseFormats,
+                getValue(
+                    filterGr,
+                    "u_course_format"
+                ),
+                getDisplayValue(
+                    filterGr,
+                    "u_course_format"
+                )
+            );
+
+            addUniqueObject(
+                data.filterOptions
+                    .statuses,
+                getValue(
+                    filterGr,
+                    STATUS_FIELD
+                ),
+                getDisplayValue(
+                    filterGr,
+                    STATUS_FIELD
+                )
+            );
+        }
+
+        data.filterOptions
+            .requestNumbers
+            .sort();
+
+        data.filterOptions
+            .courseTypes
+            .sort(sortDisplayObjects);
+
+        data.filterOptions
+            .courseFormats
+            .sort(sortDisplayObjects);
+
+        data.filterOptions
+            .statuses
+            .sort(sortDisplayObjects);
+    }
+
+    /*
+     * =====================================================
+     * Counts
+     * =====================================================
+     */
+
+    function loadCounts() {
+        data.counts = {
+            returnByManager: 0,
+            returnByL2: 0,
+            returnByHR: 0,
+            approved: 0
+        };
+
+        var countGr =
+            new GlideRecordSecure(TABLE);
+
+        addEmployeeQuery(countGr);
+
+        countGr.addQuery(
+            STATUS_FIELD,
+            "IN",
+            PENDING_ACTION_STATUSES.join(",")
+        );
+
+        countGr.query();
+
+        while (countGr.next()) {
+            var statusValue =
+                getValue(
+                    countGr,
+                    STATUS_FIELD
+                );
+
+            if (
+                statusValue ===
+                STATUS_RETURN_MANAGER
+            ) {
+                data.counts
+                    .returnByManager++;
+            } else if (
+                statusValue ===
+                STATUS_RETURN_L2
+            ) {
+                data.counts
+                    .returnByL2++;
+            } else if (
+                statusValue ===
+                STATUS_RETURN_HR
+            ) {
+                data.counts
+                    .returnByHR++;
+            } else if (
+                statusValue ===
+                STATUS_APPROVED
+            ) {
+                data.counts.approved++;
+            }
+        }
+    }
+
+    /*
+     * =====================================================
+     * Required Action
+     * =====================================================
+     */
+
+    function getRequiredAction(
+        statusValue
+    ) {
+        switch (statusValue) {
+
+            case STATUS_RETURN_MANAGER:
+                return "Edit request";
+
+            case STATUS_RETURN_L2:
+                return "Edit request";
+
+            case STATUS_RETURN_HR:
+                return "Edit request";
+
+            case STATUS_APPROVED:
+                return "Provide feedback";
+
+            default:
+                return "";
+        }
+    }
+
+    /*
+     * =====================================================
+     * Load Records
+     * =====================================================
+     */
+
+    function loadRecords(filters) {
+        filters = filters || {};
+
+        var records = [];
+
+        var recordGr =
+            new GlideRecordSecure(TABLE);
+
+        /*
+         * Only logged-in employee's records.
+         */
+        addEmployeeQuery(recordGr);
+
+        /*
+         * Only returned and approved records.
+         */
+        recordGr.addQuery(
+            STATUS_FIELD,
+            "IN",
+            PENDING_ACTION_STATUSES.join(",")
+        );
+
+        /*
+         * Request number filter.
+         */
+        if (filters.requestNumber) {
+            recordGr.addQuery(
+                "number",
+                "CONTAINS",
+                String(
+                    filters.requestNumber
+                ).trim()
+            );
+        }
+
+        /*
+         * Status filter.
+         */
+        if (
+            filters.status &&
+            isPendingActionStatus(
+                String(filters.status)
+            )
+        ) {
+            recordGr.addQuery(
+                STATUS_FIELD,
+                filters.status
+            );
+        }
+
+        /*
+         * Course type filter.
+         */
+        if (filters.courseType) {
+            recordGr.addQuery(
+                "u_course_type",
+                filters.courseType
+            );
+        }
+
+        /*
+         * Course format filter.
+         */
+        if (filters.courseFormat) {
+            recordGr.addQuery(
+                "u_course_format",
+                filters.courseFormat
+            );
+        }
+
+        recordGr.orderByDesc(
+            "sys_created_on"
+        );
+
+        recordGr.query();
+
+        while (recordGr.next()) {
+
+            var statusValue =
+                getValue(
+                    recordGr,
+                    STATUS_FIELD
+                );
+
+            var returned =
+                isReturnedStatus(
+                    statusValue
+                );
+
+            records.push({
+                sys_id:
+                    recordGr.getUniqueValue(),
+
+                requestNumber:
+                    getDisplayValue(
+                        recordGr,
+                        "number"
+                    ),
+
+                employeeName:
+                    getDisplayValue(
+                        recordGr,
+                        "u_employee_name"
+                    ),
+
+                employeeEmail:
+                    getValue(
+                        recordGr,
+                        "u_employee_email"
+                    ),
+
+                country:
+                    getDisplayValue(
+                        recordGr,
+                        "u_country"
+                    ),
+
+                courseTitle:
+                    getDisplayValue(
+                        recordGr,
+                        "u_course_title"
+                    ),
+
+                courseType:
+                    getDisplayValue(
+                        recordGr,
+                        "u_course_type"
+                    ),
+
+                courseFormat:
+                    getDisplayValue(
+                        recordGr,
+                        "u_course_format"
+                    ),
+
+                courseStartDate:
+                    getDisplayValue(
+                        recordGr,
+                        "course_start_date"
+                    ),
+
+                courseEndDate:
+                    getDisplayValue(
+                        recordGr,
+                        "u_course_end_date"
+                    ),
+
+                trainingProvider:
+                    getDisplayValue(
+                        recordGr,
+                        "u_training_provider_name"
+                    ),
+
+                totalCost:
+                    getDisplayValue(
+                        recordGr,
+                        "u_total_cost"
+                    ),
+
+                currency:
+                    getDisplayValue(
+                        recordGr,
+                        "currency"
+                    ),
+
+                directManagerComments:
+                    getValue(
+                        recordGr,
+                        "u_direct_manager_comments"
+                    ),
+
+                l2ManagerComments:
+                    getValue(
+                        recordGr,
+                        "u_l2_manager_comments"
+                    ),
+
+                hrComments:
+                    getValue(
+                        recordGr,
+                        "u_hr_comments"
+                    ),
+
+                status:
+                    getDisplayValue(
+                        recordGr,
+                        STATUS_FIELD
+                    ),
+
+                statusValue:
+                    statusValue,
+
+                requiredAction:
+                    getRequiredAction(
+                        statusValue
+                    ),
+
+                /*
+                 * View for every returned or
+                 * approved record.
+                 */
+                canView: true,
+
+                /*
+                 * Edit only for:
+                 * Return by Manager
+                 * Return by L2
+                 * Return by HR
+                 */
+                canEdit: returned,
+
+                /*
+                 * Feedback only when Approved.
+                 */
+                canProvideFeedback:
+                    statusValue ===
+                    STATUS_APPROVED
+            });
+        }
+
+        return records;
+    }
+
+    /*
+     * =====================================================
+     * Input Processing
+     * =====================================================
+     */
+
+    if (
+        input &&
+        input.action === "search"
+    ) {
+        data.records = loadRecords(
+            input.filters || {}
+        );
+
+        loadCounts();
+
+        data.success = true;
+        return;
+    }
+
+    if (
+        input &&
+        input.action === "refresh"
+    ) {
+        loadFilterOptions();
+        loadCounts();
+
+        data.records = loadRecords(
+            input.filters || {}
+        );
+
+        data.success = true;
+        return;
+    }
+
+    if (
+        input &&
+        input.action === "reset"
+    ) {
+        loadFilterOptions();
+        loadCounts();
+
+        data.records =
+            loadRecords({});
+
+        data.success = true;
+        return;
+    }
+
+    /*
+     * =====================================================
+     * Initial Load
+     * =====================================================
+     */
+
+    loadFilterOptions();
+    loadCounts();
+
+    data.records =
+        loadRecords({});
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-20 10:08:11</sys_created_on>
+        <sys_id>48d70cc0475e4f10ff78de94116d43de</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_name>Pending Actions ASEAN</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sp_widget_48d70cc0475e4f10ff78de94116d43de</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-20 11:46:06</sys_updated_on>
+        <template><![CDATA[<div class="pending-actions-page">
+
+  <!-- Header -->
+  <div class="pending-actions-header">
+    <div class="header-left">
+      <h2>Pending Actions</h2>
+      <p>
+        Edit returned learning requests or provide feedback for approved requests.
+      </p>
+    </div>
+
+    <div class="header-user-information">
+      <div class="user-information-row">
+        <span class="user-information-label">Employee:</span>
+        <span class="user-information-value">
+          {{c.data.userName}}
+        </span>
+      </div>
+
+      <div class="user-information-row">
+        <span class="user-information-label">Email:</span>
+        <span class="user-information-value">
+          {{c.data.userEmail}}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div
+    class="alert alert-success widget-message"
+    ng-if="c.successMessage">
+    <i class="fa fa-check-circle"></i>
+    {{c.successMessage}}
+  </div>
+
+  <div
+    class="alert alert-danger widget-message"
+    ng-if="c.errorMessage">
+    <i class="fa fa-exclamation-circle"></i>
+    {{c.errorMessage}}
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="summary-card-container">
+
+    <div class="summary-card">
+      <div class="summary-card-icon returned-manager-icon">
+        <i class="fa fa-undo"></i>
+      </div>
+
+      <div class="summary-card-content">
+        <div class="summary-card-count">
+          {{c.data.counts.returnByManager || 0}}
+        </div>
+        <div class="summary-card-title">
+          Returned by Manager
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-card-icon returned-l2-icon">
+        <i class="fa fa-reply"></i>
+      </div>
+
+      <div class="summary-card-content">
+        <div class="summary-card-count">
+          {{c.data.counts.returnByL2 || 0}}
+        </div>
+        <div class="summary-card-title">
+          Returned by L2
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-card-icon returned-hr-icon">
+        <i class="fa fa-history"></i>
+      </div>
+
+      <div class="summary-card-content">
+        <div class="summary-card-count">
+          {{c.data.counts.returnByHR || 0}}
+        </div>
+        <div class="summary-card-title">
+          Returned by HR
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-card-icon feedback-icon">
+        <i class="fa fa-commenting-o"></i>
+      </div>
+
+      <div class="summary-card-content">
+        <div class="summary-card-count">
+          {{c.data.counts.approved || 0}}
+        </div>
+        <div class="summary-card-title">
+          Feedback Required
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Filter Section -->
+  <div class="pending-actions-filter-section">
+
+    <div class="filter-section-heading">
+      <i class="fa fa-filter"></i>
+      Filter Pending Actions
+    </div>
+
+    <div class="filter-field-container">
+
+      <!-- Request Number Typeahead -->
+      <div class="filter-field request-number-filter">
+        <label>Request Number</label>
+
+        <div class="request-number-wrapper">
+
+          <div class="request-number-input-wrapper">
+            <input
+              type="text"
+              class="form-control"
+              ng-model="c.requestSearch"
+              ng-change="c.filterRequestNumbers()"
+              ng-focus="c.openRequestDropdown()"
+              ng-blur="c.hideRequestDropdown()"
+              ng-keydown="c.handleRequestKeydown($event)"
+              placeholder="All or type request number"
+              autocomplete="off">
+
+            <button
+              type="button"
+              class="request-clear-button"
+              ng-if="c.requestSearch"
+              ng-mousedown="c.clearRequestNumber($event)"
+              title="Clear request number">
+              <i class="fa fa-times"></i>
+            </button>
+
+            <button
+              type="button"
+              class="request-dropdown-toggle"
+              ng-mousedown="c.toggleRequestDropdown($event)"
+              title="Show request numbers">
+
+              <i
+                class="fa"
+                ng-class="
+                  c.showRequestDropdown
+                    ? 'fa-chevron-up'
+                    : 'fa-chevron-down'
+                ">
+              </i>
+            </button>
+          </div>
+
+          <ul
+            class="request-number-dropdown"
+            ng-show="c.showRequestDropdown">
+
+            <li
+              class="all-request-option"
+              ng-mousedown="c.selectRequestNumber('', $event)">
+              All Request Numbers
+            </li>
+
+            <li
+              ng-repeat="
+                requestNumber in
+                c.filteredRequestNumbers
+                track by requestNumber
+              "
+              ng-class="{
+                'active-request-option':
+                  $index === c.activeRequestIndex
+              }"
+              ng-mousedown="
+                c.selectRequestNumber(
+                  requestNumber,
+                  $event
+                )
+              ">
+
+              <i class="fa fa-file-text-o"></i>
+              {{requestNumber}}
+            </li>
+
+            <li
+              class="no-request-option"
+              ng-if="
+                !c.filteredRequestNumbers ||
+                c.filteredRequestNumbers.length === 0
+              ">
+              No matching request numbers
+            </li>
+
+          </ul>
+        </div>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="filter-field">
+        <label>Ticket Status</label>
+
+        <select
+          class="form-control"
+          ng-model="c.filters.status"
+          ng-options="
+            item.value as item.display
+            for item in c.data.filterOptions.statuses
+          ">
+          <option value="">All Pending Actions</option>
+        </select>
+      </div>
+
+      <!-- Course Type Filter -->
+      <div class="filter-field">
+        <label>Course Type</label>
+
+        <select
+          class="form-control"
+          ng-model="c.filters.courseType"
+          ng-options="
+            item.value as item.display
+            for item in c.data.filterOptions.courseTypes
+          ">
+          <option value="">All Course Types</option>
+        </select>
+      </div>
+
+      <!-- Course Format Filter -->
+      <div class="filter-field">
+        <label>Course Format</label>
+
+        <select
+          class="form-control"
+          ng-model="c.filters.courseFormat"
+          ng-options="
+            item.value as item.display
+            for item in c.data.filterOptions.courseFormats
+          ">
+          <option value="">All Course Formats</option>
+        </select>
+      </div>
+
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="filter-button-container">
+
+      <button
+        type="button"
+        class="filter-button search-button"
+        ng-click="c.search()"
+        ng-disabled="c.loading">
+        <i class="fa fa-search"></i>
+        Search
+      </button>
+
+      <button
+        type="button"
+        class="filter-button reset-button"
+        ng-click="c.reset()"
+        ng-disabled="c.loading">
+        <i class="fa fa-undo"></i>
+        Reset
+      </button>
+
+      <button
+        type="button"
+        class="filter-button sort-button"
+        ng-click="c.toggleSort()"
+        ng-disabled="c.loading">
+
+        <i
+          class="fa"
+          ng-class="
+            c.sortDescending
+              ? 'fa-sort-amount-desc'
+              : 'fa-sort-amount-asc'
+          ">
+        </i>
+
+        Sort
+      </button>
+
+      <button
+        type="button"
+        class="filter-button refresh-button"
+        ng-click="c.refresh()"
+        ng-disabled="c.loading || c.refreshing">
+
+        <i
+          class="fa fa-refresh"
+          ng-class="{
+            'fa-spin': c.refreshing
+          }">
+        </i>
+
+        Refresh
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div
+    class="pending-actions-loading"
+    ng-if="c.loading">
+
+    <i class="fa fa-spinner fa-spin fa-2x"></i>
+    <p>Loading pending actions...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div
+    class="pending-actions-empty"
+    ng-if="
+      !c.loading &&
+      (
+        !c.displayRecords ||
+        c.displayRecords.length === 0
+      )
+    ">
+
+    <div class="empty-state-icon">
+      <i class="fa fa-check-circle-o"></i>
+    </div>
+
+    <h3>No Pending Actions</h3>
+
+    <p>
+      You currently have no returned requests or approved
+      requests requiring feedback.
+    </p>
+  </div>
+
+  <!-- Records Table -->
+  <div
+    class="pending-actions-table-wrapper"
+    ng-if="
+      !c.loading &&
+      c.displayRecords &&
+      c.displayRecords.length > 0
+    ">
+
+    <table class="pending-actions-table">
+
+      <thead>
+        <tr>
+          <th class="sticky-number-header">
+            Request Number
+          </th>
+
+          <th>Employee Name</th>
+          <th>Country</th>
+          <th>Course Title</th>
+          <th>Course Type</th>
+          <th>Course Format</th>
+          <th>Course Start Date</th>
+          <th>Course End Date</th>
+          <th>Training Provider</th>
+          <th>Total Cost</th>
+          <th>Currency</th>
+          <th>Direct Manager Comments</th>
+          <th>L2 Manager Comments</th>
+          <th>HR Comments</th>
+          <th>Required Action</th>
+
+          <th class="sticky-status-header">
+            Ticket Status
+          </th>
+
+          <th class="sticky-actions-header">
+            Actions
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr
+          ng-repeat="
+            record in c.displayRecords
+            track by record.sys_id
+          ">
+
+          <td class="sticky-number-column">
+            <strong>
+              {{record.requestNumber || '-'}}
+            </strong>
+          </td>
+
+          <td>{{record.employeeName || '-'}}</td>
+          <td>{{record.country || '-'}}</td>
+          <td>{{record.courseTitle || '-'}}</td>
+          <td>{{record.courseType || '-'}}</td>
+          <td>{{record.courseFormat || '-'}}</td>
+          <td>{{record.courseStartDate || '-'}}</td>
+          <td>{{record.courseEndDate || '-'}}</td>
+          <td>{{record.trainingProvider || '-'}}</td>
+          <td>{{record.totalCost || '-'}}</td>
+          <td>{{record.currency || '-'}}</td>
+
+          <td class="comments-column">
+            <div
+              class="comments-content"
+              title="{{record.directManagerComments}}">
+              {{record.directManagerComments || '-'}}
+            </div>
+          </td>
+
+          <td class="comments-column">
+            <div
+              class="comments-content"
+              title="{{record.l2ManagerComments}}">
+              {{record.l2ManagerComments || '-'}}
+            </div>
+          </td>
+
+          <td class="comments-column">
+            <div
+              class="comments-content"
+              title="{{record.hrComments}}">
+              {{record.hrComments || '-'}}
+            </div>
+          </td>
+
+          <td>
+            <span class="required-action-label">
+              {{record.requiredAction}}
+            </span>
+          </td>
+
+          <td class="sticky-status-column">
+            <span
+              class="status-badge"
+              ng-class="
+                c.getStatusClass(
+                  record.statusValue
+                )
+              ">
+              {{record.status}}
+            </span>
+          </td>
+
+          <td class="sticky-actions-column">
+            <div class="record-action-container">
+
+              <!-- View: available for all records -->
+              <button
+                type="button"
+                class="
+                  record-action-button
+                  view-action-button
+                "
+                ng-click="c.openView(record)"
+                title="View request">
+
+                <i class="fa fa-eye"></i>
+              </button>
+
+              <!-- Edit: only returned statuses -->
+              <button
+                type="button"
+                class="
+                  record-action-button
+                  edit-action-button
+                "
+                ng-if="record.canEdit"
+                ng-click="c.openEdit(record)"
+                title="Edit returned request">
+
+                <i class="fa fa-pencil"></i>
+              </button>
+
+              <!-- Feedback: only Approved status -->
+              <button
+                type="button"
+                class="
+                  record-action-button
+                  feedback-action-button
+                "
+                ng-if="record.canProvideFeedback"
+                ng-click="c.openFeedback(record)"
+                title="Provide feedback">
+
+                <i class="fa fa-commenting-o"></i>
+              </button>
+
+            </div>
+          </td>
+
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div class="pending-actions-footer">
+    <button
+      type="button"
+      class="back-button"
+      ng-click="c.goBack()"
+      title="Back">
+
+      <i class="fa fa-chevron-left"></i>
+    </button>
+  </div>
+
+</div>]]></template>
+    </sp_widget>
+</record_update>

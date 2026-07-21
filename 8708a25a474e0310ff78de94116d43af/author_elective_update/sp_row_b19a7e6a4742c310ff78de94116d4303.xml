@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_row">
+    <sp_row action="DELETE">
+        <aria_label/>
+        <class_name/>
+        <order>1</order>
+        <semantic_tag/>
+        <sp_column/>
+        <sp_container display_value="Approval ASEAN - Container 1">0d9afa6a4742c310ff78de94116d43d1</sp_container>
+        <sys_class_name>sp_row</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 07:17:55</sys_created_on>
+        <sys_id>b19a7e6a4742c310ff78de94116d4303</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>1</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sp_row_b19a7e6a4742c310ff78de94116d4303</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 07:17:55</sys_updated_on>
+    </sp_row>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</application>
+        <file_path/>
+        <instance_id>1342adfb3b190fd8baf6048aa4e45a41</instance_id>
+        <instance_name>dev404202</instance_name>
+        <name>sp_row_b19a7e6a4742c310ff78de94116d4303</name>
+        <payload><![CDATA[<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_row"><sp_row action="INSERT_OR_UPDATE"><aria_label/><class_name/><order>1</order><semantic_tag/><sp_column/><sp_container display_value="Approval ASEAN - Container 1">0d9afa6a4742c310ff78de94116d43d1</sp_container><sys_class_name>sp_row</sys_class_name><sys_created_by>admin</sys_created_by><sys_created_on>2026-07-16 07:17:55</sys_created_on><sys_id>b19a7e6a4742c310ff78de94116d4303</sys_id><sys_mod_count>0</sys_mod_count><sys_name>1</sys_name><sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package><sys_policy/><sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope><sys_update_name>sp_row_b19a7e6a4742c310ff78de94116d4303</sys_update_name><sys_updated_by>admin</sys_updated_by><sys_updated_on>2026-07-16 07:17:55</sys_updated_on></sp_row></record_update>]]></payload>
+        <payload_hash>719492111</payload_hash>
+        <record_name>1</record_name>
+        <reverted_from/>
+        <source>6c8436d247ce0310ff78de94116d43c1</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 07:17:55</sys_created_on>
+        <sys_id>399a7e6a4742c310ff78de94116d43ff</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19f69ca06b30000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 07:17:55</sys_updated_on>
+        <type>Row</type>
+        <update_guid>f59a7e6aaf42c31035756936b1b6b7fe</update_guid>
+        <update_guid_history>f59a7e6aaf42c31035756936b1b6b7fe:719492111</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete display_value="1">2010c89c471ecf10ff78de94116d4314</sys_audit_delete>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-21 04:12:22</sys_created_on>
+        <sys_db_object display_value="" name="sp_row">sp_row</sys_db_object>
+        <sys_id>79a5c04f731a4e4aafdded2225381289</sys_id>
+        <sys_metadata>b19a7e6a4742c310ff78de94116d4303</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>1</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_scope_delete display_value="">150a93e03297447584ae8ab0fd980be9</sys_scope_delete>
+        <sys_update_name>sp_row_b19a7e6a4742c310ff78de94116d4303</sys_update_name>
+        <sys_update_version display_value="sp_row_b19a7e6a4742c310ff78de94116d4303">399a7e6a4742c310ff78de94116d43ff</sys_update_version>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-21 04:12:22</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

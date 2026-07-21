@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_container">
+    <sp_container action="DELETE">
+        <aria_label/>
+        <background_color/>
+        <background_image/>
+        <background_style>default</background_style>
+        <bootstrap_alt>false</bootstrap_alt>
+        <class_name/>
+        <container_class_name/>
+        <name>Check My Records ASEAN New - Container 1</name>
+        <order>1</order>
+        <semantic_tag/>
+        <sp_page display_value="check_my_records_asean_new">26efe63f47024f10ff78de94116d43a1</sp_page>
+        <subheader>false</subheader>
+        <sys_class_name>sp_container</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-20 03:44:07</sys_created_on>
+        <sys_id>4900fa3f47024f10ff78de94116d434e</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Check My Records ASEAN New - Container 1</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sp_container_4900fa3f47024f10ff78de94116d434e</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-20 03:44:07</sys_updated_on>
+        <title/>
+        <width>container</width>
+    </sp_container>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</application>
+        <file_path/>
+        <instance_id>1342adfb3b190fd8baf6048aa4e45a41</instance_id>
+        <instance_name>dev404202</instance_name>
+        <name>sp_container_4900fa3f47024f10ff78de94116d434e</name>
+        <payload><![CDATA[<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_container"><sp_container action="INSERT_OR_UPDATE"><aria_label/><background_color/><background_image/><background_style>default</background_style><bootstrap_alt>false</bootstrap_alt><class_name/><container_class_name/><name>Check My Records ASEAN New - Container 1</name><order>1</order><semantic_tag/><sp_page display_value="check_my_records_asean_new">26efe63f47024f10ff78de94116d43a1</sp_page><subheader>false</subheader><sys_class_name>sp_container</sys_class_name><sys_created_by>admin</sys_created_by><sys_created_on>2026-07-20 03:44:07</sys_created_on><sys_id>4900fa3f47024f10ff78de94116d434e</sys_id><sys_mod_count>0</sys_mod_count><sys_name>Check My Records ASEAN New - Container 1</sys_name><sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package><sys_policy/><sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope><sys_update_name>sp_container_4900fa3f47024f10ff78de94116d434e</sys_update_name><sys_updated_by>admin</sys_updated_by><sys_updated_on>2026-07-20 03:44:07</sys_updated_on><title/><width>container</width></sp_container></record_update>]]></payload>
+        <payload_hash>1563658956</payload_hash>
+        <record_name>Check My Records ASEAN New - Container 1</record_name>
+        <reverted_from/>
+        <source>6c8436d247ce0310ff78de94116d43c1</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-20 03:44:07</sys_created_on>
+        <sys_id>c100fa3f47024f10ff78de94116d43f4</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19f7d9fba830000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-20 03:44:07</sys_updated_on>
+        <type>Container</type>
+        <update_guid>c500fa3f30024f10fd79d3a148127051</update_guid>
+        <update_guid_history>c500fa3f30024f10fd79d3a148127051:1563658956</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete display_value="Check My Records ASEAN New - Container 1">1010889c471ecf10ff78de94116d436c</sys_audit_delete>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-21 04:12:21</sys_created_on>
+        <sys_db_object display_value="" name="sp_container">sp_container</sys_db_object>
+        <sys_id>02bf84be16c34fe9800ece5bdd96d749</sys_id>
+        <sys_metadata>4900fa3f47024f10ff78de94116d434e</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Check My Records ASEAN New - Container 1</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_scope_delete display_value="">150a93e03297447584ae8ab0fd980be9</sys_scope_delete>
+        <sys_update_name>sp_container_4900fa3f47024f10ff78de94116d434e</sys_update_name>
+        <sys_update_version display_value="sp_container_4900fa3f47024f10ff78de94116d434e">c100fa3f47024f10ff78de94116d43f4</sys_update_version>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-21 04:12:21</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

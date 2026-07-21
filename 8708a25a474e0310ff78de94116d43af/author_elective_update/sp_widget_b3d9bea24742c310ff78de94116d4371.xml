@@ -1,0 +1,7853 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="DELETE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($window,$document,$timeout) {
+    var c = this;
+
+    c.selectedRecord = null;
+
+    c.requestDropdownOpen = false;
+    c.loadingRequestSuggestions = false;
+    c.activeSuggestionIndex = -1;
+
+    c.requestNumberSuggestions =
+        angular.copy(
+            c.data.requestNumberSuggestions || []
+        );
+
+    c.filteredRequestNumberSuggestions =
+        angular.copy(
+            c.requestNumberSuggestions
+        );
+
+    c.data.filters =
+        c.data.filters || {
+            requestNumber: "",
+            courseType: "",
+            courseFormat: "",
+            country: ""
+        };
+
+    c.data.selectedStatus =
+        c.data.selectedStatus || "manager";
+
+    c.data.stageCounts =
+        c.data.stageCounts || {
+            manager: 0,
+            pending_l2_approval: 0,
+            pending_hr_review: 0
+        };
+
+    c.data.sortOrder =
+        c.data.sortOrder || "asc";
+
+    c.data.loading = false;
+    c.data.downloading = false;
+
+    c.clearMessages = function() {
+        c.data.successMessage = "";
+        c.data.errorMessage = "";
+    };
+
+    c.getSelectedApprovalLabel = function() {
+
+        if (
+            c.data.selectedStatus ==
+            "pending_l2_approval"
+        ) {
+            return "Management L2";
+        }
+
+        if (
+            c.data.selectedStatus ==
+            "pending_hr_review"
+        ) {
+            return "HR Learning";
+        }
+
+        return "In-Company Manager";
+    };
+
+    c.getSelectedStatusLabel = function() {
+
+        if (
+            c.data.selectedStatus ==
+            "pending_l2_approval"
+        ) {
+            return "Pending L2 Approval";
+        }
+
+        if (
+            c.data.selectedStatus ==
+            "pending_hr_review"
+        ) {
+            return "Pending HR Review";
+        }
+
+        return "Submitted / Pending Manager Approval";
+    };
+
+    c.getCommentsHeading = function() {
+
+        if (
+            c.data.selectedStatus ==
+            "pending_l2_approval"
+        ) {
+            return "Management L2 Comments";
+        }
+
+        if (
+            c.data.selectedStatus ==
+            "pending_hr_review"
+        ) {
+            return "HR Learning Comments";
+        }
+
+        return "In-Company Manager Comments";
+    };
+
+    c.getRequestParameters = function(action) {
+
+        return {
+            action: action,
+
+            selectedStatus:
+                c.data.selectedStatus ||
+                "manager",
+
+            requestNumber:
+                c.data.filters.requestNumber ||
+                "",
+
+            courseType:
+                c.data.filters.courseType ||
+                "",
+
+            courseFormat:
+                c.data.filters.courseFormat ||
+                "",
+
+            country:
+                c.data.filters.country ||
+                "",
+
+            sortOrder:
+                c.data.sortOrder ||
+                "asc"
+        };
+    };
+
+    c.updateResponse = function(response) {
+
+        var result =
+            response.data || {};
+
+        c.data.records =
+            result.records || [];
+
+        c.data.countries =
+            result.countries || [];
+
+        c.data.courseTypes =
+            result.courseTypes || [];
+
+        c.data.courseFormats =
+            result.courseFormats || [];
+
+        c.data.stageCounts =
+            result.stageCounts || {
+                manager: 0,
+                pending_l2_approval: 0,
+                pending_hr_review: 0
+            };
+
+        c.data.successMessage =
+            result.successMessage || "";
+
+        c.data.errorMessage =
+            result.errorMessage || "";
+
+        if (result.filters) {
+            c.data.filters =
+                result.filters;
+        }
+
+        if (result.selectedStatus) {
+            c.data.selectedStatus =
+                result.selectedStatus;
+        }
+
+        if (result.sortOrder) {
+            c.data.sortOrder =
+                result.sortOrder;
+        }
+
+        c.requestNumberSuggestions =
+            angular.copy(
+                result.requestNumberSuggestions || []
+            );
+
+        c.filterRequestNumberSuggestions();
+
+        c.requestDropdownOpen = false;
+        c.activeSuggestionIndex = -1;
+        c.selectedRecord = null;
+    };
+
+    /*
+     * TYPEAHEAD METHODS
+     */
+
+    c.onRequestNumberChange = function() {
+
+        c.filterRequestNumberSuggestions();
+
+        c.requestDropdownOpen = true;
+        c.activeSuggestionIndex = -1;
+    };
+
+    c.filterRequestNumberSuggestions = function() {
+
+        var searchText =
+            String(
+                c.data.filters.requestNumber || ""
+            ).toLowerCase();
+
+        if (!searchText) {
+
+            c.filteredRequestNumberSuggestions =
+                angular.copy(
+                    c.requestNumberSuggestions
+                );
+
+            return;
+        }
+
+        c.filteredRequestNumberSuggestions =
+            c.requestNumberSuggestions.filter(
+                function(suggestion) {
+
+                    var number =
+                        String(
+                            suggestion.label || ""
+                        ).toLowerCase();
+
+                    var courseTitle =
+                        String(
+                            suggestion.courseTitle || ""
+                        ).toLowerCase();
+
+                    var employeeName =
+                        String(
+                            suggestion.employeeName || ""
+                        ).toLowerCase();
+
+                    return (
+                        number.indexOf(searchText) > -1 ||
+                        courseTitle.indexOf(searchText) > -1 ||
+                        employeeName.indexOf(searchText) > -1
+                    );
+                }
+            );
+    };
+
+    c.openRequestNumberSuggestions = function() {
+
+        c.filterRequestNumberSuggestions();
+        c.requestDropdownOpen = true;
+        c.activeSuggestionIndex = -1;
+    };
+
+    c.toggleRequestNumberSuggestions = function(event) {
+
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        c.requestDropdownOpen =
+            !c.requestDropdownOpen;
+
+        if (c.requestDropdownOpen) {
+            c.filterRequestNumberSuggestions();
+            c.activeSuggestionIndex = -1;
+        }
+    };
+
+    c.selectRequestNumber = function(
+        suggestion,
+        event
+    ) {
+
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        if (!suggestion) {
+            return;
+        }
+
+        c.data.filters.requestNumber =
+            suggestion.value || suggestion.label || "";
+
+        c.requestDropdownOpen = false;
+        c.activeSuggestionIndex = -1;
+
+        /*
+         * Automatically search after selecting
+         * a request number.
+         */
+        c.search();
+    };
+
+    c.clearRequestNumber = function(event) {
+
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        c.data.filters.requestNumber = "";
+        c.activeSuggestionIndex = -1;
+
+        c.filterRequestNumberSuggestions();
+        c.requestDropdownOpen = true;
+    };
+
+    c.handleRequestNumberKeydown = function(event) {
+
+        if (!event) {
+            return;
+        }
+
+        var keyCode =
+            event.which || event.keyCode;
+
+        /*
+         * Down arrow.
+         */
+        if (keyCode == 40) {
+
+            event.preventDefault();
+
+            if (!c.requestDropdownOpen) {
+                c.openRequestNumberSuggestions();
+            }
+
+            if (
+                c.filteredRequestNumberSuggestions.length
+            ) {
+                c.activeSuggestionIndex++;
+
+                if (
+                    c.activeSuggestionIndex >=
+                    c.filteredRequestNumberSuggestions.length
+                ) {
+                    c.activeSuggestionIndex = 0;
+                }
+            }
+
+            return;
+        }
+
+        /*
+         * Up arrow.
+         */
+        if (keyCode == 38) {
+
+            event.preventDefault();
+
+            if (!c.requestDropdownOpen) {
+                c.openRequestNumberSuggestions();
+            }
+
+            if (
+                c.filteredRequestNumberSuggestions.length
+            ) {
+                c.activeSuggestionIndex--;
+
+                if (
+                    c.activeSuggestionIndex < 0
+                ) {
+                    c.activeSuggestionIndex =
+                        c.filteredRequestNumberSuggestions.length - 1;
+                }
+            }
+
+            return;
+        }
+
+        /*
+         * Enter.
+         */
+        if (keyCode == 13) {
+
+            event.preventDefault();
+
+            if (
+                c.requestDropdownOpen &&
+                c.activeSuggestionIndex >= 0 &&
+                c.filteredRequestNumberSuggestions[
+                    c.activeSuggestionIndex
+                ]
+            ) {
+                c.selectRequestNumber(
+                    c.filteredRequestNumberSuggestions[
+                        c.activeSuggestionIndex
+                    ],
+                    event
+                );
+            } else {
+                c.requestDropdownOpen = false;
+                c.search();
+            }
+
+            return;
+        }
+
+        /*
+         * Escape.
+         */
+        if (keyCode == 27) {
+
+            event.preventDefault();
+
+            c.requestDropdownOpen = false;
+            c.activeSuggestionIndex = -1;
+        }
+    };
+
+    c.handleOutsideClick = function() {
+        c.requestDropdownOpen = false;
+        c.activeSuggestionIndex = -1;
+    };
+
+    /*
+     * TAB / FILTER METHODS
+     */
+
+    c.selectStatus = function(status) {
+
+        if (c.data.loading) {
+            return;
+        }
+
+        c.clearMessages();
+
+        c.selectedRecord = null;
+        c.requestDropdownOpen = false;
+
+        c.data.selectedStatus = status;
+
+        /*
+         * Clear request number because request-number
+         * suggestions are different for every tab.
+         */
+        c.data.filters.requestNumber = "";
+
+        c.search();
+    };
+
+    c.selectRecord = function(record) {
+
+        if (!record) {
+            return;
+        }
+
+        c.selectedRecord = record;
+
+        c.selectedRecord.commentValidationError =
+            false;
+    };
+
+    c.clearSelectedRecord = function() {
+        c.selectedRecord = null;
+    };
+
+    c.search = function() {
+
+        if (c.data.loading) {
+            return;
+        }
+
+        c.clearMessages();
+
+        c.selectedRecord = null;
+        c.requestDropdownOpen = false;
+        c.data.loading = true;
+
+        c.server.get(
+            c.getRequestParameters("search")
+        ).then(
+            function(response) {
+
+                c.updateResponse(response);
+                c.data.loading = false;
+
+            },
+            function() {
+
+                c.data.loading = false;
+
+                c.data.errorMessage =
+                    "Unable to load learning approvals.";
+            }
+        );
+    };
+
+    c.resetFilters = function() {
+
+        if (c.data.loading) {
+            return;
+        }
+
+        c.data.filters = {
+            requestNumber: "",
+            courseType: "",
+            courseFormat: "",
+            country: ""
+        };
+
+        c.data.sortOrder = "asc";
+        c.requestDropdownOpen = false;
+
+        c.search();
+    };
+
+    c.refresh = function() {
+
+        if (!c.data.loading) {
+            c.search();
+        }
+    };
+
+    c.sortRecords = function() {
+
+        if (c.data.loading) {
+            return;
+        }
+
+        c.data.sortOrder =
+            c.data.sortOrder == "asc"
+                ? "desc"
+                : "asc";
+
+        c.search();
+    };
+
+    /*
+     * APPROVE
+     */
+
+    c.approve = function(record) {
+
+        if (
+            !record ||
+            record.processing
+        ) {
+            return;
+        }
+
+        c.clearMessages();
+
+        var comments =
+            trimValue(
+                record.actionComments
+            );
+
+        if (!comments) {
+
+            record.commentValidationError =
+                true;
+
+            return;
+        }
+
+        record.processing = true;
+
+        record.commentValidationError =
+            false;
+
+        var parameters =
+            c.getRequestParameters(
+                "approve"
+            );
+
+        parameters.approval_sys_id =
+            record.approval_sys_id;
+
+        parameters.actionComments =
+            comments;
+
+        c.server.get(parameters).then(
+            function(response) {
+
+                var result =
+                    response.data || {};
+
+                if (result.errorMessage) {
+
+                    record.processing = false;
+
+                    c.data.errorMessage =
+                        result.errorMessage;
+
+                    return;
+                }
+
+                c.updateResponse(response);
+
+            },
+            function() {
+
+                record.processing = false;
+
+                c.data.errorMessage =
+                    "Unable to approve the learning application.";
+            }
+        );
+    };
+
+    /*
+     * REJECT
+     */
+
+    c.reject = function(record) {
+
+        if (
+            !record ||
+            record.processing
+        ) {
+            return;
+        }
+
+        c.clearMessages();
+
+        var comments =
+            trimValue(
+                record.actionComments
+            );
+
+        if (!comments) {
+
+            record.commentValidationError =
+                true;
+
+            return;
+        }
+
+        record.processing = true;
+
+        record.commentValidationError =
+            false;
+
+        var parameters =
+            c.getRequestParameters(
+                "reject"
+            );
+
+        parameters.approval_sys_id =
+            record.approval_sys_id;
+
+        parameters.actionComments =
+            comments;
+
+        c.server.get(parameters).then(
+            function(response) {
+
+                var result =
+                    response.data || {};
+
+                if (result.errorMessage) {
+
+                    record.processing = false;
+
+                    c.data.errorMessage =
+                        result.errorMessage;
+
+                    return;
+                }
+
+                c.updateResponse(response);
+
+            },
+            function() {
+
+                record.processing = false;
+
+                c.data.errorMessage =
+                    "Unable to reject the learning application.";
+            }
+        );
+    };
+
+    /*
+     * REPORT DOWNLOAD
+     */
+
+    c.downloadReport = function() {
+
+        if (
+            c.data.downloading ||
+            c.data.loading
+        ) {
+            return;
+        }
+
+        c.clearMessages();
+
+        c.data.downloading = true;
+
+        c.server.get({
+            action: "download_report"
+        }).then(
+            function(response) {
+
+                var result =
+                    response.data || {};
+
+                c.data.downloading = false;
+
+                c.data.successMessage =
+                    result.successMessage || "";
+
+                c.data.errorMessage =
+                    result.errorMessage || "";
+
+                if (
+                    !result.downloadReady ||
+                    !result.fileContent
+                ) {
+                    if (!c.data.errorMessage) {
+                        c.data.errorMessage =
+                            "The report could not be generated.";
+                    }
+
+                    return;
+                }
+
+                createDownload(
+                    result.fileContent,
+                    result.fileName ||
+                    "ASEAN_Learning_Approval_Report.csv"
+                );
+
+            },
+            function() {
+
+                c.data.downloading = false;
+
+                c.data.errorMessage =
+                    "Unable to generate the approval report.";
+            }
+        );
+    };
+
+    function createDownload(
+        csvContent,
+        fileName
+    ) {
+
+        try {
+
+            var blob =
+                new $window.Blob(
+                    ["\uFEFF" + csvContent],
+                    {
+                        type:
+                            "text/csv;charset=utf-8"
+                    }
+                );
+
+            var urlApi =
+                $window.URL ||
+                $window.webkitURL;
+
+            var objectUrl =
+                urlApi.createObjectURL(blob);
+
+            var link =
+                $document[0].createElement("a");
+
+            link.href = objectUrl;
+            link.download = fileName;
+            link.style.display = "none";
+
+            $document[0].body.appendChild(link);
+
+            link.click();
+
+            $timeout(function() {
+
+                if (link.parentNode) {
+                    link.parentNode.removeChild(link);
+                }
+
+                urlApi.revokeObjectURL(objectUrl);
+
+            }, 1000);
+
+        } catch (error) {
+
+            c.data.errorMessage =
+                "The browser could not download the report.";
+        }
+    }
+
+    function trimValue(value) {
+
+        return String(
+            value || ""
+        ).replace(
+            /^\s+|\s+$/g,
+            ""
+        );
+    }
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.learning-widget {&#13;
+  position: relative;&#13;
+  min-height: 650px;&#13;
+  overflow: visible;&#13;
+  color: #222;&#13;
+  background: #fff;&#13;
+  border: 1px solid #333;&#13;
+  font-family: Arial, Helvetica, sans-serif;&#13;
+}&#13;
+&#13;
+.widget-header {&#13;
+  min-height: 65px;&#13;
+  padding: 12px 15px 8px;&#13;
+  background: #fff;&#13;
+}&#13;
+&#13;
+.widget-header h2 {&#13;
+  display: inline-block;&#13;
+  margin: 0;&#13;
+  padding: 0 5px 8px;&#13;
+  color: #ec6608;&#13;
+  border-bottom: 3px solid #ec6608;&#13;
+  font-size: 26px;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.stage-selection {&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  min-height: 52px;&#13;
+  padding: 8px 15px;&#13;
+  background: #fff;&#13;
+  border-top: 4px solid #111;&#13;
+  border-bottom: 1px solid #bdbdbd;&#13;
+}&#13;
+&#13;
+.stage-label {&#13;
+  flex: 0 0 125px;&#13;
+  font-size: 14px;&#13;
+  text-decoration: underline;&#13;
+}&#13;
+&#13;
+.stage-tabs {&#13;
+  display: flex;&#13;
+  flex: 1;&#13;
+  gap: 28px;&#13;
+}&#13;
+&#13;
+.stage-tab {&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  gap: 8px;&#13;
+  flex: 1;&#13;
+  max-width: 245px;&#13;
+  min-height: 36px;&#13;
+  padding: 5px 15px;&#13;
+  color: #16415c;&#13;
+  background: #eee;&#13;
+  border: 0;&#13;
+  border-radius: 7px;&#13;
+  cursor: pointer;&#13;
+  font-size: 14px;&#13;
+  font-weight: 600;&#13;
+}&#13;
+&#13;
+.stage-tab:hover:not([disabled]) {&#13;
+  background: #d9d9d9;&#13;
+}&#13;
+&#13;
+.stage-tab.active-stage {&#13;
+  color: #fff;&#13;
+  background: #f36f21;&#13;
+}&#13;
+&#13;
+.stage-tab[disabled] {&#13;
+  cursor: not-allowed;&#13;
+  opacity: 0.65;&#13;
+}&#13;
+&#13;
+.approval-count {&#13;
+  display: inline-flex;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  min-width: 23px;&#13;
+  height: 23px;&#13;
+  padding: 0 6px;&#13;
+  color: #fff;&#13;
+  background: #68737d;&#13;
+  border-radius: 12px;&#13;
+  font-size: 11px;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.active-stage .approval-count {&#13;
+  color: #f36f21;&#13;
+  background: #fff;&#13;
+}&#13;
+&#13;
+.toolbar {&#13;
+  display: flex;&#13;
+  align-items: stretch;&#13;
+  min-height: 155px;&#13;
+  overflow: visible;&#13;
+  background: #e5e5e5;&#13;
+  border-bottom: 1px solid #bdbdbd;&#13;
+}&#13;
+&#13;
+.download-section {&#13;
+  flex: 0 0 145px;&#13;
+  padding: 12px 10px;&#13;
+}&#13;
+&#13;
+.download-btn {&#13;
+  width: 120px;&#13;
+  min-height: 34px;&#13;
+  padding: 6px 10px;&#13;
+  color: #fff;&#13;
+  background: #2ea94f;&#13;
+  border: 0;&#13;
+  font-size: 12px;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.download-btn:hover {&#13;
+  background: #258d41;&#13;
+}&#13;
+&#13;
+.download-btn[disabled] {&#13;
+  cursor: not-allowed;&#13;
+  opacity: 0.65;&#13;
+}&#13;
+&#13;
+.download-btn i {&#13;
+  margin-right: 6px;&#13;
+}&#13;
+&#13;
+.download-help {&#13;
+  width: 120px;&#13;
+  margin-top: 6px;&#13;
+  color: #666;&#13;
+  font-size: 10px;&#13;
+  text-align: center;&#13;
+}&#13;
+&#13;
+.filters-container {&#13;
+  flex: 1;&#13;
+  padding: 10px 5px;&#13;
+  overflow: visible;&#13;
+}&#13;
+&#13;
+.filter-row {&#13;
+  display: flex;&#13;
+  gap: 25px;&#13;
+  margin-bottom: 8px;&#13;
+  overflow: visible;&#13;
+}&#13;
+&#13;
+.filter-group {&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  flex: 1;&#13;
+  min-width: 250px;&#13;
+}&#13;
+&#13;
+.filter-group label {&#13;
+  flex: 0 0 115px;&#13;
+  margin: 0;&#13;
+  padding-right: 8px;&#13;
+  font-size: 13px;&#13;
+  font-weight: normal;&#13;
+  text-align: right;&#13;
+  text-decoration: underline;&#13;
+}&#13;
+&#13;
+.filter-group .form-control {&#13;
+  flex: 1;&#13;
+  height: 31px;&#13;
+  padding: 4px 8px;&#13;
+  color: #333;&#13;
+  background: #fff;&#13;
+  border: 1px solid #c4c4c4;&#13;
+  border-radius: 0;&#13;
+  font-size: 12px;&#13;
+}&#13;
+&#13;
+.ticket-status-field {&#13;
+  color: #555 !important;&#13;
+  background: #f5f5f5 !important;&#13;
+}&#13;
+&#13;
+.empty-filter {&#13;
+  visibility: hidden;&#13;
+}&#13;
+&#13;
+.request-number-filter {&#13;
+  overflow: visible;&#13;
+}&#13;
+&#13;
+.request-typeahead {&#13;
+  position: relative;&#13;
+  flex: 1;&#13;
+  min-width: 0;&#13;
+  overflow: visible;&#13;
+  z-index: 1000;&#13;
+}&#13;
+&#13;
+.request-input-wrapper {&#13;
+  position: relative;&#13;
+  display: flex;&#13;
+  width: 100%;&#13;
+}&#13;
+&#13;
+.request-number-input {&#13;
+  width: 100%;&#13;
+  padding-right: 58px !important;&#13;
+}&#13;
+&#13;
+.request-dropdown-button,&#13;
+.request-clear-button {&#13;
+  position: absolute;&#13;
+  top: 1px;&#13;
+  width: 27px;&#13;
+  height: 29px;&#13;
+  padding: 0;&#13;
+  color: #666;&#13;
+  background: transparent;&#13;
+  border: 0;&#13;
+  z-index: 2;&#13;
+}&#13;
+&#13;
+.request-dropdown-button {&#13;
+  right: 1px;&#13;
+}&#13;
+&#13;
+.request-clear-button {&#13;
+  right: 28px;&#13;
+}&#13;
+&#13;
+.request-dropdown-button:hover,&#13;
+.request-clear-button:hover {&#13;
+  color: #f36f21;&#13;
+  background: #f2f2f2;&#13;
+}&#13;
+&#13;
+.request-dropdown-button[disabled] {&#13;
+  cursor: not-allowed;&#13;
+  opacity: 0.5;&#13;
+}&#13;
+&#13;
+.request-suggestion-dropdown {&#13;
+  position: absolute;&#13;
+  top: 33px;&#13;
+  left: 0;&#13;
+  right: 0;&#13;
+  z-index: 9999;&#13;
+  max-height: 260px;&#13;
+  overflow-y: auto;&#13;
+  background: #fff;&#13;
+  border: 1px solid #aaa;&#13;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.22);&#13;
+}&#13;
+&#13;
+.request-suggestion-item {&#13;
+  display: block;&#13;
+  width: 100%;&#13;
+  padding: 8px 10px;&#13;
+  color: #333;&#13;
+  background: #fff;&#13;
+  border: 0;&#13;
+  border-bottom: 1px solid #eee;&#13;
+  text-align: left;&#13;
+  cursor: pointer;&#13;
+}&#13;
+&#13;
+.request-suggestion-item:last-child {&#13;
+  border-bottom: 0;&#13;
+}&#13;
+&#13;
+.request-suggestion-item:hover,&#13;
+.request-suggestion-item.active-suggestion {&#13;
+  background: #fff1e8;&#13;
+}&#13;
+&#13;
+.suggestion-number {&#13;
+  display: block;&#13;
+  color: #0077b5;&#13;
+  font-size: 13px;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.suggestion-course {&#13;
+  display: block;&#13;
+  margin-top: 2px;&#13;
+  color: #333;&#13;
+  font-size: 11px;&#13;
+  overflow: hidden;&#13;
+  text-overflow: ellipsis;&#13;
+  white-space: nowrap;&#13;
+}&#13;
+&#13;
+.suggestion-employee {&#13;
+  display: block;&#13;
+  margin-top: 2px;&#13;
+  color: #777;&#13;
+  font-size: 10px;&#13;
+  overflow: hidden;&#13;
+  text-overflow: ellipsis;&#13;
+  white-space: nowrap;&#13;
+}&#13;
+&#13;
+.request-suggestion-loading,&#13;
+.request-no-suggestions {&#13;
+  padding: 12px 10px;&#13;
+  color: #666;&#13;
+  font-size: 11px;&#13;
+  text-align: center;&#13;
+}&#13;
+&#13;
+.request-suggestion-loading i {&#13;
+  margin-right: 5px;&#13;
+}&#13;
+&#13;
+.filter-button-row {&#13;
+  display: flex;&#13;
+  justify-content: flex-end;&#13;
+  gap: 8px;&#13;
+}&#13;
+&#13;
+.filter-btn {&#13;
+  min-width: 90px;&#13;
+  height: 31px;&#13;
+  color: #fff;&#13;
+  border: 0;&#13;
+  font-size: 12px;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.search-btn {&#13;
+  background: #008fd3;&#13;
+}&#13;
+&#13;
+.reset-btn {&#13;
+  background: #777;&#13;
+}&#13;
+&#13;
+.toolbar-actions {&#13;
+  display: flex;&#13;
+  flex: 0 0 46px;&#13;
+  flex-direction: column;&#13;
+  gap: 5px;&#13;
+  padding: 10px 5px 8px 0;&#13;
+}&#13;
+&#13;
+.icon-btn {&#13;
+  width: 36px;&#13;
+  height: 32px;&#13;
+  padding: 0;&#13;
+  color: #fff;&#13;
+  background: #2ea94f;&#13;
+  border: 0;&#13;
+  font-size: 17px;&#13;
+}&#13;
+&#13;
+.widget-message {&#13;
+  margin: 10px 13px;&#13;
+  padding: 9px 12px;&#13;
+}&#13;
+&#13;
+.loading-message {&#13;
+  padding: 50px 20px;&#13;
+  text-align: center;&#13;
+}&#13;
+&#13;
+.approval-workspace {&#13;
+  display: flex;&#13;
+  min-height: 470px;&#13;
+  padding: 12px 13px 75px;&#13;
+}&#13;
+&#13;
+.approval-list-panel {&#13;
+  flex: 0 0 35%;&#13;
+  min-width: 290px;&#13;
+  max-width: 410px;&#13;
+  background: #f5f5f5;&#13;
+  border: 1px solid #d5d5d5;&#13;
+}&#13;
+&#13;
+.list-panel-header {&#13;
+  display: flex;&#13;
+  justify-content: space-between;&#13;
+  padding: 10px 14px;&#13;
+  background: #eee;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.list-record-count {&#13;
+  min-width: 25px;&#13;
+  padding: 4px 7px;&#13;
+  color: #fff;&#13;
+  background: #68737d;&#13;
+  border-radius: 13px;&#13;
+  text-align: center;&#13;
+}&#13;
+&#13;
+.approval-cards {&#13;
+  max-height: 620px;&#13;
+  padding: 10px;&#13;
+  overflow-y: auto;&#13;
+}&#13;
+&#13;
+.approval-card {&#13;
+  display: block;&#13;
+  width: 100%;&#13;
+  margin-bottom: 10px;&#13;
+  padding: 12px;&#13;
+  background: #fff;&#13;
+  border: 1px solid #d7d7d7;&#13;
+  border-left: 4px solid transparent;&#13;
+  text-align: left;&#13;
+}&#13;
+&#13;
+.approval-card:hover,&#13;
+.approval-card.selected-card {&#13;
+  border-left-color: #f36f21;&#13;
+}&#13;
+&#13;
+.card-top-row,&#13;
+.card-status-row {&#13;
+  display: flex;&#13;
+  justify-content: space-between;&#13;
+}&#13;
+&#13;
+.card-request-number {&#13;
+  color: #0077b5;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.card-course-title {&#13;
+  margin: 8px 0;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.card-detail-row {&#13;
+  display: grid;&#13;
+  grid-template-columns: 95px 1fr;&#13;
+  min-height: 22px;&#13;
+  font-size: 11px;&#13;
+}&#13;
+&#13;
+.card-label {&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.card-status {&#13;
+  padding: 3px 8px;&#13;
+  color: #fff;&#13;
+  background: #f36f21;&#13;
+  border-radius: 10px;&#13;
+  font-size: 10px;&#13;
+}&#13;
+&#13;
+.approval-detail-panel {&#13;
+  flex: 1;&#13;
+  border: 1px solid #d5d5d5;&#13;
+  border-left: 0;&#13;
+}&#13;
+&#13;
+.detail-empty-state {&#13;
+  min-height: 470px;&#13;
+  padding: 120px 35px;&#13;
+  text-align: center;&#13;
+}&#13;
+&#13;
+.empty-state-icon {&#13;
+  color: #f36f21;&#13;
+  font-size: 42px;&#13;
+}&#13;
+&#13;
+.empty-state-title {&#13;
+  margin-top: 12px;&#13;
+  font-size: 18px;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.empty-state-text {&#13;
+  margin-top: 8px;&#13;
+  color: #666;&#13;
+}&#13;
+&#13;
+.selected-record-header {&#13;
+  display: flex;&#13;
+  justify-content: space-between;&#13;
+  padding: 10px 16px;&#13;
+  background: #f4f4f4;&#13;
+}&#13;
+&#13;
+.selected-record-number {&#13;
+  color: #0077b5;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.close-selected-btn {&#13;
+  width: 31px;&#13;
+  height: 31px;&#13;
+  color: #fff;&#13;
+  background: #777;&#13;
+  border: 0;&#13;
+  border-radius: 50%;&#13;
+}&#13;
+&#13;
+.selected-record-body {&#13;
+  max-height: 620px;&#13;
+  padding: 16px;&#13;
+  overflow-y: auto;&#13;
+}&#13;
+&#13;
+.detail-section {&#13;
+  margin-bottom: 20px;&#13;
+}&#13;
+&#13;
+.detail-section-title {&#13;
+  display: inline-block;&#13;
+  margin-bottom: 12px;&#13;
+  border-bottom: 2px solid #222;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.summary-detail-grid {&#13;
+  display: grid;&#13;
+  grid-template-columns: repeat(2, minmax(190px, 1fr));&#13;
+  gap: 12px 24px;&#13;
+}&#13;
+&#13;
+.summary-detail-item {&#13;
+  display: grid;&#13;
+  grid-template-columns: 145px 1fr;&#13;
+}&#13;
+&#13;
+.summary-detail-label {&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.selected-status-badge {&#13;
+  display: inline-block;&#13;
+  padding: 4px 10px;&#13;
+  color: #fff;&#13;
+  background: #f36f21;&#13;
+  border-radius: 11px;&#13;
+}&#13;
+&#13;
+.previous-comments-section {&#13;
+  margin-bottom: 20px;&#13;
+  padding: 14px 16px;&#13;
+  background: #f7f7f7;&#13;
+  border: 1px solid #d5d5d5;&#13;
+}&#13;
+&#13;
+.previous-comment-card {&#13;
+  margin-top: 12px;&#13;
+  overflow: hidden;&#13;
+  background: #fff;&#13;
+  border: 1px solid #d7d7d7;&#13;
+}&#13;
+&#13;
+.previous-comment-heading {&#13;
+  padding: 9px 12px;&#13;
+  color: #333;&#13;
+  background: #eee;&#13;
+  border-bottom: 1px solid #d7d7d7;&#13;
+  font-size: 13px;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.previous-comment-heading i {&#13;
+  margin-right: 6px;&#13;
+  color: #f36f21;&#13;
+}&#13;
+&#13;
+.previous-comment-text {&#13;
+  min-height: 45px;&#13;
+  padding: 12px;&#13;
+  color: #444;&#13;
+  font-size: 13px;&#13;
+  line-height: 1.5;&#13;
+  white-space: pre-wrap;&#13;
+  word-break: break-word;&#13;
+}&#13;
+&#13;
+.selected-comments-panel {&#13;
+  padding: 15px 17px;&#13;
+  background: #e9e9e9;&#13;
+}&#13;
+&#13;
+.comments-title {&#13;
+  margin-bottom: 10px;&#13;
+  color: #ec6608;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.mandatory-symbol {&#13;
+  color: #c9302c;&#13;
+}&#13;
+&#13;
+.selected-comments-textarea {&#13;
+  width: 100%;&#13;
+  min-height: 105px;&#13;
+  resize: vertical;&#13;
+}&#13;
+&#13;
+.comments-help {&#13;
+  margin-top: 5px;&#13;
+  color: #666;&#13;
+  font-size: 11px;&#13;
+}&#13;
+&#13;
+.field-error {&#13;
+  margin-top: 5px;&#13;
+  color: #c9302c;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.selected-record-actions {&#13;
+  display: flex;&#13;
+  justify-content: flex-end;&#13;
+  gap: 12px;&#13;
+  margin-top: 12px;&#13;
+}&#13;
+&#13;
+.decision-btn {&#13;
+  min-width: 105px;&#13;
+  height: 33px;&#13;
+  color: #fff;&#13;
+  border: 0;&#13;
+  font-weight: bold;&#13;
+}&#13;
+&#13;
+.approve-btn {&#13;
+  background: #2ea94f;&#13;
+}&#13;
+&#13;
+.reject-btn {&#13;
+  background: #d9534f;&#13;
+}&#13;
+&#13;
+.no-records-card {&#13;
+  padding: 40px 20px;&#13;
+  color: #666;&#13;
+  text-align: center;&#13;
+}&#13;
+&#13;
+.no-records-card i {&#13;
+  margin-bottom: 10px;&#13;
+  color: #f36f21;&#13;
+  font-size: 30px;&#13;
+}&#13;
+&#13;
+.back-section {&#13;
+  position: absolute;&#13;
+  bottom: 10px;&#13;
+  left: 10px;&#13;
+}&#13;
+&#13;
+.back-btn {&#13;
+  display: flex;&#13;
+  align-items: center;&#13;
+  justify-content: center;&#13;
+  width: 34px;&#13;
+  height: 34px;&#13;
+  color: #ec6608;&#13;
+  border: 2px solid #ec6608;&#13;
+  border-radius: 50%;&#13;
+  text-decoration: none;&#13;
+}&#13;
+&#13;
+@media screen and (max-width: 950px) {&#13;
+  .approval-workspace {&#13;
+    flex-direction: column;&#13;
+  }&#13;
+&#13;
+  .approval-list-panel,&#13;
+  .approval-detail-panel {&#13;
+    width: 100%;&#13;
+    max-width: none;&#13;
+  }&#13;
+&#13;
+  .approval-detail-panel {&#13;
+    border-left: 1px solid #d5d5d5;&#13;
+  }&#13;
+}&#13;
+&#13;
+@media screen and (max-width: 800px) {&#13;
+  .stage-selection,&#13;
+  .toolbar,&#13;
+  .filter-row {&#13;
+    flex-direction: column;&#13;
+  }&#13;
+&#13;
+  .stage-tabs {&#13;
+    width: 100%;&#13;
+    flex-direction: column;&#13;
+  }&#13;
+&#13;
+  .stage-tab {&#13;
+    max-width: none;&#13;
+  }&#13;
+&#13;
+  .request-typeahead {&#13;
+    width: 100%;&#13;
+  }&#13;
+}&#13;
+&#13;
+@media screen and (max-width: 650px) {&#13;
+  .summary-detail-grid {&#13;
+    grid-template-columns: 1fr;&#13;
+  }&#13;
+&#13;
+  .selected-record-actions {&#13;
+    flex-direction: column;&#13;
+  }&#13;
+&#13;
+  .decision-btn {&#13;
+    width: 100%;&#13;
+  }&#13;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>approval_asean</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Approval ASEAN</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+
+    var LEARNING_TABLE =
+        "x_1549902_asean_0_learning_application";
+
+    var APPROVAL_TABLE =
+        "sysapproval_approver";
+
+    /*
+     * Initial widget data.
+     */
+    data.records = [];
+    data.countries = [];
+    data.courseTypes = [];
+    data.courseFormats = [];
+    data.requestNumberSuggestions = [];
+
+    data.stageCounts = {
+        manager: 0,
+        pending_l2_approval: 0,
+        pending_hr_review: 0
+    };
+
+    data.successMessage = "";
+    data.errorMessage = "";
+
+    data.downloadReady = false;
+    data.fileContent = "";
+    data.fileName = "";
+
+    /*
+     * Read client input.
+     */
+    var action =
+        getInputValue("action");
+
+    var selectedStatus =
+        validateSelectedStatus(
+            getInputValue("selectedStatus") ||
+            "manager"
+        );
+
+    var requestNumber =
+        getInputValue("requestNumber");
+
+    var courseType =
+        getInputValue("courseType");
+
+    var courseFormat =
+        getInputValue("courseFormat");
+
+    var country =
+        getInputValue("country");
+
+    var sortOrder =
+        getInputValue("sortOrder") ||
+        "asc";
+
+    if (
+        sortOrder != "asc" &&
+        sortOrder != "desc"
+    ) {
+        sortOrder = "asc";
+    }
+
+    data.selectedStatus =
+        selectedStatus;
+
+    data.sortOrder =
+        sortOrder;
+
+    data.filters = {
+        requestNumber: requestNumber,
+        courseType: courseType,
+        courseFormat: courseFormat,
+        country: country
+    };
+
+    /*
+     * Download approved records
+     * from the last 90 days.
+     */
+    if (action == "download_report") {
+        generateApprovalReport();
+        return;
+    }
+
+    /*
+     * Approve request.
+     */
+    if (
+        action == "approve" &&
+        input &&
+        input.approval_sys_id
+    ) {
+        processApproval(
+            String(input.approval_sys_id),
+            "approved",
+            getInputValue("actionComments")
+        );
+    }
+
+    /*
+     * Reject request.
+     */
+    if (
+        action == "reject" &&
+        input &&
+        input.approval_sys_id
+    ) {
+        processApproval(
+            String(input.approval_sys_id),
+            "rejected",
+            getInputValue("actionComments")
+        );
+    }
+
+    /*
+     * Reload widget information.
+     */
+    loadStageCounts();
+    loadFilterChoices();
+    loadRequestNumberSuggestions();
+    loadPendingApprovals();
+
+
+    function getInputValue(name) {
+
+        if (
+            !input ||
+            input[name] === undefined ||
+            input[name] === null
+        ) {
+            return "";
+        }
+
+        return String(input[name]);
+    }
+
+
+    function validateSelectedStatus(status) {
+
+        if (
+            status == "manager" ||
+            status == "pending_l2_approval" ||
+            status == "pending_hr_review"
+        ) {
+            return status;
+        }
+
+        return "manager";
+    }
+
+
+    function isStatusForSelectedStage(status) {
+
+        if (selectedStatus == "manager") {
+
+            return (
+                status == "submitted" ||
+                status ==
+                    "pending_manager_approval"
+            );
+        }
+
+        return status == selectedStatus;
+    }
+
+
+    function getApprovalStageLabel(status) {
+
+        if (
+            status ==
+            "pending_l2_approval"
+        ) {
+            return "Management L2";
+        }
+
+        if (
+            status ==
+            "pending_hr_review"
+        ) {
+            return "HR Learning";
+        }
+
+        return "In-Company Manager";
+    }
+
+
+    function loadStageCounts() {
+
+        var approvalGR =
+            new GlideRecord(
+                APPROVAL_TABLE
+            );
+
+        approvalGR.addQuery(
+            "approver",
+            gs.getUserID()
+        );
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.query();
+
+        while (approvalGR.next()) {
+
+            var learningGR =
+                getLearningRecord(
+                    approvalGR
+                );
+
+            if (!learningGR) {
+                continue;
+            }
+
+            var status =
+                getValueSafely(
+                    learningGR,
+                    "u_status"
+                );
+
+            if (
+                status == "submitted" ||
+                status ==
+                    "pending_manager_approval"
+            ) {
+                data.stageCounts.manager++;
+
+            } else if (
+                status ==
+                "pending_l2_approval"
+            ) {
+                data.stageCounts
+                    .pending_l2_approval++;
+
+            } else if (
+                status ==
+                "pending_hr_review"
+            ) {
+                data.stageCounts
+                    .pending_hr_review++;
+            }
+        }
+    }
+
+
+    /*
+     * Load request number suggestions.
+     */
+    function loadRequestNumberSuggestions() {
+
+        var suggestions = [];
+        var duplicateMap = {};
+
+        var approvalGR =
+            new GlideRecord(
+                APPROVAL_TABLE
+            );
+
+        approvalGR.addQuery(
+            "approver",
+            gs.getUserID()
+        );
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.query();
+
+        while (approvalGR.next()) {
+
+            var learningGR =
+                getLearningRecord(
+                    approvalGR
+                );
+
+            if (!learningGR) {
+                continue;
+            }
+
+            var status =
+                getValueSafely(
+                    learningGR,
+                    "u_status"
+                );
+
+            if (
+                !isStatusForSelectedStage(
+                    status
+                )
+            ) {
+                continue;
+            }
+
+            var number =
+                getDisplayValueSafely(
+                    learningGR,
+                    "number"
+                );
+
+            if (
+                !number ||
+                duplicateMap[number]
+            ) {
+                continue;
+            }
+
+            duplicateMap[number] = true;
+
+            suggestions.push({
+                value: number,
+                label: number,
+
+                courseTitle:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_course_title"
+                    ),
+
+                employeeName:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_employee_name"
+                    ),
+
+                sysId:
+                    learningGR
+                        .getUniqueValue()
+            });
+        }
+
+        suggestions.sort(
+            function(first, second) {
+
+                var firstNumber =
+                    String(
+                        first.label || ""
+                    ).toLowerCase();
+
+                var secondNumber =
+                    String(
+                        second.label || ""
+                    ).toLowerCase();
+
+                if (
+                    firstNumber <
+                    secondNumber
+                ) {
+                    return -1;
+                }
+
+                if (
+                    firstNumber >
+                    secondNumber
+                ) {
+                    return 1;
+                }
+
+                return 0;
+            }
+        );
+
+        data.requestNumberSuggestions =
+            suggestions;
+    }
+
+
+    /*
+     * Approve or reject an application.
+     */
+    function processApproval(
+        approvalSysId,
+        decision,
+        actionComments
+    ) {
+
+        actionComments =
+            trimValue(actionComments);
+
+        if (!actionComments) {
+
+            data.errorMessage =
+                "Please enter the comments.";
+
+            return;
+        }
+
+        var approvalGR =
+            new GlideRecord(
+                APPROVAL_TABLE
+            );
+
+        approvalGR.addQuery(
+            "sys_id",
+            approvalSysId
+        );
+
+        approvalGR.addQuery(
+            "approver",
+            gs.getUserID()
+        );
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.setLimit(1);
+        approvalGR.query();
+
+        if (!approvalGR.next()) {
+
+            data.errorMessage =
+                "The approval was not found or is no longer pending.";
+
+            return;
+        }
+
+        var learningGR =
+            getLearningRecord(
+                approvalGR
+            );
+
+        if (!learningGR) {
+
+            data.errorMessage =
+                "The approval is not related to a Learning Application.";
+
+            return;
+        }
+
+        var recordStatus =
+            getValueSafely(
+                learningGR,
+                "u_status"
+            );
+
+        if (
+            !isStatusForSelectedStage(
+                recordStatus
+            )
+        ) {
+
+            data.errorMessage =
+                "The application is no longer in the selected approval stage.";
+
+            return;
+        }
+
+        /*
+         * Save comments in the
+         * stage-specific field.
+         */
+        if (
+            selectedStatus ==
+            "manager"
+        ) {
+
+            if (
+                learningGR.isValidField(
+                    "u_direct_manager_comments"
+                )
+            ) {
+                learningGR.setValue(
+                    "u_direct_manager_comments",
+                    actionComments
+                );
+            }
+
+        } else if (
+            selectedStatus ==
+            "pending_l2_approval"
+        ) {
+
+            if (
+                learningGR.isValidField(
+                    "u_l2_manager_comments"
+                )
+            ) {
+                learningGR.setValue(
+                    "u_l2_manager_comments",
+                    actionComments
+                );
+            }
+
+        } else if (
+            selectedStatus ==
+            "pending_hr_review"
+        ) {
+
+            if (
+                learningGR.isValidField(
+                    "u_hr_comments"
+                )
+            ) {
+                learningGR.setValue(
+                    "u_hr_comments",
+                    actionComments
+                );
+            }
+        }
+
+        var actionLabel =
+            decision == "approved"
+                ? "Approved"
+                : "Rejected";
+
+        var journalText =
+            actionLabel +
+            " by: " +
+            gs.getUserDisplayName() +
+            "\nApproval Stage: " +
+            getApprovalStageLabel(
+                selectedStatus
+            ) +
+            "\nComments: " +
+            actionComments;
+
+        /*
+         * Write only to Additional comments.
+         *
+         * Standard technical field name:
+         * comments
+         */
+        if (
+            learningGR.isValidField(
+                "comments"
+            )
+        ) {
+            learningGR.comments =
+                journalText;
+        }
+
+        /*
+         * Fallback custom field only when
+         * the standard comments field
+         * does not exist.
+         */
+        if (
+            !learningGR.isValidField(
+                "comments"
+            ) &&
+            learningGR.isValidField(
+                "u_comment"
+            )
+        ) {
+
+            var existingComment =
+                learningGR.getValue(
+                    "u_comment"
+                ) || "";
+
+            learningGR.setValue(
+                "u_comment",
+                existingComment
+                    ? existingComment +
+                      "\n\n" +
+                      journalText
+                    : journalText
+            );
+        }
+
+        /*
+         * Rejected request moves to
+         * Rejected status.
+         */
+        if (
+            decision ==
+            "rejected"
+        ) {
+            learningGR.setValue(
+                "u_status",
+                "rejected"
+            );
+        }
+
+        learningGR.update();
+
+        /*
+         * Save comment on the approval
+         * record itself.
+         *
+         * This does not update the Learning
+         * Request work notes.
+         */
+        if (
+            approvalGR.isValidField(
+                "comments"
+            )
+        ) {
+            approvalGR.comments =
+                actionComments;
+        }
+
+        approvalGR.setValue(
+            "state",
+            decision
+        );
+
+        approvalGR.update();
+
+        data.successMessage =
+            decision == "approved"
+                ? "Learning application approved successfully."
+                : "Learning application rejected successfully.";
+    }
+
+
+    function loadPendingApprovals() {
+
+        var records = [];
+
+        var approvalGR =
+            new GlideRecord(
+                APPROVAL_TABLE
+            );
+
+        approvalGR.addQuery(
+            "approver",
+            gs.getUserID()
+        );
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.query();
+
+        while (approvalGR.next()) {
+
+            var learningGR =
+                getLearningRecord(
+                    approvalGR
+                );
+
+            if (!learningGR) {
+                continue;
+            }
+
+            if (
+                !matchesFilters(
+                    learningGR
+                )
+            ) {
+                continue;
+            }
+
+            records.push({
+
+                approval_sys_id:
+                    approvalGR
+                        .getUniqueValue(),
+
+                learning_sys_id:
+                    learningGR
+                        .getUniqueValue(),
+
+                number:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "number"
+                    ),
+
+                employee_name:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_employee_name"
+                    ),
+
+                employee_email:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_employee_email"
+                    ),
+
+                country:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_country"
+                    ),
+
+                manager:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_manager_email"
+                    ),
+
+                management_l2:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_management_l2"
+                    ),
+
+                l2_required:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "manager_approval_l2_required"
+                    ),
+
+                course_title:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_course_title"
+                    ),
+
+                course_type:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_course_type"
+                    ),
+
+                course_format:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_course_format"
+                    ),
+
+                training_country:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_training_country"
+                    ),
+
+                training_provider:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_training_provider_name"
+                    ),
+
+                course_start_date:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "course_start_date"
+                    ),
+
+                course_end_date:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_course_end_date"
+                    ),
+
+                training_hours:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_total_training_hours"
+                    ),
+
+                currency:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "currency"
+                    ),
+
+                course_fee:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_course_fee"
+                    ),
+
+                other_expenses:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_other_expenses"
+                    ),
+
+                total_cost:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_total_cost"
+                    ),
+
+                ticket_status:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_status"
+                    ),
+
+                approval_state:
+                    approvalGR
+                        .getDisplayValue(
+                            "state"
+                        ),
+
+                direct_manager_comments:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_direct_manager_comments"
+                    ),
+
+                l2_manager_comments:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_l2_manager_comments"
+                    ),
+
+                hr_comments:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_hr_comments"
+                    ),
+
+                actionComments: "",
+                commentValidationError: false,
+                processing: false
+            });
+        }
+
+        records.sort(
+            function(
+                firstRecord,
+                secondRecord
+            ) {
+
+                var first =
+                    String(
+                        firstRecord.number ||
+                        ""
+                    ).toLowerCase();
+
+                var second =
+                    String(
+                        secondRecord.number ||
+                        ""
+                    ).toLowerCase();
+
+                if (first < second) {
+                    return sortOrder ==
+                        "asc" ? -1 : 1;
+                }
+
+                if (first > second) {
+                    return sortOrder ==
+                        "asc" ? 1 : -1;
+                }
+
+                return 0;
+            }
+        );
+
+        data.records = records;
+    }
+
+
+    function matchesFilters(
+        learningGR
+    ) {
+
+        var status =
+            getValueSafely(
+                learningGR,
+                "u_status"
+            );
+
+        if (
+            !isStatusForSelectedStage(
+                status
+            )
+        ) {
+            return false;
+        }
+
+        if (requestNumber) {
+
+            var number =
+                getDisplayValueSafely(
+                    learningGR,
+                    "number"
+                );
+
+            if (
+                !containsIgnoreCase(
+                    number,
+                    requestNumber
+                )
+            ) {
+                return false;
+            }
+        }
+
+        if (
+            courseType &&
+            getValueSafely(
+                learningGR,
+                "u_course_type"
+            ) != courseType
+        ) {
+            return false;
+        }
+
+        if (
+            courseFormat &&
+            getValueSafely(
+                learningGR,
+                "u_course_format"
+            ) != courseFormat
+        ) {
+            return false;
+        }
+
+        if (
+            country &&
+            getValueSafely(
+                learningGR,
+                "u_country"
+            ) != country
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+
+    function loadFilterChoices() {
+
+        var countryMap = {};
+        var courseTypeMap = {};
+        var courseFormatMap = {};
+
+        var approvalGR =
+            new GlideRecord(
+                APPROVAL_TABLE
+            );
+
+        approvalGR.addQuery(
+            "approver",
+            gs.getUserID()
+        );
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.query();
+
+        while (approvalGR.next()) {
+
+            var learningGR =
+                getLearningRecord(
+                    approvalGR
+                );
+
+            if (!learningGR) {
+                continue;
+            }
+
+            var status =
+                getValueSafely(
+                    learningGR,
+                    "u_status"
+                );
+
+            if (
+                !isStatusForSelectedStage(
+                    status
+                )
+            ) {
+                continue;
+            }
+
+            addChoice(
+                data.countries,
+                countryMap,
+                getValueSafely(
+                    learningGR,
+                    "u_country"
+                ),
+                getDisplayValueSafely(
+                    learningGR,
+                    "u_country"
+                )
+            );
+
+            addChoice(
+                data.courseTypes,
+                courseTypeMap,
+                getValueSafely(
+                    learningGR,
+                    "u_course_type"
+                ),
+                getDisplayValueSafely(
+                    learningGR,
+                    "u_course_type"
+                )
+            );
+
+            addChoice(
+                data.courseFormats,
+                courseFormatMap,
+                getValueSafely(
+                    learningGR,
+                    "u_course_format"
+                ),
+                getDisplayValueSafely(
+                    learningGR,
+                    "u_course_format"
+                )
+            );
+        }
+
+        sortChoices(data.countries);
+        sortChoices(data.courseTypes);
+        sortChoices(data.courseFormats);
+    }
+
+
+    /*
+     * Download only approved records
+     * from the previous 90 days.
+     */
+    function generateApprovalReport() {
+
+        data.downloadReady = false;
+        data.fileContent = "";
+        data.fileName = "";
+
+        try {
+
+            var rows = [];
+            var count = 0;
+
+            var cutoffDate =
+                new GlideDateTime();
+
+            cutoffDate.addDaysUTC(-90);
+
+            rows.push(
+                createCsvRow([
+                    "Number",
+                    "Employee Name",
+                    "Employee Email",
+                    "Country",
+                    "Manager",
+                    "Management L2",
+                    "Course Title",
+                    "Course Type",
+                    "Course Format",
+                    "Learning Request Status",
+                    "Approval Stage",
+                    "Approval Decision",
+                    "Decision Date",
+                    "Approver",
+                    "Approval Comments"
+                ])
+            );
+
+            var approvalGR =
+                new GlideRecord(
+                    APPROVAL_TABLE
+                );
+
+            approvalGR.addQuery(
+                "approver",
+                gs.getUserID()
+            );
+
+            approvalGR.addQuery(
+                "state",
+                "approved"
+            );
+
+            approvalGR.addQuery(
+                "sys_updated_on",
+                ">=",
+                cutoffDate
+            );
+
+            approvalGR.orderByDesc(
+                "sys_updated_on"
+            );
+
+            approvalGR.query();
+
+            while (approvalGR.next()) {
+
+                var learningGR =
+                    getLearningRecord(
+                        approvalGR
+                    );
+
+                if (!learningGR) {
+                    continue;
+                }
+
+                count++;
+
+                rows.push(
+                    createCsvRow([
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "number"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_employee_name"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_employee_email"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_country"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_manager_email"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_management_l2"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_course_title"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_course_type"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_course_format"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_status"
+                        ),
+
+                        getReportApprovalStage(
+                            learningGR,
+                            approvalGR
+                        ),
+
+                        approvalGR
+                            .getDisplayValue(
+                                "state"
+                            ),
+
+                        approvalGR
+                            .getDisplayValue(
+                                "sys_updated_on"
+                            ),
+
+                        approvalGR
+                            .getDisplayValue(
+                                "approver"
+                            ),
+
+                        getApprovalComments(
+                            approvalGR
+                        )
+                    ])
+                );
+            }
+
+            if (count === 0) {
+
+                data.errorMessage =
+                    "No approved records were found for the last 90 days.";
+
+                return;
+            }
+
+            data.fileContent =
+                rows.join("\r\n");
+
+            var dateText =
+                String(
+                    new GlideDateTime()
+                        .getLocalDate()
+                        .toString()
+                )
+                .split("-")
+                .join("");
+
+            data.fileName =
+                "ASEAN_Approved_Records_Last_90_Days_" +
+                dateText +
+                ".csv";
+
+            data.downloadReady = true;
+
+            data.successMessage =
+                count +
+                " approved record(s) from the last 90 days exported.";
+
+        } catch (error) {
+
+            data.errorMessage =
+                "Unable to generate report: " +
+                error.message;
+
+            gs.error(
+                "ASEAN Approval Widget report error: " +
+                error.message
+            );
+        }
+    }
+
+
+    function getReportApprovalStage(
+        learningGR,
+        approvalGR
+    ) {
+
+        var shortDescription = "";
+
+        if (
+            approvalGR.isValidField(
+                "short_description"
+            )
+        ) {
+            shortDescription =
+                approvalGR
+                    .getDisplayValue(
+                        "short_description"
+                    ) || "";
+        }
+
+        var descriptionLower =
+            String(shortDescription)
+                .toLowerCase();
+
+        if (
+            descriptionLower
+                .indexOf("hr") > -1
+        ) {
+            return "HR Learning";
+        }
+
+        if (
+            descriptionLower
+                .indexOf("l2") > -1
+        ) {
+            return "Management L2";
+        }
+
+        if (
+            descriptionLower
+                .indexOf("manager") > -1
+        ) {
+            return "In-Company Manager";
+        }
+
+        var approverSysId =
+            approvalGR.getValue(
+                "approver"
+            );
+
+        var directManager =
+            getValueSafely(
+                learningGR,
+                "u_direct_manager"
+            );
+
+        if (
+            !directManager &&
+            learningGR.isValidField(
+                "u_manager_email"
+            ) &&
+            learningGR
+                .getElement(
+                    "u_manager_email"
+                )
+                .getED()
+                .getInternalType() ==
+                "reference"
+        ) {
+            directManager =
+                getValueSafely(
+                    learningGR,
+                    "u_manager_email"
+                );
+        }
+
+        var l2Manager =
+            getValueSafely(
+                learningGR,
+                "u_management_l2"
+            );
+
+        if (
+            approverSysId &&
+            approverSysId ==
+                l2Manager
+        ) {
+            return "Management L2";
+        }
+
+        if (
+            approverSysId &&
+            approverSysId ==
+                directManager
+        ) {
+            return "In-Company Manager";
+        }
+
+        return "Approval";
+    }
+
+
+    function getLearningRecord(
+        approvalGR
+    ) {
+
+        var learningSysId =
+            approvalGR.getValue(
+                "sysapproval"
+            );
+
+        if (!learningSysId) {
+
+            learningSysId =
+                approvalGR.getValue(
+                    "document_id"
+                );
+        }
+
+        if (!learningSysId) {
+            return null;
+        }
+
+        var learningGR =
+            new GlideRecord(
+                LEARNING_TABLE
+            );
+
+        if (
+            !learningGR.get(
+                learningSysId
+            )
+        ) {
+            return null;
+        }
+
+        return learningGR;
+    }
+
+
+    function getApprovalComments(
+        approvalGR
+    ) {
+
+        if (
+            approvalGR.isValidField(
+                "comments"
+            )
+        ) {
+            return (
+                approvalGR
+                    .getDisplayValue(
+                        "comments"
+                    ) || ""
+            );
+        }
+
+        return "";
+    }
+
+
+    function addChoice(
+        collection,
+        map,
+        value,
+        label
+    ) {
+
+        if (
+            !value ||
+            map[value]
+        ) {
+            return;
+        }
+
+        map[value] = true;
+
+        collection.push({
+            value: value,
+            label: label || value
+        });
+    }
+
+
+    function sortChoices(
+        collection
+    ) {
+
+        collection.sort(
+            function(
+                firstChoice,
+                secondChoice
+            ) {
+
+                var first =
+                    String(
+                        firstChoice.label ||
+                        ""
+                    ).toLowerCase();
+
+                var second =
+                    String(
+                        secondChoice.label ||
+                        ""
+                    ).toLowerCase();
+
+                if (first < second) {
+                    return -1;
+                }
+
+                if (first > second) {
+                    return 1;
+                }
+
+                return 0;
+            }
+        );
+    }
+
+
+    function containsIgnoreCase(
+        source,
+        search
+    ) {
+
+        return (
+            String(source || "")
+                .toLowerCase()
+                .indexOf(
+                    String(search || "")
+                        .toLowerCase()
+                ) > -1
+        );
+    }
+
+
+    function trimValue(value) {
+
+        return String(value || "")
+            .replace(
+                /^\s+|\s+$/g,
+                ""
+            );
+    }
+
+
+    function getValueSafely(
+        record,
+        fieldName
+    ) {
+
+        if (
+            !record ||
+            !record.isValidField(
+                fieldName
+            )
+        ) {
+            return "";
+        }
+
+        return (
+            record.getValue(
+                fieldName
+            ) || ""
+        );
+    }
+
+
+    function getDisplayValueSafely(
+        record,
+        fieldName
+    ) {
+
+        if (
+            !record ||
+            !record.isValidField(
+                fieldName
+            )
+        ) {
+            return "";
+        }
+
+        return (
+            record.getDisplayValue(
+                fieldName
+            ) || ""
+        );
+    }
+
+
+    function escapeCsv(value) {
+
+        value =
+            String(value || "");
+
+        value =
+            value
+                .split("\r\n")
+                .join(" ");
+
+        value =
+            value
+                .split("\n")
+                .join(" ");
+
+        value =
+            value
+                .split("\r")
+                .join(" ");
+
+        /*
+         * Prevent CSV formula injection.
+         */
+        var firstCharacter =
+            value.length
+                ? value.charAt(0)
+                : "";
+
+        if (
+            firstCharacter == "=" ||
+            firstCharacter == "+" ||
+            firstCharacter == "-" ||
+            firstCharacter == "@"
+        ) {
+            value = "'" + value;
+        }
+
+        value =
+            value
+                .split('"')
+                .join('""');
+
+        return '"' + value + '"';
+    }
+
+
+    function createCsvRow(values) {
+
+        var row = [];
+
+        for (
+            var index = 0;
+            index < values.length;
+            index++
+        ) {
+            row.push(
+                escapeCsv(
+                    values[index]
+                )
+            );
+        }
+
+        return row.join(",");
+    }
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 07:17:17</sys_created_on>
+        <sys_id>b3d9bea24742c310ff78de94116d4371</sys_id>
+        <sys_mod_count>11</sys_mod_count>
+        <sys_name>Approval ASEAN</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sp_widget_b3d9bea24742c310ff78de94116d4371</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-20 04:13:20</sys_updated_on>
+        <template><![CDATA[<div class="learning-widget"
+     ng-click="c.handleOutsideClick($event)">
+
+  <div class="widget-header">
+    <h2>Learning Approval Records</h2>
+  </div>
+
+  <div class="stage-selection">
+
+    <div class="stage-label">
+      Select Role:
+    </div>
+
+    <div class="stage-tabs">
+
+      <button type="button"
+              class="stage-tab"
+              ng-class="{
+                'active-stage': c.data.selectedStatus == 'manager'
+              }"
+              ng-click="c.selectStatus('manager')"
+              ng-disabled="c.data.loading">
+
+        <span>In-Company Manager</span>
+
+        <span class="approval-count">
+          {{c.data.stageCounts.manager || 0}}
+        </span>
+
+      </button>
+
+      <button type="button"
+              class="stage-tab"
+              ng-class="{
+                'active-stage': c.data.selectedStatus == 'pending_l2_approval'
+              }"
+              ng-click="c.selectStatus('pending_l2_approval')"
+              ng-disabled="c.data.loading">
+
+        <span>Management L2</span>
+
+        <span class="approval-count">
+          {{c.data.stageCounts.pending_l2_approval || 0}}
+        </span>
+
+      </button>
+
+      <button type="button"
+              class="stage-tab"
+              ng-class="{
+                'active-stage': c.data.selectedStatus == 'pending_hr_review'
+              }"
+              ng-click="c.selectStatus('pending_hr_review')"
+              ng-disabled="c.data.loading">
+
+        <span>HR Learning</span>
+
+        <span class="approval-count">
+          {{c.data.stageCounts.pending_hr_review || 0}}
+        </span>
+
+      </button>
+
+    </div>
+
+  </div>
+
+  <div class="toolbar">
+
+    <div class="download-section">
+
+      <button type="button"
+              class="download-btn"
+              ng-click="c.downloadReport()"
+              ng-disabled="c.data.downloading || c.data.loading">
+
+        <i class="fa"
+           ng-class="c.data.downloading
+             ? 'fa-spinner fa-spin'
+             : 'fa-download'">
+        </i>
+
+        <span ng-if="!c.data.downloading">
+          Download
+        </span>
+
+        <span ng-if="c.data.downloading">
+          Generating...
+        </span>
+
+      </button>
+
+      <div class="download-help">
+        All completed approvals
+      </div>
+
+    </div>
+
+    <div class="filters-container">
+
+      <div class="filter-row">
+
+        <div class="filter-group request-number-filter">
+
+          <label>Request Number:</label>
+
+          <div class="request-typeahead"
+               ng-click="$event.stopPropagation()">
+
+            <div class="request-input-wrapper">
+
+              <input type="text"
+                     class="form-control request-number-input"
+                     ng-model="c.data.filters.requestNumber"
+                     ng-change="c.onRequestNumberChange()"
+                     ng-focus="c.openRequestNumberSuggestions()"
+                     ng-keydown="c.handleRequestNumberKeydown($event)"
+                     autocomplete="off"
+                     placeholder="Enter or select request number">
+
+              <button type="button"
+                      class="request-dropdown-button"
+                      ng-click="c.toggleRequestNumberSuggestions($event)"
+                      ng-disabled="c.data.loading"
+                      title="Show request numbers">
+
+                <i class="fa"
+                   ng-class="c.requestDropdownOpen
+                     ? 'fa-chevron-up'
+                     : 'fa-chevron-down'">
+                </i>
+
+              </button>
+
+              <button type="button"
+                      class="request-clear-button"
+                      ng-if="c.data.filters.requestNumber"
+                      ng-click="c.clearRequestNumber($event)"
+                      title="Clear request number">
+
+                <i class="fa fa-times"></i>
+
+              </button>
+
+            </div>
+
+            <div class="request-suggestion-dropdown"
+                 ng-if="c.requestDropdownOpen">
+
+              <div class="request-suggestion-loading"
+                   ng-if="c.loadingRequestSuggestions">
+
+                <i class="fa fa-spinner fa-spin"></i>
+                Loading request numbers...
+
+              </div>
+
+              <button type="button"
+                      class="request-suggestion-item"
+                      ng-repeat="suggestion in c.filteredRequestNumberSuggestions track by suggestion.value"
+                      ng-class="{
+                        'active-suggestion': $index == c.activeSuggestionIndex
+                      }"
+                      ng-mousedown="c.selectRequestNumber(suggestion, $event)"
+                      ng-mouseenter="c.activeSuggestionIndex = $index">
+
+                <span class="suggestion-number">
+                  {{suggestion.label}}
+                </span>
+
+                <span class="suggestion-course"
+                      ng-if="suggestion.courseTitle">
+
+                  {{suggestion.courseTitle}}
+
+                </span>
+
+                <span class="suggestion-employee"
+                      ng-if="suggestion.employeeName">
+
+                  {{suggestion.employeeName}}
+
+                </span>
+
+              </button>
+
+              <div class="request-no-suggestions"
+                   ng-if="
+                     !c.loadingRequestSuggestions &&
+                     c.filteredRequestNumberSuggestions.length == 0
+                   ">
+
+                No matching request numbers found.
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div class="filter-group">
+
+          <label>Course Type:</label>
+
+          <select class="form-control"
+                  ng-model="c.data.filters.courseType">
+
+            <option value="">All</option>
+
+            <option ng-repeat="type in c.data.courseTypes"
+                    value="{{type.value}}">
+              {{type.label}}
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+      <div class="filter-row">
+
+        <div class="filter-group">
+
+          <label>Course Format:</label>
+
+          <select class="form-control"
+                  ng-model="c.data.filters.courseFormat">
+
+            <option value="">All</option>
+
+            <option ng-repeat="format in c.data.courseFormats"
+                    value="{{format.value}}">
+              {{format.label}}
+            </option>
+
+          </select>
+
+        </div>
+
+        <div class="filter-group">
+
+          <label>Ticket Status:</label>
+
+          <input type="text"
+                 class="form-control ticket-status-field"
+                 ng-value="c.getSelectedStatusLabel()"
+                 readonly>
+
+        </div>
+
+      </div>
+
+      <div class="filter-row">
+
+        <div class="filter-group">
+
+          <label>Country:</label>
+
+          <select class="form-control"
+                  ng-model="c.data.filters.country">
+
+            <option value="">All</option>
+
+            <option ng-repeat="country in c.data.countries"
+                    value="{{country.value}}">
+              {{country.label}}
+            </option>
+
+          </select>
+
+        </div>
+
+        <div class="filter-group empty-filter"></div>
+
+      </div>
+
+      <div class="filter-button-row">
+
+        <button type="button"
+                class="filter-btn search-btn"
+                ng-click="c.search()"
+                ng-disabled="c.data.loading">
+
+          <i class="fa fa-search"></i>
+          Search
+
+        </button>
+
+        <button type="button"
+                class="filter-btn reset-btn"
+                ng-click="c.resetFilters()"
+                ng-disabled="c.data.loading">
+
+          <i class="fa fa-times-circle"></i>
+          Reset
+
+        </button>
+
+      </div>
+
+    </div>
+
+    <div class="toolbar-actions">
+
+      <button type="button"
+              class="icon-btn"
+              title="Sort records"
+              ng-click="c.sortRecords()"
+              ng-disabled="c.data.loading">
+
+        <i class="fa"
+           ng-class="c.data.sortOrder == 'asc'
+             ? 'fa-sort-amount-asc'
+             : 'fa-sort-amount-desc'">
+        </i>
+
+      </button>
+
+      <button type="button"
+              class="icon-btn"
+              title="Refresh"
+              ng-click="c.refresh()"
+              ng-disabled="c.data.loading">
+
+        <i class="fa fa-refresh"
+           ng-class="{'fa-spin': c.data.loading}">
+        </i>
+
+      </button>
+
+    </div>
+
+  </div>
+
+  <div class="alert alert-success widget-message"
+       ng-if="c.data.successMessage">
+    {{c.data.successMessage}}
+  </div>
+
+  <div class="alert alert-danger widget-message"
+       ng-if="c.data.errorMessage">
+    {{c.data.errorMessage}}
+  </div>
+
+  <div class="loading-message"
+       ng-if="c.data.loading">
+
+    <i class="fa fa-spinner fa-spin"></i>
+    Loading approvals...
+
+  </div>
+
+  <div class="approval-workspace"
+       ng-if="!c.data.loading">
+
+    <div class="approval-list-panel">
+
+      <div class="list-panel-header">
+
+        <span>Pending Approvals</span>
+
+        <span class="list-record-count">
+          {{c.data.records.length || 0}}
+        </span>
+
+      </div>
+
+      <div class="approval-cards"
+           ng-if="c.data.records.length > 0">
+
+        <button type="button"
+                class="approval-card"
+                ng-repeat="record in c.data.records track by record.approval_sys_id"
+                ng-class="{
+                  'selected-card':
+                    c.selectedRecord &&
+                    c.selectedRecord.approval_sys_id ==
+                    record.approval_sys_id
+                }"
+                ng-click="c.selectRecord(record)">
+
+          <div class="card-top-row">
+
+            <span class="card-request-number">
+              {{record.number || '-'}}
+            </span>
+
+            <span>
+              <i class="fa fa-chevron-right"></i>
+            </span>
+
+          </div>
+
+          <div class="card-course-title">
+            {{record.course_title || 'Course title not available'}}
+          </div>
+
+          <div class="card-detail-row">
+
+            <span class="card-label">Employee</span>
+
+            <span>
+              {{record.employee_name || '-'}}
+            </span>
+
+          </div>
+
+          <div class="card-detail-row">
+
+            <span class="card-label">Course Type</span>
+
+            <span>
+              {{record.course_type || '-'}}
+            </span>
+
+          </div>
+
+          <div class="card-detail-row">
+
+            <span class="card-label">Format</span>
+
+            <span>
+              {{record.course_format || '-'}}
+            </span>
+
+          </div>
+
+          <div class="card-status-row">
+
+            <span class="card-status">
+              {{record.ticket_status || '-'}}
+            </span>
+
+            <span class="card-view-text">
+              View
+            </span>
+
+          </div>
+
+        </button>
+
+      </div>
+
+      <div class="no-records-card"
+           ng-if="c.data.records.length == 0">
+
+        <i class="fa fa-info-circle"></i>
+
+        <div>
+          No pending approvals found for
+          <strong>{{c.getSelectedApprovalLabel()}}</strong>.
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="approval-detail-panel">
+
+      <div class="detail-empty-state"
+           ng-if="!c.selectedRecord">
+
+        <div class="empty-state-icon">
+          <i class="fa fa-hand-pointer-o"></i>
+        </div>
+
+        <div class="empty-state-title">
+          Select an approval record
+        </div>
+
+        <div class="empty-state-text">
+          Select a record from the left to view details, approve, or reject.
+        </div>
+
+      </div>
+
+      <div ng-if="c.selectedRecord">
+
+        <div class="selected-record-header">
+
+          <div>
+
+            <div class="selected-record-caption">
+              Learning Application
+            </div>
+
+            <div class="selected-record-number">
+              {{c.selectedRecord.number || '-'}}
+            </div>
+
+          </div>
+
+          <button type="button"
+                  class="close-selected-btn"
+                  ng-click="c.clearSelectedRecord()">
+
+            <i class="fa fa-times"></i>
+
+          </button>
+
+        </div>
+
+        <div class="selected-record-body">
+
+          <div class="detail-section">
+
+            <div class="detail-section-title">
+              Course Details
+            </div>
+
+            <div class="summary-detail-grid">
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Course Title</span>
+                <span>{{c.selectedRecord.course_title || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Course Type</span>
+                <span>{{c.selectedRecord.course_type || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Course Format</span>
+                <span>{{c.selectedRecord.course_format || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Training Country</span>
+                <span>{{c.selectedRecord.training_country || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Training Provider</span>
+                <span>{{c.selectedRecord.training_provider || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Start Date</span>
+                <span>{{c.selectedRecord.course_start_date || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">End Date</span>
+                <span>{{c.selectedRecord.course_end_date || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Training Hours</span>
+                <span>{{c.selectedRecord.training_hours || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Status</span>
+
+                <span class="selected-status-badge">
+                  {{c.selectedRecord.ticket_status || '-'}}
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+
+          <div class="detail-section">
+
+            <div class="detail-section-title">
+              Employee Details
+            </div>
+
+            <div class="summary-detail-grid">
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Employee Name</span>
+                <span>{{c.selectedRecord.employee_name || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Employee Email</span>
+                <span>{{c.selectedRecord.employee_email || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Country</span>
+                <span>{{c.selectedRecord.country || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Manager</span>
+                <span>{{c.selectedRecord.manager || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Management L2</span>
+                <span>{{c.selectedRecord.management_l2 || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">L2 Required</span>
+                <span>{{c.selectedRecord.l2_required || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Approval State</span>
+                <span>{{c.selectedRecord.approval_state || '-'}}</span>
+              </div>
+
+            </div>
+
+          </div>
+
+          <div class="detail-section">
+
+            <div class="detail-section-title">
+              Cost Details
+            </div>
+
+            <div class="summary-detail-grid">
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Currency</span>
+                <span>{{c.selectedRecord.currency || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Course Fee</span>
+                <span>{{c.selectedRecord.course_fee || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Other Expenses</span>
+                <span>{{c.selectedRecord.other_expenses || '-'}}</span>
+              </div>
+
+              <div class="summary-detail-item">
+                <span class="summary-detail-label">Total Cost</span>
+                <span>{{c.selectedRecord.total_cost || '-'}}</span>
+              </div>
+
+            </div>
+
+          </div>
+
+          <div class="previous-comments-section"
+               ng-if="
+                 c.data.selectedStatus == 'pending_l2_approval' ||
+                 c.data.selectedStatus == 'pending_hr_review'
+               ">
+
+            <div class="detail-section-title">
+              Previous Approval Comments
+            </div>
+
+            <div class="previous-comment-card">
+
+              <div class="previous-comment-heading">
+                <i class="fa fa-user"></i>
+                Direct Manager Comments
+              </div>
+
+              <div class="previous-comment-text">
+                {{
+                  c.selectedRecord.direct_manager_comments ||
+                  'No comments provided'
+                }}
+              </div>
+
+            </div>
+
+            <div class="previous-comment-card"
+                 ng-if="c.data.selectedStatus == 'pending_hr_review'">
+
+              <div class="previous-comment-heading">
+                <i class="fa fa-users"></i>
+                L2 Manager Comments
+              </div>
+
+              <div class="previous-comment-text">
+                {{
+                  c.selectedRecord.l2_manager_comments ||
+                  'No comments provided'
+                }}
+              </div>
+
+            </div>
+
+          </div>
+
+          <div class="selected-comments-panel">
+
+            <div class="comments-title">
+
+              {{c.getCommentsHeading()}}
+
+              <span class="mandatory-symbol">*</span>
+
+            </div>
+
+            <textarea class="form-control selected-comments-textarea"
+                      rows="5"
+                      maxlength="4000"
+                      ng-model="c.selectedRecord.actionComments"
+                      ng-change="c.selectedRecord.commentValidationError = false"
+                      placeholder="Enter comments">
+            </textarea>
+
+            <div class="comments-help">
+              Comments are mandatory for approval and rejection.
+            </div>
+
+            <div class="field-error"
+                 ng-if="c.selectedRecord.commentValidationError">
+
+              Please enter the comments.
+
+            </div>
+
+            <div class="selected-record-actions">
+
+              <button type="button"
+                      class="decision-btn approve-btn"
+                      ng-click="c.approve(c.selectedRecord)"
+                      ng-disabled="c.selectedRecord.processing">
+
+                <i class="fa fa-check"
+                   ng-if="!c.selectedRecord.processing">
+                </i>
+
+                <span ng-if="!c.selectedRecord.processing">
+                  Approve
+                </span>
+
+                <span ng-if="c.selectedRecord.processing">
+                  Processing...
+                </span>
+
+              </button>
+
+              <button type="button"
+                      class="decision-btn reject-btn"
+                      ng-click="c.reject(c.selectedRecord)"
+                      ng-disabled="c.selectedRecord.processing">
+
+                <i class="fa fa-times"
+                   ng-if="!c.selectedRecord.processing">
+                </i>
+
+                <span ng-if="!c.selectedRecord.processing">
+                  Reject
+                </span>
+
+                <span ng-if="c.selectedRecord.processing">
+                  Processing...
+                </span>
+
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="back-section">
+
+    <a href="?id=manager_role_asean"
+       class="back-btn"
+       title="Back">
+
+      <i class="fa fa-chevron-left"></i>
+
+    </a>
+
+  </div>
+
+</div>]]></template>
+    </sp_widget>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</application>
+        <file_path/>
+        <instance_id>1342adfb3b190fd8baf6048aa4e45a41</instance_id>
+        <instance_name>dev404202</instance_name>
+        <name>sp_widget_b3d9bea24742c310ff78de94116d4371</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sp_widget"&gt;&lt;sp_widget action="INSERT_OR_UPDATE"&gt;&lt;category&gt;custom&lt;/category&gt;&lt;client_script&gt;&lt;![CDATA[api.controller = function($window,$document,$timeout) {
+    var c = this;
+
+    c.selectedRecord = null;
+
+    c.requestDropdownOpen = false;
+    c.loadingRequestSuggestions = false;
+    c.activeSuggestionIndex = -1;
+
+    c.requestNumberSuggestions =
+        angular.copy(
+            c.data.requestNumberSuggestions || []
+        );
+
+    c.filteredRequestNumberSuggestions =
+        angular.copy(
+            c.requestNumberSuggestions
+        );
+
+    c.data.filters =
+        c.data.filters || {
+            requestNumber: "",
+            courseType: "",
+            courseFormat: "",
+            country: ""
+        };
+
+    c.data.selectedStatus =
+        c.data.selectedStatus || "manager";
+
+    c.data.stageCounts =
+        c.data.stageCounts || {
+            manager: 0,
+            pending_l2_approval: 0,
+            pending_hr_review: 0
+        };
+
+    c.data.sortOrder =
+        c.data.sortOrder || "asc";
+
+    c.data.loading = false;
+    c.data.downloading = false;
+
+    c.clearMessages = function() {
+        c.data.successMessage = "";
+        c.data.errorMessage = "";
+    };
+
+    c.getSelectedApprovalLabel = function() {
+
+        if (
+            c.data.selectedStatus ==
+            "pending_l2_approval"
+        ) {
+            return "Management L2";
+        }
+
+        if (
+            c.data.selectedStatus ==
+            "pending_hr_review"
+        ) {
+            return "HR Learning";
+        }
+
+        return "In-Company Manager";
+    };
+
+    c.getSelectedStatusLabel = function() {
+
+        if (
+            c.data.selectedStatus ==
+            "pending_l2_approval"
+        ) {
+            return "Pending L2 Approval";
+        }
+
+        if (
+            c.data.selectedStatus ==
+            "pending_hr_review"
+        ) {
+            return "Pending HR Review";
+        }
+
+        return "Submitted / Pending Manager Approval";
+    };
+
+    c.getCommentsHeading = function() {
+
+        if (
+            c.data.selectedStatus ==
+            "pending_l2_approval"
+        ) {
+            return "Management L2 Comments";
+        }
+
+        if (
+            c.data.selectedStatus ==
+            "pending_hr_review"
+        ) {
+            return "HR Learning Comments";
+        }
+
+        return "In-Company Manager Comments";
+    };
+
+    c.getRequestParameters = function(action) {
+
+        return {
+            action: action,
+
+            selectedStatus:
+                c.data.selectedStatus ||
+                "manager",
+
+            requestNumber:
+                c.data.filters.requestNumber ||
+                "",
+
+            courseType:
+                c.data.filters.courseType ||
+                "",
+
+            courseFormat:
+                c.data.filters.courseFormat ||
+                "",
+
+            country:
+                c.data.filters.country ||
+                "",
+
+            sortOrder:
+                c.data.sortOrder ||
+                "asc"
+        };
+    };
+
+    c.updateResponse = function(response) {
+
+        var result =
+            response.data || {};
+
+        c.data.records =
+            result.records || [];
+
+        c.data.countries =
+            result.countries || [];
+
+        c.data.courseTypes =
+            result.courseTypes || [];
+
+        c.data.courseFormats =
+            result.courseFormats || [];
+
+        c.data.stageCounts =
+            result.stageCounts || {
+                manager: 0,
+                pending_l2_approval: 0,
+                pending_hr_review: 0
+            };
+
+        c.data.successMessage =
+            result.successMessage || "";
+
+        c.data.errorMessage =
+            result.errorMessage || "";
+
+        if (result.filters) {
+            c.data.filters =
+                result.filters;
+        }
+
+        if (result.selectedStatus) {
+            c.data.selectedStatus =
+                result.selectedStatus;
+        }
+
+        if (result.sortOrder) {
+            c.data.sortOrder =
+                result.sortOrder;
+        }
+
+        c.requestNumberSuggestions =
+            angular.copy(
+                result.requestNumberSuggestions || []
+            );
+
+        c.filterRequestNumberSuggestions();
+
+        c.requestDropdownOpen = false;
+        c.activeSuggestionIndex = -1;
+        c.selectedRecord = null;
+    };
+
+    /*
+     * TYPEAHEAD METHODS
+     */
+
+    c.onRequestNumberChange = function() {
+
+        c.filterRequestNumberSuggestions();
+
+        c.requestDropdownOpen = true;
+        c.activeSuggestionIndex = -1;
+    };
+
+    c.filterRequestNumberSuggestions = function() {
+
+        var searchText =
+            String(
+                c.data.filters.requestNumber || ""
+            ).toLowerCase();
+
+        if (!searchText) {
+
+            c.filteredRequestNumberSuggestions =
+                angular.copy(
+                    c.requestNumberSuggestions
+                );
+
+            return;
+        }
+
+        c.filteredRequestNumberSuggestions =
+            c.requestNumberSuggestions.filter(
+                function(suggestion) {
+
+                    var number =
+                        String(
+                            suggestion.label || ""
+                        ).toLowerCase();
+
+                    var courseTitle =
+                        String(
+                            suggestion.courseTitle || ""
+                        ).toLowerCase();
+
+                    var employeeName =
+                        String(
+                            suggestion.employeeName || ""
+                        ).toLowerCase();
+
+                    return (
+                        number.indexOf(searchText) &gt; -1 ||
+                        courseTitle.indexOf(searchText) &gt; -1 ||
+                        employeeName.indexOf(searchText) &gt; -1
+                    );
+                }
+            );
+    };
+
+    c.openRequestNumberSuggestions = function() {
+
+        c.filterRequestNumberSuggestions();
+        c.requestDropdownOpen = true;
+        c.activeSuggestionIndex = -1;
+    };
+
+    c.toggleRequestNumberSuggestions = function(event) {
+
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        c.requestDropdownOpen =
+            !c.requestDropdownOpen;
+
+        if (c.requestDropdownOpen) {
+            c.filterRequestNumberSuggestions();
+            c.activeSuggestionIndex = -1;
+        }
+    };
+
+    c.selectRequestNumber = function(
+        suggestion,
+        event
+    ) {
+
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        if (!suggestion) {
+            return;
+        }
+
+        c.data.filters.requestNumber =
+            suggestion.value || suggestion.label || "";
+
+        c.requestDropdownOpen = false;
+        c.activeSuggestionIndex = -1;
+
+        /*
+         * Automatically search after selecting
+         * a request number.
+         */
+        c.search();
+    };
+
+    c.clearRequestNumber = function(event) {
+
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        c.data.filters.requestNumber = "";
+        c.activeSuggestionIndex = -1;
+
+        c.filterRequestNumberSuggestions();
+        c.requestDropdownOpen = true;
+    };
+
+    c.handleRequestNumberKeydown = function(event) {
+
+        if (!event) {
+            return;
+        }
+
+        var keyCode =
+            event.which || event.keyCode;
+
+        /*
+         * Down arrow.
+         */
+        if (keyCode == 40) {
+
+            event.preventDefault();
+
+            if (!c.requestDropdownOpen) {
+                c.openRequestNumberSuggestions();
+            }
+
+            if (
+                c.filteredRequestNumberSuggestions.length
+            ) {
+                c.activeSuggestionIndex++;
+
+                if (
+                    c.activeSuggestionIndex &gt;=
+                    c.filteredRequestNumberSuggestions.length
+                ) {
+                    c.activeSuggestionIndex = 0;
+                }
+            }
+
+            return;
+        }
+
+        /*
+         * Up arrow.
+         */
+        if (keyCode == 38) {
+
+            event.preventDefault();
+
+            if (!c.requestDropdownOpen) {
+                c.openRequestNumberSuggestions();
+            }
+
+            if (
+                c.filteredRequestNumberSuggestions.length
+            ) {
+                c.activeSuggestionIndex--;
+
+                if (
+                    c.activeSuggestionIndex &lt; 0
+                ) {
+                    c.activeSuggestionIndex =
+                        c.filteredRequestNumberSuggestions.length - 1;
+                }
+            }
+
+            return;
+        }
+
+        /*
+         * Enter.
+         */
+        if (keyCode == 13) {
+
+            event.preventDefault();
+
+            if (
+                c.requestDropdownOpen &amp;&amp;
+                c.activeSuggestionIndex &gt;= 0 &amp;&amp;
+                c.filteredRequestNumberSuggestions[
+                    c.activeSuggestionIndex
+                ]
+            ) {
+                c.selectRequestNumber(
+                    c.filteredRequestNumberSuggestions[
+                        c.activeSuggestionIndex
+                    ],
+                    event
+                );
+            } else {
+                c.requestDropdownOpen = false;
+                c.search();
+            }
+
+            return;
+        }
+
+        /*
+         * Escape.
+         */
+        if (keyCode == 27) {
+
+            event.preventDefault();
+
+            c.requestDropdownOpen = false;
+            c.activeSuggestionIndex = -1;
+        }
+    };
+
+    c.handleOutsideClick = function() {
+        c.requestDropdownOpen = false;
+        c.activeSuggestionIndex = -1;
+    };
+
+    /*
+     * TAB / FILTER METHODS
+     */
+
+    c.selectStatus = function(status) {
+
+        if (c.data.loading) {
+            return;
+        }
+
+        c.clearMessages();
+
+        c.selectedRecord = null;
+        c.requestDropdownOpen = false;
+
+        c.data.selectedStatus = status;
+
+        /*
+         * Clear request number because request-number
+         * suggestions are different for every tab.
+         */
+        c.data.filters.requestNumber = "";
+
+        c.search();
+    };
+
+    c.selectRecord = function(record) {
+
+        if (!record) {
+            return;
+        }
+
+        c.selectedRecord = record;
+
+        c.selectedRecord.commentValidationError =
+            false;
+    };
+
+    c.clearSelectedRecord = function() {
+        c.selectedRecord = null;
+    };
+
+    c.search = function() {
+
+        if (c.data.loading) {
+            return;
+        }
+
+        c.clearMessages();
+
+        c.selectedRecord = null;
+        c.requestDropdownOpen = false;
+        c.data.loading = true;
+
+        c.server.get(
+            c.getRequestParameters("search")
+        ).then(
+            function(response) {
+
+                c.updateResponse(response);
+                c.data.loading = false;
+
+            },
+            function() {
+
+                c.data.loading = false;
+
+                c.data.errorMessage =
+                    "Unable to load learning approvals.";
+            }
+        );
+    };
+
+    c.resetFilters = function() {
+
+        if (c.data.loading) {
+            return;
+        }
+
+        c.data.filters = {
+            requestNumber: "",
+            courseType: "",
+            courseFormat: "",
+            country: ""
+        };
+
+        c.data.sortOrder = "asc";
+        c.requestDropdownOpen = false;
+
+        c.search();
+    };
+
+    c.refresh = function() {
+
+        if (!c.data.loading) {
+            c.search();
+        }
+    };
+
+    c.sortRecords = function() {
+
+        if (c.data.loading) {
+            return;
+        }
+
+        c.data.sortOrder =
+            c.data.sortOrder == "asc"
+                ? "desc"
+                : "asc";
+
+        c.search();
+    };
+
+    /*
+     * APPROVE
+     */
+
+    c.approve = function(record) {
+
+        if (
+            !record ||
+            record.processing
+        ) {
+            return;
+        }
+
+        c.clearMessages();
+
+        var comments =
+            trimValue(
+                record.actionComments
+            );
+
+        if (!comments) {
+
+            record.commentValidationError =
+                true;
+
+            return;
+        }
+
+        record.processing = true;
+
+        record.commentValidationError =
+            false;
+
+        var parameters =
+            c.getRequestParameters(
+                "approve"
+            );
+
+        parameters.approval_sys_id =
+            record.approval_sys_id;
+
+        parameters.actionComments =
+            comments;
+
+        c.server.get(parameters).then(
+            function(response) {
+
+                var result =
+                    response.data || {};
+
+                if (result.errorMessage) {
+
+                    record.processing = false;
+
+                    c.data.errorMessage =
+                        result.errorMessage;
+
+                    return;
+                }
+
+                c.updateResponse(response);
+
+            },
+            function() {
+
+                record.processing = false;
+
+                c.data.errorMessage =
+                    "Unable to approve the learning application.";
+            }
+        );
+    };
+
+    /*
+     * REJECT
+     */
+
+    c.reject = function(record) {
+
+        if (
+            !record ||
+            record.processing
+        ) {
+            return;
+        }
+
+        c.clearMessages();
+
+        var comments =
+            trimValue(
+                record.actionComments
+            );
+
+        if (!comments) {
+
+            record.commentValidationError =
+                true;
+
+            return;
+        }
+
+        record.processing = true;
+
+        record.commentValidationError =
+            false;
+
+        var parameters =
+            c.getRequestParameters(
+                "reject"
+            );
+
+        parameters.approval_sys_id =
+            record.approval_sys_id;
+
+        parameters.actionComments =
+            comments;
+
+        c.server.get(parameters).then(
+            function(response) {
+
+                var result =
+                    response.data || {};
+
+                if (result.errorMessage) {
+
+                    record.processing = false;
+
+                    c.data.errorMessage =
+                        result.errorMessage;
+
+                    return;
+                }
+
+                c.updateResponse(response);
+
+            },
+            function() {
+
+                record.processing = false;
+
+                c.data.errorMessage =
+                    "Unable to reject the learning application.";
+            }
+        );
+    };
+
+    /*
+     * REPORT DOWNLOAD
+     */
+
+    c.downloadReport = function() {
+
+        if (
+            c.data.downloading ||
+            c.data.loading
+        ) {
+            return;
+        }
+
+        c.clearMessages();
+
+        c.data.downloading = true;
+
+        c.server.get({
+            action: "download_report"
+        }).then(
+            function(response) {
+
+                var result =
+                    response.data || {};
+
+                c.data.downloading = false;
+
+                c.data.successMessage =
+                    result.successMessage || "";
+
+                c.data.errorMessage =
+                    result.errorMessage || "";
+
+                if (
+                    !result.downloadReady ||
+                    !result.fileContent
+                ) {
+                    if (!c.data.errorMessage) {
+                        c.data.errorMessage =
+                            "The report could not be generated.";
+                    }
+
+                    return;
+                }
+
+                createDownload(
+                    result.fileContent,
+                    result.fileName ||
+                    "ASEAN_Learning_Approval_Report.csv"
+                );
+
+            },
+            function() {
+
+                c.data.downloading = false;
+
+                c.data.errorMessage =
+                    "Unable to generate the approval report.";
+            }
+        );
+    };
+
+    function createDownload(
+        csvContent,
+        fileName
+    ) {
+
+        try {
+
+            var blob =
+                new $window.Blob(
+                    ["\uFEFF" + csvContent],
+                    {
+                        type:
+                            "text/csv;charset=utf-8"
+                    }
+                );
+
+            var urlApi =
+                $window.URL ||
+                $window.webkitURL;
+
+            var objectUrl =
+                urlApi.createObjectURL(blob);
+
+            var link =
+                $document[0].createElement("a");
+
+            link.href = objectUrl;
+            link.download = fileName;
+            link.style.display = "none";
+
+            $document[0].body.appendChild(link);
+
+            link.click();
+
+            $timeout(function() {
+
+                if (link.parentNode) {
+                    link.parentNode.removeChild(link);
+                }
+
+                urlApi.revokeObjectURL(objectUrl);
+
+            }, 1000);
+
+        } catch (error) {
+
+            c.data.errorMessage =
+                "The browser could not download the report.";
+        }
+    }
+
+    function trimValue(value) {
+
+        return String(
+            value || ""
+        ).replace(
+            /^\s+|\s+$/g,
+            ""
+        );
+    }
+};]]&gt;&lt;/client_script&gt;&lt;controller_as&gt;c&lt;/controller_as&gt;&lt;css&gt;.learning-widget {&amp;#13;
+  position: relative;&amp;#13;
+  min-height: 650px;&amp;#13;
+  overflow: visible;&amp;#13;
+  color: #222;&amp;#13;
+  background: #fff;&amp;#13;
+  border: 1px solid #333;&amp;#13;
+  font-family: Arial, Helvetica, sans-serif;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.widget-header {&amp;#13;
+  min-height: 65px;&amp;#13;
+  padding: 12px 15px 8px;&amp;#13;
+  background: #fff;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.widget-header h2 {&amp;#13;
+  display: inline-block;&amp;#13;
+  margin: 0;&amp;#13;
+  padding: 0 5px 8px;&amp;#13;
+  color: #ec6608;&amp;#13;
+  border-bottom: 3px solid #ec6608;&amp;#13;
+  font-size: 26px;&amp;#13;
+  font-weight: 600;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.stage-selection {&amp;#13;
+  display: flex;&amp;#13;
+  align-items: center;&amp;#13;
+  min-height: 52px;&amp;#13;
+  padding: 8px 15px;&amp;#13;
+  background: #fff;&amp;#13;
+  border-top: 4px solid #111;&amp;#13;
+  border-bottom: 1px solid #bdbdbd;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.stage-label {&amp;#13;
+  flex: 0 0 125px;&amp;#13;
+  font-size: 14px;&amp;#13;
+  text-decoration: underline;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.stage-tabs {&amp;#13;
+  display: flex;&amp;#13;
+  flex: 1;&amp;#13;
+  gap: 28px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.stage-tab {&amp;#13;
+  display: flex;&amp;#13;
+  align-items: center;&amp;#13;
+  justify-content: center;&amp;#13;
+  gap: 8px;&amp;#13;
+  flex: 1;&amp;#13;
+  max-width: 245px;&amp;#13;
+  min-height: 36px;&amp;#13;
+  padding: 5px 15px;&amp;#13;
+  color: #16415c;&amp;#13;
+  background: #eee;&amp;#13;
+  border: 0;&amp;#13;
+  border-radius: 7px;&amp;#13;
+  cursor: pointer;&amp;#13;
+  font-size: 14px;&amp;#13;
+  font-weight: 600;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.stage-tab:hover:not([disabled]) {&amp;#13;
+  background: #d9d9d9;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.stage-tab.active-stage {&amp;#13;
+  color: #fff;&amp;#13;
+  background: #f36f21;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.stage-tab[disabled] {&amp;#13;
+  cursor: not-allowed;&amp;#13;
+  opacity: 0.65;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.approval-count {&amp;#13;
+  display: inline-flex;&amp;#13;
+  align-items: center;&amp;#13;
+  justify-content: center;&amp;#13;
+  min-width: 23px;&amp;#13;
+  height: 23px;&amp;#13;
+  padding: 0 6px;&amp;#13;
+  color: #fff;&amp;#13;
+  background: #68737d;&amp;#13;
+  border-radius: 12px;&amp;#13;
+  font-size: 11px;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.active-stage .approval-count {&amp;#13;
+  color: #f36f21;&amp;#13;
+  background: #fff;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.toolbar {&amp;#13;
+  display: flex;&amp;#13;
+  align-items: stretch;&amp;#13;
+  min-height: 155px;&amp;#13;
+  overflow: visible;&amp;#13;
+  background: #e5e5e5;&amp;#13;
+  border-bottom: 1px solid #bdbdbd;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.download-section {&amp;#13;
+  flex: 0 0 145px;&amp;#13;
+  padding: 12px 10px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.download-btn {&amp;#13;
+  width: 120px;&amp;#13;
+  min-height: 34px;&amp;#13;
+  padding: 6px 10px;&amp;#13;
+  color: #fff;&amp;#13;
+  background: #2ea94f;&amp;#13;
+  border: 0;&amp;#13;
+  font-size: 12px;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.download-btn:hover {&amp;#13;
+  background: #258d41;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.download-btn[disabled] {&amp;#13;
+  cursor: not-allowed;&amp;#13;
+  opacity: 0.65;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.download-btn i {&amp;#13;
+  margin-right: 6px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.download-help {&amp;#13;
+  width: 120px;&amp;#13;
+  margin-top: 6px;&amp;#13;
+  color: #666;&amp;#13;
+  font-size: 10px;&amp;#13;
+  text-align: center;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filters-container {&amp;#13;
+  flex: 1;&amp;#13;
+  padding: 10px 5px;&amp;#13;
+  overflow: visible;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-row {&amp;#13;
+  display: flex;&amp;#13;
+  gap: 25px;&amp;#13;
+  margin-bottom: 8px;&amp;#13;
+  overflow: visible;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-group {&amp;#13;
+  display: flex;&amp;#13;
+  align-items: center;&amp;#13;
+  flex: 1;&amp;#13;
+  min-width: 250px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-group label {&amp;#13;
+  flex: 0 0 115px;&amp;#13;
+  margin: 0;&amp;#13;
+  padding-right: 8px;&amp;#13;
+  font-size: 13px;&amp;#13;
+  font-weight: normal;&amp;#13;
+  text-align: right;&amp;#13;
+  text-decoration: underline;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-group .form-control {&amp;#13;
+  flex: 1;&amp;#13;
+  height: 31px;&amp;#13;
+  padding: 4px 8px;&amp;#13;
+  color: #333;&amp;#13;
+  background: #fff;&amp;#13;
+  border: 1px solid #c4c4c4;&amp;#13;
+  border-radius: 0;&amp;#13;
+  font-size: 12px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.ticket-status-field {&amp;#13;
+  color: #555 !important;&amp;#13;
+  background: #f5f5f5 !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.empty-filter {&amp;#13;
+  visibility: hidden;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-number-filter {&amp;#13;
+  overflow: visible;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-typeahead {&amp;#13;
+  position: relative;&amp;#13;
+  flex: 1;&amp;#13;
+  min-width: 0;&amp;#13;
+  overflow: visible;&amp;#13;
+  z-index: 1000;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-input-wrapper {&amp;#13;
+  position: relative;&amp;#13;
+  display: flex;&amp;#13;
+  width: 100%;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-number-input {&amp;#13;
+  width: 100%;&amp;#13;
+  padding-right: 58px !important;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown-button,&amp;#13;
+.request-clear-button {&amp;#13;
+  position: absolute;&amp;#13;
+  top: 1px;&amp;#13;
+  width: 27px;&amp;#13;
+  height: 29px;&amp;#13;
+  padding: 0;&amp;#13;
+  color: #666;&amp;#13;
+  background: transparent;&amp;#13;
+  border: 0;&amp;#13;
+  z-index: 2;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown-button {&amp;#13;
+  right: 1px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-clear-button {&amp;#13;
+  right: 28px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown-button:hover,&amp;#13;
+.request-clear-button:hover {&amp;#13;
+  color: #f36f21;&amp;#13;
+  background: #f2f2f2;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-dropdown-button[disabled] {&amp;#13;
+  cursor: not-allowed;&amp;#13;
+  opacity: 0.5;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-suggestion-dropdown {&amp;#13;
+  position: absolute;&amp;#13;
+  top: 33px;&amp;#13;
+  left: 0;&amp;#13;
+  right: 0;&amp;#13;
+  z-index: 9999;&amp;#13;
+  max-height: 260px;&amp;#13;
+  overflow-y: auto;&amp;#13;
+  background: #fff;&amp;#13;
+  border: 1px solid #aaa;&amp;#13;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.22);&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-suggestion-item {&amp;#13;
+  display: block;&amp;#13;
+  width: 100%;&amp;#13;
+  padding: 8px 10px;&amp;#13;
+  color: #333;&amp;#13;
+  background: #fff;&amp;#13;
+  border: 0;&amp;#13;
+  border-bottom: 1px solid #eee;&amp;#13;
+  text-align: left;&amp;#13;
+  cursor: pointer;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-suggestion-item:last-child {&amp;#13;
+  border-bottom: 0;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-suggestion-item:hover,&amp;#13;
+.request-suggestion-item.active-suggestion {&amp;#13;
+  background: #fff1e8;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.suggestion-number {&amp;#13;
+  display: block;&amp;#13;
+  color: #0077b5;&amp;#13;
+  font-size: 13px;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.suggestion-course {&amp;#13;
+  display: block;&amp;#13;
+  margin-top: 2px;&amp;#13;
+  color: #333;&amp;#13;
+  font-size: 11px;&amp;#13;
+  overflow: hidden;&amp;#13;
+  text-overflow: ellipsis;&amp;#13;
+  white-space: nowrap;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.suggestion-employee {&amp;#13;
+  display: block;&amp;#13;
+  margin-top: 2px;&amp;#13;
+  color: #777;&amp;#13;
+  font-size: 10px;&amp;#13;
+  overflow: hidden;&amp;#13;
+  text-overflow: ellipsis;&amp;#13;
+  white-space: nowrap;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-suggestion-loading,&amp;#13;
+.request-no-suggestions {&amp;#13;
+  padding: 12px 10px;&amp;#13;
+  color: #666;&amp;#13;
+  font-size: 11px;&amp;#13;
+  text-align: center;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.request-suggestion-loading i {&amp;#13;
+  margin-right: 5px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-button-row {&amp;#13;
+  display: flex;&amp;#13;
+  justify-content: flex-end;&amp;#13;
+  gap: 8px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.filter-btn {&amp;#13;
+  min-width: 90px;&amp;#13;
+  height: 31px;&amp;#13;
+  color: #fff;&amp;#13;
+  border: 0;&amp;#13;
+  font-size: 12px;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.search-btn {&amp;#13;
+  background: #008fd3;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.reset-btn {&amp;#13;
+  background: #777;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.toolbar-actions {&amp;#13;
+  display: flex;&amp;#13;
+  flex: 0 0 46px;&amp;#13;
+  flex-direction: column;&amp;#13;
+  gap: 5px;&amp;#13;
+  padding: 10px 5px 8px 0;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.icon-btn {&amp;#13;
+  width: 36px;&amp;#13;
+  height: 32px;&amp;#13;
+  padding: 0;&amp;#13;
+  color: #fff;&amp;#13;
+  background: #2ea94f;&amp;#13;
+  border: 0;&amp;#13;
+  font-size: 17px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.widget-message {&amp;#13;
+  margin: 10px 13px;&amp;#13;
+  padding: 9px 12px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.loading-message {&amp;#13;
+  padding: 50px 20px;&amp;#13;
+  text-align: center;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.approval-workspace {&amp;#13;
+  display: flex;&amp;#13;
+  min-height: 470px;&amp;#13;
+  padding: 12px 13px 75px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.approval-list-panel {&amp;#13;
+  flex: 0 0 35%;&amp;#13;
+  min-width: 290px;&amp;#13;
+  max-width: 410px;&amp;#13;
+  background: #f5f5f5;&amp;#13;
+  border: 1px solid #d5d5d5;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.list-panel-header {&amp;#13;
+  display: flex;&amp;#13;
+  justify-content: space-between;&amp;#13;
+  padding: 10px 14px;&amp;#13;
+  background: #eee;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.list-record-count {&amp;#13;
+  min-width: 25px;&amp;#13;
+  padding: 4px 7px;&amp;#13;
+  color: #fff;&amp;#13;
+  background: #68737d;&amp;#13;
+  border-radius: 13px;&amp;#13;
+  text-align: center;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.approval-cards {&amp;#13;
+  max-height: 620px;&amp;#13;
+  padding: 10px;&amp;#13;
+  overflow-y: auto;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.approval-card {&amp;#13;
+  display: block;&amp;#13;
+  width: 100%;&amp;#13;
+  margin-bottom: 10px;&amp;#13;
+  padding: 12px;&amp;#13;
+  background: #fff;&amp;#13;
+  border: 1px solid #d7d7d7;&amp;#13;
+  border-left: 4px solid transparent;&amp;#13;
+  text-align: left;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.approval-card:hover,&amp;#13;
+.approval-card.selected-card {&amp;#13;
+  border-left-color: #f36f21;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.card-top-row,&amp;#13;
+.card-status-row {&amp;#13;
+  display: flex;&amp;#13;
+  justify-content: space-between;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.card-request-number {&amp;#13;
+  color: #0077b5;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.card-course-title {&amp;#13;
+  margin: 8px 0;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.card-detail-row {&amp;#13;
+  display: grid;&amp;#13;
+  grid-template-columns: 95px 1fr;&amp;#13;
+  min-height: 22px;&amp;#13;
+  font-size: 11px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.card-label {&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.card-status {&amp;#13;
+  padding: 3px 8px;&amp;#13;
+  color: #fff;&amp;#13;
+  background: #f36f21;&amp;#13;
+  border-radius: 10px;&amp;#13;
+  font-size: 10px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.approval-detail-panel {&amp;#13;
+  flex: 1;&amp;#13;
+  border: 1px solid #d5d5d5;&amp;#13;
+  border-left: 0;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.detail-empty-state {&amp;#13;
+  min-height: 470px;&amp;#13;
+  padding: 120px 35px;&amp;#13;
+  text-align: center;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.empty-state-icon {&amp;#13;
+  color: #f36f21;&amp;#13;
+  font-size: 42px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.empty-state-title {&amp;#13;
+  margin-top: 12px;&amp;#13;
+  font-size: 18px;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.empty-state-text {&amp;#13;
+  margin-top: 8px;&amp;#13;
+  color: #666;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.selected-record-header {&amp;#13;
+  display: flex;&amp;#13;
+  justify-content: space-between;&amp;#13;
+  padding: 10px 16px;&amp;#13;
+  background: #f4f4f4;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.selected-record-number {&amp;#13;
+  color: #0077b5;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.close-selected-btn {&amp;#13;
+  width: 31px;&amp;#13;
+  height: 31px;&amp;#13;
+  color: #fff;&amp;#13;
+  background: #777;&amp;#13;
+  border: 0;&amp;#13;
+  border-radius: 50%;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.selected-record-body {&amp;#13;
+  max-height: 620px;&amp;#13;
+  padding: 16px;&amp;#13;
+  overflow-y: auto;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.detail-section {&amp;#13;
+  margin-bottom: 20px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.detail-section-title {&amp;#13;
+  display: inline-block;&amp;#13;
+  margin-bottom: 12px;&amp;#13;
+  border-bottom: 2px solid #222;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.summary-detail-grid {&amp;#13;
+  display: grid;&amp;#13;
+  grid-template-columns: repeat(2, minmax(190px, 1fr));&amp;#13;
+  gap: 12px 24px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.summary-detail-item {&amp;#13;
+  display: grid;&amp;#13;
+  grid-template-columns: 145px 1fr;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.summary-detail-label {&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.selected-status-badge {&amp;#13;
+  display: inline-block;&amp;#13;
+  padding: 4px 10px;&amp;#13;
+  color: #fff;&amp;#13;
+  background: #f36f21;&amp;#13;
+  border-radius: 11px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.previous-comments-section {&amp;#13;
+  margin-bottom: 20px;&amp;#13;
+  padding: 14px 16px;&amp;#13;
+  background: #f7f7f7;&amp;#13;
+  border: 1px solid #d5d5d5;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.previous-comment-card {&amp;#13;
+  margin-top: 12px;&amp;#13;
+  overflow: hidden;&amp;#13;
+  background: #fff;&amp;#13;
+  border: 1px solid #d7d7d7;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.previous-comment-heading {&amp;#13;
+  padding: 9px 12px;&amp;#13;
+  color: #333;&amp;#13;
+  background: #eee;&amp;#13;
+  border-bottom: 1px solid #d7d7d7;&amp;#13;
+  font-size: 13px;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.previous-comment-heading i {&amp;#13;
+  margin-right: 6px;&amp;#13;
+  color: #f36f21;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.previous-comment-text {&amp;#13;
+  min-height: 45px;&amp;#13;
+  padding: 12px;&amp;#13;
+  color: #444;&amp;#13;
+  font-size: 13px;&amp;#13;
+  line-height: 1.5;&amp;#13;
+  white-space: pre-wrap;&amp;#13;
+  word-break: break-word;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.selected-comments-panel {&amp;#13;
+  padding: 15px 17px;&amp;#13;
+  background: #e9e9e9;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.comments-title {&amp;#13;
+  margin-bottom: 10px;&amp;#13;
+  color: #ec6608;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.mandatory-symbol {&amp;#13;
+  color: #c9302c;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.selected-comments-textarea {&amp;#13;
+  width: 100%;&amp;#13;
+  min-height: 105px;&amp;#13;
+  resize: vertical;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.comments-help {&amp;#13;
+  margin-top: 5px;&amp;#13;
+  color: #666;&amp;#13;
+  font-size: 11px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.field-error {&amp;#13;
+  margin-top: 5px;&amp;#13;
+  color: #c9302c;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.selected-record-actions {&amp;#13;
+  display: flex;&amp;#13;
+  justify-content: flex-end;&amp;#13;
+  gap: 12px;&amp;#13;
+  margin-top: 12px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.decision-btn {&amp;#13;
+  min-width: 105px;&amp;#13;
+  height: 33px;&amp;#13;
+  color: #fff;&amp;#13;
+  border: 0;&amp;#13;
+  font-weight: bold;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.approve-btn {&amp;#13;
+  background: #2ea94f;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.reject-btn {&amp;#13;
+  background: #d9534f;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.no-records-card {&amp;#13;
+  padding: 40px 20px;&amp;#13;
+  color: #666;&amp;#13;
+  text-align: center;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.no-records-card i {&amp;#13;
+  margin-bottom: 10px;&amp;#13;
+  color: #f36f21;&amp;#13;
+  font-size: 30px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.back-section {&amp;#13;
+  position: absolute;&amp;#13;
+  bottom: 10px;&amp;#13;
+  left: 10px;&amp;#13;
+}&amp;#13;
+&amp;#13;
+.back-btn {&amp;#13;
+  display: flex;&amp;#13;
+  align-items: center;&amp;#13;
+  justify-content: center;&amp;#13;
+  width: 34px;&amp;#13;
+  height: 34px;&amp;#13;
+  color: #ec6608;&amp;#13;
+  border: 2px solid #ec6608;&amp;#13;
+  border-radius: 50%;&amp;#13;
+  text-decoration: none;&amp;#13;
+}&amp;#13;
+&amp;#13;
+@media screen and (max-width: 950px) {&amp;#13;
+  .approval-workspace {&amp;#13;
+    flex-direction: column;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .approval-list-panel,&amp;#13;
+  .approval-detail-panel {&amp;#13;
+    width: 100%;&amp;#13;
+    max-width: none;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .approval-detail-panel {&amp;#13;
+    border-left: 1px solid #d5d5d5;&amp;#13;
+  }&amp;#13;
+}&amp;#13;
+&amp;#13;
+@media screen and (max-width: 800px) {&amp;#13;
+  .stage-selection,&amp;#13;
+  .toolbar,&amp;#13;
+  .filter-row {&amp;#13;
+    flex-direction: column;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .stage-tabs {&amp;#13;
+    width: 100%;&amp;#13;
+    flex-direction: column;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .stage-tab {&amp;#13;
+    max-width: none;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .request-typeahead {&amp;#13;
+    width: 100%;&amp;#13;
+  }&amp;#13;
+}&amp;#13;
+&amp;#13;
+@media screen and (max-width: 650px) {&amp;#13;
+  .summary-detail-grid {&amp;#13;
+    grid-template-columns: 1fr;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .selected-record-actions {&amp;#13;
+    flex-direction: column;&amp;#13;
+  }&amp;#13;
+&amp;#13;
+  .decision-btn {&amp;#13;
+    width: 100%;&amp;#13;
+  }&amp;#13;
+}&lt;/css&gt;&lt;data_table&gt;sp_instance&lt;/data_table&gt;&lt;demo_data/&gt;&lt;description/&gt;&lt;docs/&gt;&lt;field_list/&gt;&lt;has_preview&gt;false&lt;/has_preview&gt;&lt;id&gt;approval_asean&lt;/id&gt;&lt;internal&gt;false&lt;/internal&gt;&lt;link&gt;&lt;![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]&gt;&lt;/link&gt;&lt;name&gt;Approval ASEAN&lt;/name&gt;&lt;option_schema/&gt;&lt;public&gt;false&lt;/public&gt;&lt;roles/&gt;&lt;script&gt;&lt;![CDATA[(function() {
+
+    var LEARNING_TABLE =
+        "x_1549902_asean_0_learning_application";
+
+    var APPROVAL_TABLE =
+        "sysapproval_approver";
+
+    /*
+     * Initial widget data.
+     */
+    data.records = [];
+    data.countries = [];
+    data.courseTypes = [];
+    data.courseFormats = [];
+    data.requestNumberSuggestions = [];
+
+    data.stageCounts = {
+        manager: 0,
+        pending_l2_approval: 0,
+        pending_hr_review: 0
+    };
+
+    data.successMessage = "";
+    data.errorMessage = "";
+
+    data.downloadReady = false;
+    data.fileContent = "";
+    data.fileName = "";
+
+    /*
+     * Read client input.
+     */
+    var action =
+        getInputValue("action");
+
+    var selectedStatus =
+        validateSelectedStatus(
+            getInputValue("selectedStatus") ||
+            "manager"
+        );
+
+    var requestNumber =
+        getInputValue("requestNumber");
+
+    var courseType =
+        getInputValue("courseType");
+
+    var courseFormat =
+        getInputValue("courseFormat");
+
+    var country =
+        getInputValue("country");
+
+    var sortOrder =
+        getInputValue("sortOrder") ||
+        "asc";
+
+    if (
+        sortOrder != "asc" &amp;&amp;
+        sortOrder != "desc"
+    ) {
+        sortOrder = "asc";
+    }
+
+    data.selectedStatus =
+        selectedStatus;
+
+    data.sortOrder =
+        sortOrder;
+
+    data.filters = {
+        requestNumber: requestNumber,
+        courseType: courseType,
+        courseFormat: courseFormat,
+        country: country
+    };
+
+    /*
+     * Download approved records
+     * from the last 90 days.
+     */
+    if (action == "download_report") {
+        generateApprovalReport();
+        return;
+    }
+
+    /*
+     * Approve request.
+     */
+    if (
+        action == "approve" &amp;&amp;
+        input &amp;&amp;
+        input.approval_sys_id
+    ) {
+        processApproval(
+            String(input.approval_sys_id),
+            "approved",
+            getInputValue("actionComments")
+        );
+    }
+
+    /*
+     * Reject request.
+     */
+    if (
+        action == "reject" &amp;&amp;
+        input &amp;&amp;
+        input.approval_sys_id
+    ) {
+        processApproval(
+            String(input.approval_sys_id),
+            "rejected",
+            getInputValue("actionComments")
+        );
+    }
+
+    /*
+     * Reload widget information.
+     */
+    loadStageCounts();
+    loadFilterChoices();
+    loadRequestNumberSuggestions();
+    loadPendingApprovals();
+
+
+    function getInputValue(name) {
+
+        if (
+            !input ||
+            input[name] === undefined ||
+            input[name] === null
+        ) {
+            return "";
+        }
+
+        return String(input[name]);
+    }
+
+
+    function validateSelectedStatus(status) {
+
+        if (
+            status == "manager" ||
+            status == "pending_l2_approval" ||
+            status == "pending_hr_review"
+        ) {
+            return status;
+        }
+
+        return "manager";
+    }
+
+
+    function isStatusForSelectedStage(status) {
+
+        if (selectedStatus == "manager") {
+
+            return (
+                status == "submitted" ||
+                status ==
+                    "pending_manager_approval"
+            );
+        }
+
+        return status == selectedStatus;
+    }
+
+
+    function getApprovalStageLabel(status) {
+
+        if (
+            status ==
+            "pending_l2_approval"
+        ) {
+            return "Management L2";
+        }
+
+        if (
+            status ==
+            "pending_hr_review"
+        ) {
+            return "HR Learning";
+        }
+
+        return "In-Company Manager";
+    }
+
+
+    function loadStageCounts() {
+
+        var approvalGR =
+            new GlideRecord(
+                APPROVAL_TABLE
+            );
+
+        approvalGR.addQuery(
+            "approver",
+            gs.getUserID()
+        );
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.query();
+
+        while (approvalGR.next()) {
+
+            var learningGR =
+                getLearningRecord(
+                    approvalGR
+                );
+
+            if (!learningGR) {
+                continue;
+            }
+
+            var status =
+                getValueSafely(
+                    learningGR,
+                    "u_status"
+                );
+
+            if (
+                status == "submitted" ||
+                status ==
+                    "pending_manager_approval"
+            ) {
+                data.stageCounts.manager++;
+
+            } else if (
+                status ==
+                "pending_l2_approval"
+            ) {
+                data.stageCounts
+                    .pending_l2_approval++;
+
+            } else if (
+                status ==
+                "pending_hr_review"
+            ) {
+                data.stageCounts
+                    .pending_hr_review++;
+            }
+        }
+    }
+
+
+    /*
+     * Load request number suggestions.
+     */
+    function loadRequestNumberSuggestions() {
+
+        var suggestions = [];
+        var duplicateMap = {};
+
+        var approvalGR =
+            new GlideRecord(
+                APPROVAL_TABLE
+            );
+
+        approvalGR.addQuery(
+            "approver",
+            gs.getUserID()
+        );
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.query();
+
+        while (approvalGR.next()) {
+
+            var learningGR =
+                getLearningRecord(
+                    approvalGR
+                );
+
+            if (!learningGR) {
+                continue;
+            }
+
+            var status =
+                getValueSafely(
+                    learningGR,
+                    "u_status"
+                );
+
+            if (
+                !isStatusForSelectedStage(
+                    status
+                )
+            ) {
+                continue;
+            }
+
+            var number =
+                getDisplayValueSafely(
+                    learningGR,
+                    "number"
+                );
+
+            if (
+                !number ||
+                duplicateMap[number]
+            ) {
+                continue;
+            }
+
+            duplicateMap[number] = true;
+
+            suggestions.push({
+                value: number,
+                label: number,
+
+                courseTitle:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_course_title"
+                    ),
+
+                employeeName:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_employee_name"
+                    ),
+
+                sysId:
+                    learningGR
+                        .getUniqueValue()
+            });
+        }
+
+        suggestions.sort(
+            function(first, second) {
+
+                var firstNumber =
+                    String(
+                        first.label || ""
+                    ).toLowerCase();
+
+                var secondNumber =
+                    String(
+                        second.label || ""
+                    ).toLowerCase();
+
+                if (
+                    firstNumber &lt;
+                    secondNumber
+                ) {
+                    return -1;
+                }
+
+                if (
+                    firstNumber &gt;
+                    secondNumber
+                ) {
+                    return 1;
+                }
+
+                return 0;
+            }
+        );
+
+        data.requestNumberSuggestions =
+            suggestions;
+    }
+
+
+    /*
+     * Approve or reject an application.
+     */
+    function processApproval(
+        approvalSysId,
+        decision,
+        actionComments
+    ) {
+
+        actionComments =
+            trimValue(actionComments);
+
+        if (!actionComments) {
+
+            data.errorMessage =
+                "Please enter the comments.";
+
+            return;
+        }
+
+        var approvalGR =
+            new GlideRecord(
+                APPROVAL_TABLE
+            );
+
+        approvalGR.addQuery(
+            "sys_id",
+            approvalSysId
+        );
+
+        approvalGR.addQuery(
+            "approver",
+            gs.getUserID()
+        );
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.setLimit(1);
+        approvalGR.query();
+
+        if (!approvalGR.next()) {
+
+            data.errorMessage =
+                "The approval was not found or is no longer pending.";
+
+            return;
+        }
+
+        var learningGR =
+            getLearningRecord(
+                approvalGR
+            );
+
+        if (!learningGR) {
+
+            data.errorMessage =
+                "The approval is not related to a Learning Application.";
+
+            return;
+        }
+
+        var recordStatus =
+            getValueSafely(
+                learningGR,
+                "u_status"
+            );
+
+        if (
+            !isStatusForSelectedStage(
+                recordStatus
+            )
+        ) {
+
+            data.errorMessage =
+                "The application is no longer in the selected approval stage.";
+
+            return;
+        }
+
+        /*
+         * Save comments in the
+         * stage-specific field.
+         */
+        if (
+            selectedStatus ==
+            "manager"
+        ) {
+
+            if (
+                learningGR.isValidField(
+                    "u_direct_manager_comments"
+                )
+            ) {
+                learningGR.setValue(
+                    "u_direct_manager_comments",
+                    actionComments
+                );
+            }
+
+        } else if (
+            selectedStatus ==
+            "pending_l2_approval"
+        ) {
+
+            if (
+                learningGR.isValidField(
+                    "u_l2_manager_comments"
+                )
+            ) {
+                learningGR.setValue(
+                    "u_l2_manager_comments",
+                    actionComments
+                );
+            }
+
+        } else if (
+            selectedStatus ==
+            "pending_hr_review"
+        ) {
+
+            if (
+                learningGR.isValidField(
+                    "u_hr_comments"
+                )
+            ) {
+                learningGR.setValue(
+                    "u_hr_comments",
+                    actionComments
+                );
+            }
+        }
+
+        var actionLabel =
+            decision == "approved"
+                ? "Approved"
+                : "Rejected";
+
+        var journalText =
+            actionLabel +
+            " by: " +
+            gs.getUserDisplayName() +
+            "\nApproval Stage: " +
+            getApprovalStageLabel(
+                selectedStatus
+            ) +
+            "\nComments: " +
+            actionComments;
+
+        /*
+         * Write only to Additional comments.
+         *
+         * Standard technical field name:
+         * comments
+         */
+        if (
+            learningGR.isValidField(
+                "comments"
+            )
+        ) {
+            learningGR.comments =
+                journalText;
+        }
+
+        /*
+         * Fallback custom field only when
+         * the standard comments field
+         * does not exist.
+         */
+        if (
+            !learningGR.isValidField(
+                "comments"
+            ) &amp;&amp;
+            learningGR.isValidField(
+                "u_comment"
+            )
+        ) {
+
+            var existingComment =
+                learningGR.getValue(
+                    "u_comment"
+                ) || "";
+
+            learningGR.setValue(
+                "u_comment",
+                existingComment
+                    ? existingComment +
+                      "\n\n" +
+                      journalText
+                    : journalText
+            );
+        }
+
+        /*
+         * Rejected request moves to
+         * Rejected status.
+         */
+        if (
+            decision ==
+            "rejected"
+        ) {
+            learningGR.setValue(
+                "u_status",
+                "rejected"
+            );
+        }
+
+        learningGR.update();
+
+        /*
+         * Save comment on the approval
+         * record itself.
+         *
+         * This does not update the Learning
+         * Request work notes.
+         */
+        if (
+            approvalGR.isValidField(
+                "comments"
+            )
+        ) {
+            approvalGR.comments =
+                actionComments;
+        }
+
+        approvalGR.setValue(
+            "state",
+            decision
+        );
+
+        approvalGR.update();
+
+        data.successMessage =
+            decision == "approved"
+                ? "Learning application approved successfully."
+                : "Learning application rejected successfully.";
+    }
+
+
+    function loadPendingApprovals() {
+
+        var records = [];
+
+        var approvalGR =
+            new GlideRecord(
+                APPROVAL_TABLE
+            );
+
+        approvalGR.addQuery(
+            "approver",
+            gs.getUserID()
+        );
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.query();
+
+        while (approvalGR.next()) {
+
+            var learningGR =
+                getLearningRecord(
+                    approvalGR
+                );
+
+            if (!learningGR) {
+                continue;
+            }
+
+            if (
+                !matchesFilters(
+                    learningGR
+                )
+            ) {
+                continue;
+            }
+
+            records.push({
+
+                approval_sys_id:
+                    approvalGR
+                        .getUniqueValue(),
+
+                learning_sys_id:
+                    learningGR
+                        .getUniqueValue(),
+
+                number:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "number"
+                    ),
+
+                employee_name:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_employee_name"
+                    ),
+
+                employee_email:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_employee_email"
+                    ),
+
+                country:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_country"
+                    ),
+
+                manager:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_manager_email"
+                    ),
+
+                management_l2:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_management_l2"
+                    ),
+
+                l2_required:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "manager_approval_l2_required"
+                    ),
+
+                course_title:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_course_title"
+                    ),
+
+                course_type:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_course_type"
+                    ),
+
+                course_format:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_course_format"
+                    ),
+
+                training_country:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_training_country"
+                    ),
+
+                training_provider:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_training_provider_name"
+                    ),
+
+                course_start_date:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "course_start_date"
+                    ),
+
+                course_end_date:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_course_end_date"
+                    ),
+
+                training_hours:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_total_training_hours"
+                    ),
+
+                currency:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "currency"
+                    ),
+
+                course_fee:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_course_fee"
+                    ),
+
+                other_expenses:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_other_expenses"
+                    ),
+
+                total_cost:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_total_cost"
+                    ),
+
+                ticket_status:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_status"
+                    ),
+
+                approval_state:
+                    approvalGR
+                        .getDisplayValue(
+                            "state"
+                        ),
+
+                direct_manager_comments:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_direct_manager_comments"
+                    ),
+
+                l2_manager_comments:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_l2_manager_comments"
+                    ),
+
+                hr_comments:
+                    getDisplayValueSafely(
+                        learningGR,
+                        "u_hr_comments"
+                    ),
+
+                actionComments: "",
+                commentValidationError: false,
+                processing: false
+            });
+        }
+
+        records.sort(
+            function(
+                firstRecord,
+                secondRecord
+            ) {
+
+                var first =
+                    String(
+                        firstRecord.number ||
+                        ""
+                    ).toLowerCase();
+
+                var second =
+                    String(
+                        secondRecord.number ||
+                        ""
+                    ).toLowerCase();
+
+                if (first &lt; second) {
+                    return sortOrder ==
+                        "asc" ? -1 : 1;
+                }
+
+                if (first &gt; second) {
+                    return sortOrder ==
+                        "asc" ? 1 : -1;
+                }
+
+                return 0;
+            }
+        );
+
+        data.records = records;
+    }
+
+
+    function matchesFilters(
+        learningGR
+    ) {
+
+        var status =
+            getValueSafely(
+                learningGR,
+                "u_status"
+            );
+
+        if (
+            !isStatusForSelectedStage(
+                status
+            )
+        ) {
+            return false;
+        }
+
+        if (requestNumber) {
+
+            var number =
+                getDisplayValueSafely(
+                    learningGR,
+                    "number"
+                );
+
+            if (
+                !containsIgnoreCase(
+                    number,
+                    requestNumber
+                )
+            ) {
+                return false;
+            }
+        }
+
+        if (
+            courseType &amp;&amp;
+            getValueSafely(
+                learningGR,
+                "u_course_type"
+            ) != courseType
+        ) {
+            return false;
+        }
+
+        if (
+            courseFormat &amp;&amp;
+            getValueSafely(
+                learningGR,
+                "u_course_format"
+            ) != courseFormat
+        ) {
+            return false;
+        }
+
+        if (
+            country &amp;&amp;
+            getValueSafely(
+                learningGR,
+                "u_country"
+            ) != country
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+
+    function loadFilterChoices() {
+
+        var countryMap = {};
+        var courseTypeMap = {};
+        var courseFormatMap = {};
+
+        var approvalGR =
+            new GlideRecord(
+                APPROVAL_TABLE
+            );
+
+        approvalGR.addQuery(
+            "approver",
+            gs.getUserID()
+        );
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.query();
+
+        while (approvalGR.next()) {
+
+            var learningGR =
+                getLearningRecord(
+                    approvalGR
+                );
+
+            if (!learningGR) {
+                continue;
+            }
+
+            var status =
+                getValueSafely(
+                    learningGR,
+                    "u_status"
+                );
+
+            if (
+                !isStatusForSelectedStage(
+                    status
+                )
+            ) {
+                continue;
+            }
+
+            addChoice(
+                data.countries,
+                countryMap,
+                getValueSafely(
+                    learningGR,
+                    "u_country"
+                ),
+                getDisplayValueSafely(
+                    learningGR,
+                    "u_country"
+                )
+            );
+
+            addChoice(
+                data.courseTypes,
+                courseTypeMap,
+                getValueSafely(
+                    learningGR,
+                    "u_course_type"
+                ),
+                getDisplayValueSafely(
+                    learningGR,
+                    "u_course_type"
+                )
+            );
+
+            addChoice(
+                data.courseFormats,
+                courseFormatMap,
+                getValueSafely(
+                    learningGR,
+                    "u_course_format"
+                ),
+                getDisplayValueSafely(
+                    learningGR,
+                    "u_course_format"
+                )
+            );
+        }
+
+        sortChoices(data.countries);
+        sortChoices(data.courseTypes);
+        sortChoices(data.courseFormats);
+    }
+
+
+    /*
+     * Download only approved records
+     * from the previous 90 days.
+     */
+    function generateApprovalReport() {
+
+        data.downloadReady = false;
+        data.fileContent = "";
+        data.fileName = "";
+
+        try {
+
+            var rows = [];
+            var count = 0;
+
+            var cutoffDate =
+                new GlideDateTime();
+
+            cutoffDate.addDaysUTC(-90);
+
+            rows.push(
+                createCsvRow([
+                    "Number",
+                    "Employee Name",
+                    "Employee Email",
+                    "Country",
+                    "Manager",
+                    "Management L2",
+                    "Course Title",
+                    "Course Type",
+                    "Course Format",
+                    "Learning Request Status",
+                    "Approval Stage",
+                    "Approval Decision",
+                    "Decision Date",
+                    "Approver",
+                    "Approval Comments"
+                ])
+            );
+
+            var approvalGR =
+                new GlideRecord(
+                    APPROVAL_TABLE
+                );
+
+            approvalGR.addQuery(
+                "approver",
+                gs.getUserID()
+            );
+
+            approvalGR.addQuery(
+                "state",
+                "approved"
+            );
+
+            approvalGR.addQuery(
+                "sys_updated_on",
+                "&gt;=",
+                cutoffDate
+            );
+
+            approvalGR.orderByDesc(
+                "sys_updated_on"
+            );
+
+            approvalGR.query();
+
+            while (approvalGR.next()) {
+
+                var learningGR =
+                    getLearningRecord(
+                        approvalGR
+                    );
+
+                if (!learningGR) {
+                    continue;
+                }
+
+                count++;
+
+                rows.push(
+                    createCsvRow([
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "number"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_employee_name"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_employee_email"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_country"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_manager_email"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_management_l2"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_course_title"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_course_type"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_course_format"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_status"
+                        ),
+
+                        getReportApprovalStage(
+                            learningGR,
+                            approvalGR
+                        ),
+
+                        approvalGR
+                            .getDisplayValue(
+                                "state"
+                            ),
+
+                        approvalGR
+                            .getDisplayValue(
+                                "sys_updated_on"
+                            ),
+
+                        approvalGR
+                            .getDisplayValue(
+                                "approver"
+                            ),
+
+                        getApprovalComments(
+                            approvalGR
+                        )
+                    ])
+                );
+            }
+
+            if (count === 0) {
+
+                data.errorMessage =
+                    "No approved records were found for the last 90 days.";
+
+                return;
+            }
+
+            data.fileContent =
+                rows.join("\r\n");
+
+            var dateText =
+                String(
+                    new GlideDateTime()
+                        .getLocalDate()
+                        .toString()
+                )
+                .split("-")
+                .join("");
+
+            data.fileName =
+                "ASEAN_Approved_Records_Last_90_Days_" +
+                dateText +
+                ".csv";
+
+            data.downloadReady = true;
+
+            data.successMessage =
+                count +
+                " approved record(s) from the last 90 days exported.";
+
+        } catch (error) {
+
+            data.errorMessage =
+                "Unable to generate report: " +
+                error.message;
+
+            gs.error(
+                "ASEAN Approval Widget report error: " +
+                error.message
+            );
+        }
+    }
+
+
+    function getReportApprovalStage(
+        learningGR,
+        approvalGR
+    ) {
+
+        var shortDescription = "";
+
+        if (
+            approvalGR.isValidField(
+                "short_description"
+            )
+        ) {
+            shortDescription =
+                approvalGR
+                    .getDisplayValue(
+                        "short_description"
+                    ) || "";
+        }
+
+        var descriptionLower =
+            String(shortDescription)
+                .toLowerCase();
+
+        if (
+            descriptionLower
+                .indexOf("hr") &gt; -1
+        ) {
+            return "HR Learning";
+        }
+
+        if (
+            descriptionLower
+                .indexOf("l2") &gt; -1
+        ) {
+            return "Management L2";
+        }
+
+        if (
+            descriptionLower
+                .indexOf("manager") &gt; -1
+        ) {
+            return "In-Company Manager";
+        }
+
+        var approverSysId =
+            approvalGR.getValue(
+                "approver"
+            );
+
+        var directManager =
+            getValueSafely(
+                learningGR,
+                "u_direct_manager"
+            );
+
+        if (
+            !directManager &amp;&amp;
+            learningGR.isValidField(
+                "u_manager_email"
+            ) &amp;&amp;
+            learningGR
+                .getElement(
+                    "u_manager_email"
+                )
+                .getED()
+                .getInternalType() ==
+                "reference"
+        ) {
+            directManager =
+                getValueSafely(
+                    learningGR,
+                    "u_manager_email"
+                );
+        }
+
+        var l2Manager =
+            getValueSafely(
+                learningGR,
+                "u_management_l2"
+            );
+
+        if (
+            approverSysId &amp;&amp;
+            approverSysId ==
+                l2Manager
+        ) {
+            return "Management L2";
+        }
+
+        if (
+            approverSysId &amp;&amp;
+            approverSysId ==
+                directManager
+        ) {
+            return "In-Company Manager";
+        }
+
+        return "Approval";
+    }
+
+
+    function getLearningRecord(
+        approvalGR
+    ) {
+
+        var learningSysId =
+            approvalGR.getValue(
+                "sysapproval"
+            );
+
+        if (!learningSysId) {
+
+            learningSysId =
+                approvalGR.getValue(
+                    "document_id"
+                );
+        }
+
+        if (!learningSysId) {
+            return null;
+        }
+
+        var learningGR =
+            new GlideRecord(
+                LEARNING_TABLE
+            );
+
+        if (
+            !learningGR.get(
+                learningSysId
+            )
+        ) {
+            return null;
+        }
+
+        return learningGR;
+    }
+
+
+    function getApprovalComments(
+        approvalGR
+    ) {
+
+        if (
+            approvalGR.isValidField(
+                "comments"
+            )
+        ) {
+            return (
+                approvalGR
+                    .getDisplayValue(
+                        "comments"
+                    ) || ""
+            );
+        }
+
+        return "";
+    }
+
+
+    function addChoice(
+        collection,
+        map,
+        value,
+        label
+    ) {
+
+        if (
+            !value ||
+            map[value]
+        ) {
+            return;
+        }
+
+        map[value] = true;
+
+        collection.push({
+            value: value,
+            label: label || value
+        });
+    }
+
+
+    function sortChoices(
+        collection
+    ) {
+
+        collection.sort(
+            function(
+                firstChoice,
+                secondChoice
+            ) {
+
+                var first =
+                    String(
+                        firstChoice.label ||
+                        ""
+                    ).toLowerCase();
+
+                var second =
+                    String(
+                        secondChoice.label ||
+                        ""
+                    ).toLowerCase();
+
+                if (first &lt; second) {
+                    return -1;
+                }
+
+                if (first &gt; second) {
+                    return 1;
+                }
+
+                return 0;
+            }
+        );
+    }
+
+
+    function containsIgnoreCase(
+        source,
+        search
+    ) {
+
+        return (
+            String(source || "")
+                .toLowerCase()
+                .indexOf(
+                    String(search || "")
+                        .toLowerCase()
+                ) &gt; -1
+        );
+    }
+
+
+    function trimValue(value) {
+
+        return String(value || "")
+            .replace(
+                /^\s+|\s+$/g,
+                ""
+            );
+    }
+
+
+    function getValueSafely(
+        record,
+        fieldName
+    ) {
+
+        if (
+            !record ||
+            !record.isValidField(
+                fieldName
+            )
+        ) {
+            return "";
+        }
+
+        return (
+            record.getValue(
+                fieldName
+            ) || ""
+        );
+    }
+
+
+    function getDisplayValueSafely(
+        record,
+        fieldName
+    ) {
+
+        if (
+            !record ||
+            !record.isValidField(
+                fieldName
+            )
+        ) {
+            return "";
+        }
+
+        return (
+            record.getDisplayValue(
+                fieldName
+            ) || ""
+        );
+    }
+
+
+    function escapeCsv(value) {
+
+        value =
+            String(value || "");
+
+        value =
+            value
+                .split("\r\n")
+                .join(" ");
+
+        value =
+            value
+                .split("\n")
+                .join(" ");
+
+        value =
+            value
+                .split("\r")
+                .join(" ");
+
+        /*
+         * Prevent CSV formula injection.
+         */
+        var firstCharacter =
+            value.length
+                ? value.charAt(0)
+                : "";
+
+        if (
+            firstCharacter == "=" ||
+            firstCharacter == "+" ||
+            firstCharacter == "-" ||
+            firstCharacter == "@"
+        ) {
+            value = "'" + value;
+        }
+
+        value =
+            value
+                .split('"')
+                .join('""');
+
+        return '"' + value + '"';
+    }
+
+
+    function createCsvRow(values) {
+
+        var row = [];
+
+        for (
+            var index = 0;
+            index &lt; values.length;
+            index++
+        ) {
+            row.push(
+                escapeCsv(
+                    values[index]
+                )
+            );
+        }
+
+        return row.join(",");
+    }
+
+})();]]&gt;&lt;/script&gt;&lt;servicenow&gt;false&lt;/servicenow&gt;&lt;sys_class_name&gt;sp_widget&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 07:17:17&lt;/sys_created_on&gt;&lt;sys_id&gt;b3d9bea24742c310ff78de94116d4371&lt;/sys_id&gt;&lt;sys_mod_count&gt;11&lt;/sys_mod_count&gt;&lt;sys_name&gt;Approval ASEAN&lt;/sys_name&gt;&lt;sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="ASEAN Learning Application"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_scope&gt;&lt;sys_update_name&gt;sp_widget_b3d9bea24742c310ff78de94116d4371&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-20 04:13:20&lt;/sys_updated_on&gt;&lt;template&gt;&lt;![CDATA[&lt;div class="learning-widget"
+     ng-click="c.handleOutsideClick($event)"&gt;
+
+  &lt;div class="widget-header"&gt;
+    &lt;h2&gt;Learning Approval Records&lt;/h2&gt;
+  &lt;/div&gt;
+
+  &lt;div class="stage-selection"&gt;
+
+    &lt;div class="stage-label"&gt;
+      Select Role:
+    &lt;/div&gt;
+
+    &lt;div class="stage-tabs"&gt;
+
+      &lt;button type="button"
+              class="stage-tab"
+              ng-class="{
+                'active-stage': c.data.selectedStatus == 'manager'
+              }"
+              ng-click="c.selectStatus('manager')"
+              ng-disabled="c.data.loading"&gt;
+
+        &lt;span&gt;In-Company Manager&lt;/span&gt;
+
+        &lt;span class="approval-count"&gt;
+          {{c.data.stageCounts.manager || 0}}
+        &lt;/span&gt;
+
+      &lt;/button&gt;
+
+      &lt;button type="button"
+              class="stage-tab"
+              ng-class="{
+                'active-stage': c.data.selectedStatus == 'pending_l2_approval'
+              }"
+              ng-click="c.selectStatus('pending_l2_approval')"
+              ng-disabled="c.data.loading"&gt;
+
+        &lt;span&gt;Management L2&lt;/span&gt;
+
+        &lt;span class="approval-count"&gt;
+          {{c.data.stageCounts.pending_l2_approval || 0}}
+        &lt;/span&gt;
+
+      &lt;/button&gt;
+
+      &lt;button type="button"
+              class="stage-tab"
+              ng-class="{
+                'active-stage': c.data.selectedStatus == 'pending_hr_review'
+              }"
+              ng-click="c.selectStatus('pending_hr_review')"
+              ng-disabled="c.data.loading"&gt;
+
+        &lt;span&gt;HR Learning&lt;/span&gt;
+
+        &lt;span class="approval-count"&gt;
+          {{c.data.stageCounts.pending_hr_review || 0}}
+        &lt;/span&gt;
+
+      &lt;/button&gt;
+
+    &lt;/div&gt;
+
+  &lt;/div&gt;
+
+  &lt;div class="toolbar"&gt;
+
+    &lt;div class="download-section"&gt;
+
+      &lt;button type="button"
+              class="download-btn"
+              ng-click="c.downloadReport()"
+              ng-disabled="c.data.downloading || c.data.loading"&gt;
+
+        &lt;i class="fa"
+           ng-class="c.data.downloading
+             ? 'fa-spinner fa-spin'
+             : 'fa-download'"&gt;
+        &lt;/i&gt;
+
+        &lt;span ng-if="!c.data.downloading"&gt;
+          Download
+        &lt;/span&gt;
+
+        &lt;span ng-if="c.data.downloading"&gt;
+          Generating...
+        &lt;/span&gt;
+
+      &lt;/button&gt;
+
+      &lt;div class="download-help"&gt;
+        All completed approvals
+      &lt;/div&gt;
+
+    &lt;/div&gt;
+
+    &lt;div class="filters-container"&gt;
+
+      &lt;div class="filter-row"&gt;
+
+        &lt;div class="filter-group request-number-filter"&gt;
+
+          &lt;label&gt;Request Number:&lt;/label&gt;
+
+          &lt;div class="request-typeahead"
+               ng-click="$event.stopPropagation()"&gt;
+
+            &lt;div class="request-input-wrapper"&gt;
+
+              &lt;input type="text"
+                     class="form-control request-number-input"
+                     ng-model="c.data.filters.requestNumber"
+                     ng-change="c.onRequestNumberChange()"
+                     ng-focus="c.openRequestNumberSuggestions()"
+                     ng-keydown="c.handleRequestNumberKeydown($event)"
+                     autocomplete="off"
+                     placeholder="Enter or select request number"&gt;
+
+              &lt;button type="button"
+                      class="request-dropdown-button"
+                      ng-click="c.toggleRequestNumberSuggestions($event)"
+                      ng-disabled="c.data.loading"
+                      title="Show request numbers"&gt;
+
+                &lt;i class="fa"
+                   ng-class="c.requestDropdownOpen
+                     ? 'fa-chevron-up'
+                     : 'fa-chevron-down'"&gt;
+                &lt;/i&gt;
+
+              &lt;/button&gt;
+
+              &lt;button type="button"
+                      class="request-clear-button"
+                      ng-if="c.data.filters.requestNumber"
+                      ng-click="c.clearRequestNumber($event)"
+                      title="Clear request number"&gt;
+
+                &lt;i class="fa fa-times"&gt;&lt;/i&gt;
+
+              &lt;/button&gt;
+
+            &lt;/div&gt;
+
+            &lt;div class="request-suggestion-dropdown"
+                 ng-if="c.requestDropdownOpen"&gt;
+
+              &lt;div class="request-suggestion-loading"
+                   ng-if="c.loadingRequestSuggestions"&gt;
+
+                &lt;i class="fa fa-spinner fa-spin"&gt;&lt;/i&gt;
+                Loading request numbers...
+
+              &lt;/div&gt;
+
+              &lt;button type="button"
+                      class="request-suggestion-item"
+                      ng-repeat="suggestion in c.filteredRequestNumberSuggestions track by suggestion.value"
+                      ng-class="{
+                        'active-suggestion': $index == c.activeSuggestionIndex
+                      }"
+                      ng-mousedown="c.selectRequestNumber(suggestion, $event)"
+                      ng-mouseenter="c.activeSuggestionIndex = $index"&gt;
+
+                &lt;span class="suggestion-number"&gt;
+                  {{suggestion.label}}
+                &lt;/span&gt;
+
+                &lt;span class="suggestion-course"
+                      ng-if="suggestion.courseTitle"&gt;
+
+                  {{suggestion.courseTitle}}
+
+                &lt;/span&gt;
+
+                &lt;span class="suggestion-employee"
+                      ng-if="suggestion.employeeName"&gt;
+
+                  {{suggestion.employeeName}}
+
+                &lt;/span&gt;
+
+              &lt;/button&gt;
+
+              &lt;div class="request-no-suggestions"
+                   ng-if="
+                     !c.loadingRequestSuggestions &amp;&amp;
+                     c.filteredRequestNumberSuggestions.length == 0
+                   "&gt;
+
+                No matching request numbers found.
+
+              &lt;/div&gt;
+
+            &lt;/div&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+
+        &lt;div class="filter-group"&gt;
+
+          &lt;label&gt;Course Type:&lt;/label&gt;
+
+          &lt;select class="form-control"
+                  ng-model="c.data.filters.courseType"&gt;
+
+            &lt;option value=""&gt;All&lt;/option&gt;
+
+            &lt;option ng-repeat="type in c.data.courseTypes"
+                    value="{{type.value}}"&gt;
+              {{type.label}}
+            &lt;/option&gt;
+
+          &lt;/select&gt;
+
+        &lt;/div&gt;
+
+      &lt;/div&gt;
+
+      &lt;div class="filter-row"&gt;
+
+        &lt;div class="filter-group"&gt;
+
+          &lt;label&gt;Course Format:&lt;/label&gt;
+
+          &lt;select class="form-control"
+                  ng-model="c.data.filters.courseFormat"&gt;
+
+            &lt;option value=""&gt;All&lt;/option&gt;
+
+            &lt;option ng-repeat="format in c.data.courseFormats"
+                    value="{{format.value}}"&gt;
+              {{format.label}}
+            &lt;/option&gt;
+
+          &lt;/select&gt;
+
+        &lt;/div&gt;
+
+        &lt;div class="filter-group"&gt;
+
+          &lt;label&gt;Ticket Status:&lt;/label&gt;
+
+          &lt;input type="text"
+                 class="form-control ticket-status-field"
+                 ng-value="c.getSelectedStatusLabel()"
+                 readonly&gt;
+
+        &lt;/div&gt;
+
+      &lt;/div&gt;
+
+      &lt;div class="filter-row"&gt;
+
+        &lt;div class="filter-group"&gt;
+
+          &lt;label&gt;Country:&lt;/label&gt;
+
+          &lt;select class="form-control"
+                  ng-model="c.data.filters.country"&gt;
+
+            &lt;option value=""&gt;All&lt;/option&gt;
+
+            &lt;option ng-repeat="country in c.data.countries"
+                    value="{{country.value}}"&gt;
+              {{country.label}}
+            &lt;/option&gt;
+
+          &lt;/select&gt;
+
+        &lt;/div&gt;
+
+        &lt;div class="filter-group empty-filter"&gt;&lt;/div&gt;
+
+      &lt;/div&gt;
+
+      &lt;div class="filter-button-row"&gt;
+
+        &lt;button type="button"
+                class="filter-btn search-btn"
+                ng-click="c.search()"
+                ng-disabled="c.data.loading"&gt;
+
+          &lt;i class="fa fa-search"&gt;&lt;/i&gt;
+          Search
+
+        &lt;/button&gt;
+
+        &lt;button type="button"
+                class="filter-btn reset-btn"
+                ng-click="c.resetFilters()"
+                ng-disabled="c.data.loading"&gt;
+
+          &lt;i class="fa fa-times-circle"&gt;&lt;/i&gt;
+          Reset
+
+        &lt;/button&gt;
+
+      &lt;/div&gt;
+
+    &lt;/div&gt;
+
+    &lt;div class="toolbar-actions"&gt;
+
+      &lt;button type="button"
+              class="icon-btn"
+              title="Sort records"
+              ng-click="c.sortRecords()"
+              ng-disabled="c.data.loading"&gt;
+
+        &lt;i class="fa"
+           ng-class="c.data.sortOrder == 'asc'
+             ? 'fa-sort-amount-asc'
+             : 'fa-sort-amount-desc'"&gt;
+        &lt;/i&gt;
+
+      &lt;/button&gt;
+
+      &lt;button type="button"
+              class="icon-btn"
+              title="Refresh"
+              ng-click="c.refresh()"
+              ng-disabled="c.data.loading"&gt;
+
+        &lt;i class="fa fa-refresh"
+           ng-class="{'fa-spin': c.data.loading}"&gt;
+        &lt;/i&gt;
+
+      &lt;/button&gt;
+
+    &lt;/div&gt;
+
+  &lt;/div&gt;
+
+  &lt;div class="alert alert-success widget-message"
+       ng-if="c.data.successMessage"&gt;
+    {{c.data.successMessage}}
+  &lt;/div&gt;
+
+  &lt;div class="alert alert-danger widget-message"
+       ng-if="c.data.errorMessage"&gt;
+    {{c.data.errorMessage}}
+  &lt;/div&gt;
+
+  &lt;div class="loading-message"
+       ng-if="c.data.loading"&gt;
+
+    &lt;i class="fa fa-spinner fa-spin"&gt;&lt;/i&gt;
+    Loading approvals...
+
+  &lt;/div&gt;
+
+  &lt;div class="approval-workspace"
+       ng-if="!c.data.loading"&gt;
+
+    &lt;div class="approval-list-panel"&gt;
+
+      &lt;div class="list-panel-header"&gt;
+
+        &lt;span&gt;Pending Approvals&lt;/span&gt;
+
+        &lt;span class="list-record-count"&gt;
+          {{c.data.records.length || 0}}
+        &lt;/span&gt;
+
+      &lt;/div&gt;
+
+      &lt;div class="approval-cards"
+           ng-if="c.data.records.length &gt; 0"&gt;
+
+        &lt;button type="button"
+                class="approval-card"
+                ng-repeat="record in c.data.records track by record.approval_sys_id"
+                ng-class="{
+                  'selected-card':
+                    c.selectedRecord &amp;&amp;
+                    c.selectedRecord.approval_sys_id ==
+                    record.approval_sys_id
+                }"
+                ng-click="c.selectRecord(record)"&gt;
+
+          &lt;div class="card-top-row"&gt;
+
+            &lt;span class="card-request-number"&gt;
+              {{record.number || '-'}}
+            &lt;/span&gt;
+
+            &lt;span&gt;
+              &lt;i class="fa fa-chevron-right"&gt;&lt;/i&gt;
+            &lt;/span&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="card-course-title"&gt;
+            {{record.course_title || 'Course title not available'}}
+          &lt;/div&gt;
+
+          &lt;div class="card-detail-row"&gt;
+
+            &lt;span class="card-label"&gt;Employee&lt;/span&gt;
+
+            &lt;span&gt;
+              {{record.employee_name || '-'}}
+            &lt;/span&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="card-detail-row"&gt;
+
+            &lt;span class="card-label"&gt;Course Type&lt;/span&gt;
+
+            &lt;span&gt;
+              {{record.course_type || '-'}}
+            &lt;/span&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="card-detail-row"&gt;
+
+            &lt;span class="card-label"&gt;Format&lt;/span&gt;
+
+            &lt;span&gt;
+              {{record.course_format || '-'}}
+            &lt;/span&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="card-status-row"&gt;
+
+            &lt;span class="card-status"&gt;
+              {{record.ticket_status || '-'}}
+            &lt;/span&gt;
+
+            &lt;span class="card-view-text"&gt;
+              View
+            &lt;/span&gt;
+
+          &lt;/div&gt;
+
+        &lt;/button&gt;
+
+      &lt;/div&gt;
+
+      &lt;div class="no-records-card"
+           ng-if="c.data.records.length == 0"&gt;
+
+        &lt;i class="fa fa-info-circle"&gt;&lt;/i&gt;
+
+        &lt;div&gt;
+          No pending approvals found for
+          &lt;strong&gt;{{c.getSelectedApprovalLabel()}}&lt;/strong&gt;.
+        &lt;/div&gt;
+
+      &lt;/div&gt;
+
+    &lt;/div&gt;
+
+    &lt;div class="approval-detail-panel"&gt;
+
+      &lt;div class="detail-empty-state"
+           ng-if="!c.selectedRecord"&gt;
+
+        &lt;div class="empty-state-icon"&gt;
+          &lt;i class="fa fa-hand-pointer-o"&gt;&lt;/i&gt;
+        &lt;/div&gt;
+
+        &lt;div class="empty-state-title"&gt;
+          Select an approval record
+        &lt;/div&gt;
+
+        &lt;div class="empty-state-text"&gt;
+          Select a record from the left to view details, approve, or reject.
+        &lt;/div&gt;
+
+      &lt;/div&gt;
+
+      &lt;div ng-if="c.selectedRecord"&gt;
+
+        &lt;div class="selected-record-header"&gt;
+
+          &lt;div&gt;
+
+            &lt;div class="selected-record-caption"&gt;
+              Learning Application
+            &lt;/div&gt;
+
+            &lt;div class="selected-record-number"&gt;
+              {{c.selectedRecord.number || '-'}}
+            &lt;/div&gt;
+
+          &lt;/div&gt;
+
+          &lt;button type="button"
+                  class="close-selected-btn"
+                  ng-click="c.clearSelectedRecord()"&gt;
+
+            &lt;i class="fa fa-times"&gt;&lt;/i&gt;
+
+          &lt;/button&gt;
+
+        &lt;/div&gt;
+
+        &lt;div class="selected-record-body"&gt;
+
+          &lt;div class="detail-section"&gt;
+
+            &lt;div class="detail-section-title"&gt;
+              Course Details
+            &lt;/div&gt;
+
+            &lt;div class="summary-detail-grid"&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Course Title&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.course_title || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Course Type&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.course_type || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Course Format&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.course_format || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Training Country&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.training_country || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Training Provider&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.training_provider || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Start Date&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.course_start_date || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;End Date&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.course_end_date || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Training Hours&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.training_hours || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Status&lt;/span&gt;
+
+                &lt;span class="selected-status-badge"&gt;
+                  {{c.selectedRecord.ticket_status || '-'}}
+                &lt;/span&gt;
+              &lt;/div&gt;
+
+            &lt;/div&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="detail-section"&gt;
+
+            &lt;div class="detail-section-title"&gt;
+              Employee Details
+            &lt;/div&gt;
+
+            &lt;div class="summary-detail-grid"&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Employee Name&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.employee_name || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Employee Email&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.employee_email || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Country&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.country || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Manager&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.manager || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Management L2&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.management_l2 || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;L2 Required&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.l2_required || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Approval State&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.approval_state || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+            &lt;/div&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="detail-section"&gt;
+
+            &lt;div class="detail-section-title"&gt;
+              Cost Details
+            &lt;/div&gt;
+
+            &lt;div class="summary-detail-grid"&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Currency&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.currency || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Course Fee&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.course_fee || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Other Expenses&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.other_expenses || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+              &lt;div class="summary-detail-item"&gt;
+                &lt;span class="summary-detail-label"&gt;Total Cost&lt;/span&gt;
+                &lt;span&gt;{{c.selectedRecord.total_cost || '-'}}&lt;/span&gt;
+              &lt;/div&gt;
+
+            &lt;/div&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="previous-comments-section"
+               ng-if="
+                 c.data.selectedStatus == 'pending_l2_approval' ||
+                 c.data.selectedStatus == 'pending_hr_review'
+               "&gt;
+
+            &lt;div class="detail-section-title"&gt;
+              Previous Approval Comments
+            &lt;/div&gt;
+
+            &lt;div class="previous-comment-card"&gt;
+
+              &lt;div class="previous-comment-heading"&gt;
+                &lt;i class="fa fa-user"&gt;&lt;/i&gt;
+                Direct Manager Comments
+              &lt;/div&gt;
+
+              &lt;div class="previous-comment-text"&gt;
+                {{
+                  c.selectedRecord.direct_manager_comments ||
+                  'No comments provided'
+                }}
+              &lt;/div&gt;
+
+            &lt;/div&gt;
+
+            &lt;div class="previous-comment-card"
+                 ng-if="c.data.selectedStatus == 'pending_hr_review'"&gt;
+
+              &lt;div class="previous-comment-heading"&gt;
+                &lt;i class="fa fa-users"&gt;&lt;/i&gt;
+                L2 Manager Comments
+              &lt;/div&gt;
+
+              &lt;div class="previous-comment-text"&gt;
+                {{
+                  c.selectedRecord.l2_manager_comments ||
+                  'No comments provided'
+                }}
+              &lt;/div&gt;
+
+            &lt;/div&gt;
+
+          &lt;/div&gt;
+
+          &lt;div class="selected-comments-panel"&gt;
+
+            &lt;div class="comments-title"&gt;
+
+              {{c.getCommentsHeading()}}
+
+              &lt;span class="mandatory-symbol"&gt;*&lt;/span&gt;
+
+            &lt;/div&gt;
+
+            &lt;textarea class="form-control selected-comments-textarea"
+                      rows="5"
+                      maxlength="4000"
+                      ng-model="c.selectedRecord.actionComments"
+                      ng-change="c.selectedRecord.commentValidationError = false"
+                      placeholder="Enter comments"&gt;
+            &lt;/textarea&gt;
+
+            &lt;div class="comments-help"&gt;
+              Comments are mandatory for approval and rejection.
+            &lt;/div&gt;
+
+            &lt;div class="field-error"
+                 ng-if="c.selectedRecord.commentValidationError"&gt;
+
+              Please enter the comments.
+
+            &lt;/div&gt;
+
+            &lt;div class="selected-record-actions"&gt;
+
+              &lt;button type="button"
+                      class="decision-btn approve-btn"
+                      ng-click="c.approve(c.selectedRecord)"
+                      ng-disabled="c.selectedRecord.processing"&gt;
+
+                &lt;i class="fa fa-check"
+                   ng-if="!c.selectedRecord.processing"&gt;
+                &lt;/i&gt;
+
+                &lt;span ng-if="!c.selectedRecord.processing"&gt;
+                  Approve
+                &lt;/span&gt;
+
+                &lt;span ng-if="c.selectedRecord.processing"&gt;
+                  Processing...
+                &lt;/span&gt;
+
+              &lt;/button&gt;
+
+              &lt;button type="button"
+                      class="decision-btn reject-btn"
+                      ng-click="c.reject(c.selectedRecord)"
+                      ng-disabled="c.selectedRecord.processing"&gt;
+
+                &lt;i class="fa fa-times"
+                   ng-if="!c.selectedRecord.processing"&gt;
+                &lt;/i&gt;
+
+                &lt;span ng-if="!c.selectedRecord.processing"&gt;
+                  Reject
+                &lt;/span&gt;
+
+                &lt;span ng-if="c.selectedRecord.processing"&gt;
+                  Processing...
+                &lt;/span&gt;
+
+              &lt;/button&gt;
+
+            &lt;/div&gt;
+
+          &lt;/div&gt;
+
+        &lt;/div&gt;
+
+      &lt;/div&gt;
+
+    &lt;/div&gt;
+
+  &lt;/div&gt;
+
+  &lt;div class="back-section"&gt;
+
+    &lt;a href="?id=manager_role_asean"
+       class="back-btn"
+       title="Back"&gt;
+
+      &lt;i class="fa fa-chevron-left"&gt;&lt;/i&gt;
+
+    &lt;/a&gt;
+
+  &lt;/div&gt;
+
+&lt;/div&gt;]]&gt;&lt;/template&gt;&lt;/sp_widget&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>-1901734030</payload_hash>
+        <record_name>Approval ASEAN</record_name>
+        <reverted_from/>
+        <source>6c8436d247ce0310ff78de94116d43c1</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-20 04:13:20</sys_created_on>
+        <sys_id>8db632fb47424f10ff78de94116d4320</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19f7dba7a110000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-20 04:13:20</sys_updated_on>
+        <type>Widget</type>
+        <update_guid>4db632fb19424f10c0ff4c87926a601f</update_guid>
+        <update_guid_history>4db632fb19424f10c0ff4c87926a601f:-1901734030,ebf07abfa9024f10ef58f2b55e0040ab:-729538195,7463b08ff44287105079769cbd2a30b9:-1429062980,3a32648b75ce47103afcc8fb67277633:-1063767843,d4f12c4bb9ce4710ded53db9d5ae533b:-1110731628,f381204b8cce471019dea494414bcf3d:1605316534,8a51640b0bce4710d71fe27077c641d6:-1477293126,5aafdc07c3ce47101a7e252c17e8d40a:-486971954,17ae588303ce4710f9f678a23469a4e4:-882604667,36d2c72e8c82c310af3516d1c838c17b:-486971954,530eb2a2d782c310904b903fb6871567:431179565,75eb7e2e2542c310fa14854d099986fb:541064141,6eda3aaa8542c31022df96cdf05457f0:-457808203,687af66a7b42c3103bca17d7c4b10668:-2125596243</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete display_value="Approval ASEAN">2fbfbf4c471ecf10ff78de94116d4398</sys_audit_delete>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-21 04:10:56</sys_created_on>
+        <sys_db_object display_value="" name="sp_widget">sp_widget</sys_db_object>
+        <sys_id>a4285f696e9949e9862b70d726904bc1</sys_id>
+        <sys_metadata>b3d9bea24742c310ff78de94116d4371</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Approval ASEAN</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_scope_delete display_value="">150a93e03297447584ae8ab0fd980be9</sys_scope_delete>
+        <sys_update_name>sp_widget_b3d9bea24742c310ff78de94116d4371</sys_update_name>
+        <sys_update_version display_value="sp_widget_b3d9bea24742c310ff78de94116d4371">8db632fb47424f10ff78de94116d4320</sys_update_version>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-21 04:10:56</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>

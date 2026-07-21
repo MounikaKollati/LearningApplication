@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sys_wizard_answer">
+    <sys_wizard_answer action="INSERT_OR_UPDATE">
+        <active>true</active>
+        <answer>Learning Application</answer>
+        <button_label/>
+        <dependent_value/>
+        <element/>
+        <name>Learning Application</name>
+        <next_question/>
+        <order>100</order>
+        <payload_name/>
+        <question display_value="Task" name="Task">a0f89235086003100a22e9371c04a48a</question>
+        <roles/>
+        <script/>
+        <sys_class_name>sys_wizard_answer</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-15 11:24:05</sys_created_on>
+        <sys_id>8659221e474e0310ff78de94116d430b</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Learning Application</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sys_wizard_answer_8659221e474e0310ff78de94116d430b</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-15 11:24:05</sys_updated_on>
+        <table/>
+        <target_url>x_1549902_asean_0_learning_application.do</target_url>
+        <type>1</type>
+    </sys_wizard_answer>
+</record_update>

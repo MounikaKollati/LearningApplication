@@ -1,0 +1,5272 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function ($scope,$window,$timeout,spUtil) {
+
+    var c = this;
+
+    /*
+     * Initial client values.
+     */
+    c.records =
+        c.data.records || [];
+
+    c.stageCounts =
+        c.data.stageCounts || {
+            manager: 0,
+            pending_l2_approval: 0,
+            pending_hr_review: 0
+        };
+
+    c.selectedStatus =
+        c.data.selectedStatus ||
+        "manager";
+
+    c.filters =
+        angular.copy(
+            c.data.filters || {
+                requestNumber: "",
+                courseType: "",
+                courseFormat: "",
+                country: ""
+            }
+        );
+
+    c.courseTypes =
+        c.data.courseTypes || [];
+
+    c.courseFormats =
+        c.data.courseFormats || [];
+
+    c.countries =
+        c.data.countries || [];
+
+    c.requestNumberSuggestions =
+        c.data.requestNumberSuggestions || [];
+
+    c.filteredRequestSuggestions =
+        angular.copy(
+            c.requestNumberSuggestions
+        );
+
+    c.selectedRecord = null;
+
+    c.sortOrder =
+        c.data.sortOrder ||
+        "desc";
+
+    c.isLoading = false;
+    c.isDownloading = false;
+
+    c.showRequestSuggestions = false;
+    c.requestSuggestionLoading = false;
+    c.activeSuggestionIndex = -1;
+
+    c.successMessage =
+        c.data.successMessage || "";
+
+    c.errorMessage =
+        c.data.errorMessage || "";
+
+    /*
+     * Change approval stage.
+     */
+    c.changeStage = function (
+        stage
+    ) {
+
+        if (
+            c.isLoading ||
+            !stage ||
+            c.selectedStatus === stage
+        ) {
+            return;
+        }
+
+        c.selectedStatus = stage;
+        c.selectedRecord = null;
+
+        c.filters.requestNumber = "";
+
+        c.showRequestSuggestions = false;
+        c.activeSuggestionIndex = -1;
+
+        c.loadRecords(
+            "change_stage"
+        );
+    };
+
+    /*
+     * Load approval records.
+     */
+    c.loadRecords = function (
+        actionName
+    ) {
+
+        if (c.isLoading) {
+            return;
+        }
+
+        c.isLoading = true;
+        c.successMessage = "";
+        c.errorMessage = "";
+
+        c.server.get({
+            action:
+                actionName || "load",
+
+            selectedStatus:
+                c.selectedStatus,
+
+            filters:
+                angular.copy(
+                    c.filters
+                ),
+
+            sortOrder:
+                c.sortOrder
+
+        }).then(
+            function (
+                response
+            ) {
+
+                applyServerResponse(
+                    response
+                );
+
+            },
+            function () {
+
+                c.errorMessage =
+                    "Unable to load approval records.";
+
+                spUtil.addErrorMessage(
+                    c.errorMessage
+                );
+
+            }
+        ).finally(
+            function () {
+
+                c.isLoading = false;
+            }
+        );
+    };
+
+    /*
+     * Search.
+     */
+    c.search = function () {
+
+        c.selectedRecord = null;
+        c.closeRequestSuggestions();
+
+        c.loadRecords(
+            "search"
+        );
+    };
+
+    /*
+     * Reset filters.
+     */
+    c.resetFilters = function () {
+
+        c.filters = {
+            requestNumber: "",
+            courseType: "",
+            courseFormat: "",
+            country: ""
+        };
+
+        c.selectedRecord = null;
+        c.closeRequestSuggestions();
+
+        c.loadRecords(
+            "refresh"
+        );
+    };
+
+    /*
+     * Refresh.
+     */
+    c.refresh = function () {
+
+        c.selectedRecord = null;
+        c.closeRequestSuggestions();
+
+        c.loadRecords(
+            "refresh"
+        );
+    };
+
+    /*
+     * Sort records.
+     */
+    c.toggleSort = function () {
+
+        c.sortOrder =
+            c.sortOrder === "asc"
+                ? "desc"
+                : "asc";
+
+        c.loadRecords(
+            "refresh"
+        );
+    };
+
+    /*
+     * Select approval card.
+     */
+    c.selectRecord = function (
+        record
+    ) {
+
+        if (!record) {
+            return;
+        }
+
+        c.selectedRecord =
+            angular.copy(
+                record
+            );
+
+        c.selectedRecord.actionComments = "";
+        c.selectedRecord.commentValidationError =
+            false;
+        c.selectedRecord.processing =
+            false;
+
+        c.successMessage = "";
+        c.errorMessage = "";
+    };
+
+    /*
+     * Close selected record.
+     */
+    c.closeSelectedRecord = function () {
+
+        c.selectedRecord = null;
+        c.successMessage = "";
+        c.errorMessage = "";
+    };
+
+    /*
+     * Approval actions.
+     */
+    c.approveSelected = function () {
+
+        processDecision(
+            "approve"
+        );
+    };
+
+    c.rejectSelected = function () {
+
+        processDecision(
+            "reject"
+        );
+    };
+
+    c.sendBackSelected = function () {
+
+        processDecision(
+            "send_back"
+        );
+    };
+
+    /*
+     * Process approve, reject or send back.
+     */
+    function processDecision(
+        actionName
+    ) {
+
+        if (
+            !c.selectedRecord ||
+            c.selectedRecord.processing
+        ) {
+            return;
+        }
+
+        var comments =
+            String(
+                c.selectedRecord
+                    .actionComments || ""
+            ).trim();
+
+        if (!comments) {
+
+            c.selectedRecord
+                .commentValidationError = true;
+
+            c.errorMessage =
+                "Please enter the comments.";
+
+            spUtil.addErrorMessage(
+                c.errorMessage
+            );
+
+            focusCommentsField();
+
+            return;
+        }
+
+        c.selectedRecord
+            .commentValidationError = false;
+
+        c.selectedRecord.processing = true;
+
+        c.successMessage = "";
+        c.errorMessage = "";
+
+        c.server.get({
+            action:
+                actionName,
+
+            approvalSysId:
+                c.selectedRecord
+                    .approval_sys_id,
+
+            applicationSysId:
+                c.selectedRecord
+                    .application_sys_id,
+
+            comments:
+                comments,
+
+            selectedStatus:
+                c.selectedStatus,
+
+            filters:
+                angular.copy(
+                    c.filters
+                ),
+
+            sortOrder:
+                c.sortOrder
+
+        }).then(
+            function (
+                response
+            ) {
+
+                applyServerResponse(
+                    response
+                );
+
+                if (
+                    !c.errorMessage
+                ) {
+                    c.selectedRecord =
+                        null;
+                }
+
+            },
+            function () {
+
+                c.errorMessage =
+                    "Unable to process the approval action.";
+
+                spUtil.addErrorMessage(
+                    c.errorMessage
+                );
+
+            }
+        ).finally(
+            function () {
+
+                if (
+                    c.selectedRecord
+                ) {
+                    c.selectedRecord
+                        .processing = false;
+                }
+            }
+        );
+    }
+
+    /*
+     * Download approved records.
+     *
+     * This function name exactly matches the HTML:
+     * c.downloadApprovedRecords()
+     */
+    c.downloadApprovedRecords =
+        function () {
+
+            if (
+                c.isDownloading
+            ) {
+                return;
+            }
+
+            c.isDownloading = true;
+            c.successMessage = "";
+            c.errorMessage = "";
+
+            c.server.get({
+                action:
+                    "download_report",
+
+                selectedStatus:
+                    c.selectedStatus,
+
+                filters:
+                    angular.copy(
+                        c.filters
+                    ),
+
+                sortOrder:
+                    c.sortOrder
+
+            }).then(
+                function (
+                    response
+                ) {
+
+                    var responseData =
+                        response &&
+                        response.data
+                            ? response.data
+                            : {};
+
+                    c.successMessage =
+                        responseData
+                            .successMessage || "";
+
+                    c.errorMessage =
+                        responseData
+                            .errorMessage || "";
+
+                    if (
+                        c.errorMessage
+                    ) {
+
+                        spUtil.addErrorMessage(
+                            c.errorMessage
+                        );
+
+                        return;
+                    }
+
+                    if (
+                        !responseData
+                            .downloadReady
+                    ) {
+
+                        c.errorMessage =
+                            "The report was not generated.";
+
+                        spUtil.addErrorMessage(
+                            c.errorMessage
+                        );
+
+                        return;
+                    }
+
+                    if (
+                        !responseData
+                            .fileContent
+                    ) {
+
+                        c.errorMessage =
+                            "No report content was returned.";
+
+                        spUtil.addErrorMessage(
+                            c.errorMessage
+                        );
+
+                        return;
+                    }
+
+                    downloadCsvFile(
+                        responseData
+                            .fileContent,
+
+                        responseData
+                            .fileName ||
+                        "ASEAN_My_Approved_Learning_Requests.csv"
+                    );
+
+                    if (
+                        c.successMessage
+                    ) {
+                        spUtil.addInfoMessage(
+                            c.successMessage
+                        );
+                    }
+
+                },
+                function (
+                    error
+                ) {
+
+                    c.errorMessage =
+                        "Unable to generate the report.";
+
+                    spUtil.addErrorMessage(
+                        c.errorMessage
+                    );
+
+                    console.error(
+                        "Approval report server error:",
+                        error
+                    );
+
+                }
+            ).finally(
+                function () {
+
+                    c.isDownloading = false;
+                }
+            );
+        };
+
+    /*
+     * Download CSV in browser.
+     */
+    function downloadCsvFile(
+        fileContent,
+        fileName
+    ) {
+
+        try {
+
+            var csvText =
+                "\uFEFF" +
+                String(
+                    fileContent || ""
+                );
+
+            var blob =
+                new Blob(
+                    [csvText],
+                    {
+                        type:
+                            "text/csv;charset=utf-8;"
+                    }
+                );
+
+            var urlCreator =
+                $window.URL ||
+                $window.webkitURL;
+
+            if (
+                !urlCreator ||
+                !urlCreator.createObjectURL
+            ) {
+                throw new Error(
+                    "Browser URL API is unavailable."
+                );
+            }
+
+            var downloadUrl =
+                urlCreator.createObjectURL(
+                    blob
+                );
+
+            var downloadLink =
+                document.createElement(
+                    "a"
+                );
+
+            downloadLink.href =
+                downloadUrl;
+
+            downloadLink.download =
+                fileName ||
+                "ASEAN_My_Approved_Learning_Requests.csv";
+
+            downloadLink.style.display =
+                "none";
+
+            /*
+             * Required for some browser versions.
+             */
+            document.body.appendChild(
+                downloadLink
+            );
+
+            /*
+             * Native browser click.
+             */
+            if (
+                typeof downloadLink.click ===
+                "function"
+            ) {
+                downloadLink.click();
+            } else {
+
+                var clickEvent =
+                    document.createEvent(
+                        "MouseEvents"
+                    );
+
+                clickEvent.initMouseEvent(
+                    "click",
+                    true,
+                    true,
+                    $window,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    false,
+                    false,
+                    false,
+                    false,
+                    0,
+                    null
+                );
+
+                downloadLink.dispatchEvent(
+                    clickEvent
+                );
+            }
+
+            /*
+             * Clean up after click.
+             */
+            $timeout(
+                function () {
+
+                    if (
+                        downloadLink.parentNode
+                    ) {
+                        downloadLink.parentNode
+                            .removeChild(
+                                downloadLink
+                            );
+                    }
+
+                    urlCreator.revokeObjectURL(
+                        downloadUrl
+                    );
+
+                },
+                1000
+            );
+
+        } catch (
+            downloadError
+        ) {
+
+            c.errorMessage =
+                "The report was generated, but the browser could not download it.";
+
+            spUtil.addErrorMessage(
+                c.errorMessage
+            );
+
+            console.error(
+                "ASEAN CSV download error:",
+                downloadError
+            );
+        }
+    }
+
+    /*
+     * Request-number typeahead.
+     */
+    c.onRequestNumberChange =
+        function () {
+
+            var searchText =
+                String(
+                    c.filters
+                        .requestNumber || ""
+                )
+                    .toLowerCase()
+                    .trim();
+
+            c.activeSuggestionIndex =
+                -1;
+
+            if (!searchText) {
+
+                c.filteredRequestSuggestions =
+                    angular.copy(
+                        c.requestNumberSuggestions
+                    );
+
+                c.showRequestSuggestions =
+                    c.filteredRequestSuggestions
+                        .length > 0;
+
+                return;
+            }
+
+            c.filteredRequestSuggestions =
+                c.requestNumberSuggestions
+                    .filter(
+                        function (
+                            suggestion
+                        ) {
+
+                            var combinedText =
+                                [
+                                    suggestion
+                                        .label || "",
+                                    suggestion
+                                        .courseTitle || "",
+                                    suggestion
+                                        .employeeName || ""
+                                ]
+                                    .join(" ")
+                                    .toLowerCase();
+
+                            return (
+                                combinedText
+                                    .indexOf(
+                                        searchText
+                                    ) !== -1
+                            );
+                        }
+                    );
+
+            c.showRequestSuggestions =
+                true;
+        };
+
+    /*
+     * Request number focus.
+     */
+    c.onRequestNumberFocus =
+        function () {
+
+            if (
+                c.requestNumberSuggestions &&
+                c.requestNumberSuggestions
+                    .length > 0
+            ) {
+                c.onRequestNumberChange();
+            }
+        };
+
+    /*
+     * Delayed blur.
+     */
+    c.onRequestNumberBlur =
+        function () {
+
+            $timeout(
+                function () {
+
+                    c.closeRequestSuggestions();
+
+                },
+                200
+            );
+        };
+
+    /*
+     * Toggle request-number dropdown.
+     */
+    c.toggleRequestSuggestions =
+        function (
+            event
+        ) {
+
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            if (
+                c.requestSuggestionLoading
+            ) {
+                return;
+            }
+
+            if (
+                c.showRequestSuggestions
+            ) {
+                c.closeRequestSuggestions();
+                return;
+            }
+
+            if (
+                !c.requestNumberSuggestions ||
+                c.requestNumberSuggestions
+                    .length === 0
+            ) {
+                loadRequestSuggestions();
+                return;
+            }
+
+            c.filteredRequestSuggestions =
+                angular.copy(
+                    c.requestNumberSuggestions
+                );
+
+            c.showRequestSuggestions =
+                true;
+
+            c.activeSuggestionIndex =
+                -1;
+        };
+
+    /*
+     * Select request suggestion.
+     */
+    c.selectRequestSuggestion =
+        function (
+            suggestion,
+            event
+        ) {
+
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            if (!suggestion) {
+                return;
+            }
+
+            c.filters.requestNumber =
+                suggestion.value ||
+                suggestion.label ||
+                "";
+
+            c.closeRequestSuggestions();
+
+            c.search();
+        };
+
+    /*
+     * Clear request number.
+     */
+    c.clearRequestNumber =
+        function (
+            event
+        ) {
+
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            c.filters.requestNumber = "";
+
+            c.filteredRequestSuggestions =
+                angular.copy(
+                    c.requestNumberSuggestions
+                );
+
+            c.closeRequestSuggestions();
+        };
+
+    /*
+     * Keyboard typeahead handling.
+     */
+    c.handleRequestKeydown =
+        function (
+            event
+        ) {
+
+            if (!event) {
+                return;
+            }
+
+            var suggestions =
+                c.filteredRequestSuggestions ||
+                [];
+
+            var suggestionCount =
+                suggestions.length;
+
+            /*
+             * Down arrow.
+             */
+            if (
+                event.keyCode === 40
+            ) {
+
+                event.preventDefault();
+
+                if (
+                    !c.showRequestSuggestions
+                ) {
+                    c.onRequestNumberChange();
+                }
+
+                if (
+                    suggestionCount > 0
+                ) {
+                    c.activeSuggestionIndex =
+                        (
+                            c.activeSuggestionIndex +
+                            1
+                        ) %
+                        suggestionCount;
+                }
+
+                return;
+            }
+
+            /*
+             * Up arrow.
+             */
+            if (
+                event.keyCode === 38
+            ) {
+
+                event.preventDefault();
+
+                if (
+                    suggestionCount > 0
+                ) {
+                    c.activeSuggestionIndex =
+                        c.activeSuggestionIndex <= 0
+                            ? suggestionCount - 1
+                            : c.activeSuggestionIndex - 1;
+                }
+
+                return;
+            }
+
+            /*
+             * Enter.
+             */
+            if (
+                event.keyCode === 13
+            ) {
+
+                event.preventDefault();
+
+                if (
+                    c.showRequestSuggestions &&
+                    c.activeSuggestionIndex >= 0 &&
+                    suggestions[
+                        c.activeSuggestionIndex
+                    ]
+                ) {
+
+                    c.selectRequestSuggestion(
+                        suggestions[
+                            c.activeSuggestionIndex
+                        ],
+                        event
+                    );
+
+                } else {
+
+                    c.search();
+                }
+
+                return;
+            }
+
+            /*
+             * Escape.
+             */
+            if (
+                event.keyCode === 27
+            ) {
+                c.closeRequestSuggestions();
+            }
+        };
+
+    /*
+     * Close typeahead.
+     */
+    c.closeRequestSuggestions =
+        function () {
+
+            c.showRequestSuggestions =
+                false;
+
+            c.activeSuggestionIndex =
+                -1;
+        };
+
+    /*
+     * Load suggestions from server.
+     */
+    function loadRequestSuggestions() {
+
+        c.requestSuggestionLoading =
+            true;
+
+        c.showRequestSuggestions =
+            true;
+
+        c.server.get({
+            action:
+                "get_request_suggestions",
+
+            selectedStatus:
+                c.selectedStatus,
+
+            filters:
+                angular.copy(
+                    c.filters
+                ),
+
+            sortOrder:
+                c.sortOrder
+
+        }).then(
+            function (
+                response
+            ) {
+
+                var responseData =
+                    response &&
+                    response.data
+                        ? response.data
+                        : {};
+
+                c.requestNumberSuggestions =
+                    responseData
+                        .requestNumberSuggestions ||
+                    [];
+
+                c.filteredRequestSuggestions =
+                    angular.copy(
+                        c.requestNumberSuggestions
+                    );
+
+                c.showRequestSuggestions =
+                    true;
+
+            },
+            function () {
+
+                c.errorMessage =
+                    "Unable to load request-number suggestions.";
+
+                spUtil.addErrorMessage(
+                    c.errorMessage
+                );
+
+                c.closeRequestSuggestions();
+
+            }
+        ).finally(
+            function () {
+
+                c.requestSuggestionLoading =
+                    false;
+            }
+        );
+    }
+
+    /*
+     * Show send-back button for supported stages.
+     */
+    c.canSendBack =
+        function () {
+
+            return (
+                c.selectedStatus ===
+                    "manager" ||
+                c.selectedStatus ===
+                    "pending_l2_approval" ||
+                c.selectedStatus ===
+                    "pending_hr_review"
+            );
+        };
+
+    /*
+     * Stage label.
+     */
+    c.getSelectedStageLabel =
+        function () {
+
+            if (
+                c.selectedStatus ===
+                "manager"
+            ) {
+                return "In-Company Manager";
+            }
+
+            if (
+                c.selectedStatus ===
+                "pending_l2_approval"
+            ) {
+                return "Management L2";
+            }
+
+            if (
+                c.selectedStatus ===
+                "pending_hr_review"
+            ) {
+                return "HR Learning";
+            }
+
+            return "Approval";
+        };
+
+    /*
+     * Back button.
+     */
+    c.goBack = function () {
+
+        $window.location.href =
+            "?id=manager_role_asean";
+    };
+
+    /*
+     * Apply server response.
+     */
+    function applyServerResponse(
+        response
+    ) {
+
+        var responseData =
+            response &&
+            response.data
+                ? response.data
+                : {};
+
+        c.records =
+            responseData.records || [];
+
+        c.stageCounts =
+            responseData.stageCounts || {
+                manager: 0,
+                pending_l2_approval: 0,
+                pending_hr_review: 0
+            };
+
+        c.courseTypes =
+            responseData.courseTypes ||
+            c.courseTypes ||
+            [];
+
+        c.courseFormats =
+            responseData.courseFormats ||
+            c.courseFormats ||
+            [];
+
+        c.countries =
+            responseData.countries ||
+            c.countries ||
+            [];
+
+        c.requestNumberSuggestions =
+            responseData
+                .requestNumberSuggestions ||
+            [];
+
+        c.filteredRequestSuggestions =
+            angular.copy(
+                c.requestNumberSuggestions
+            );
+
+        c.successMessage =
+            responseData.successMessage ||
+            "";
+
+        c.errorMessage =
+            responseData.errorMessage ||
+            "";
+
+        if (
+            c.successMessage
+        ) {
+            spUtil.addInfoMessage(
+                c.successMessage
+            );
+        }
+
+        if (
+            c.errorMessage
+        ) {
+            spUtil.addErrorMessage(
+                c.errorMessage
+            );
+        }
+    }
+
+    /*
+     * Focus comment field.
+     */
+    function focusCommentsField() {
+
+        $timeout(
+            function () {
+
+                var commentsField =
+                    document.getElementById(
+                        "approvalActionComments"
+                    );
+
+                if (
+                    commentsField
+                ) {
+                    commentsField.focus();
+                }
+
+            },
+            50
+        );
+    }
+
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.learning-widget {&#13;
+    position: relative;&#13;
+    min-height: 650px;&#13;
+    overflow: visible;&#13;
+    color: #222;&#13;
+    background: #fff;&#13;
+    border: 1px solid #333;&#13;
+    font-family: Arial, Helvetica, sans-serif;&#13;
+}&#13;
+&#13;
+.widget-header {&#13;
+    min-height: 65px;&#13;
+    padding: 12px 15px 8px;&#13;
+    background: #fff;&#13;
+}&#13;
+&#13;
+.widget-header h2 {&#13;
+    display: inline-block;&#13;
+    margin: 0;&#13;
+    padding: 0 5px 8px;&#13;
+    color: #ec6608;&#13;
+    border-bottom: 3px solid #ec6608;&#13;
+    font-size: 26px;&#13;
+    font-weight: 600;&#13;
+}&#13;
+&#13;
+.stage-selection {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+    min-height: 52px;&#13;
+    padding: 8px 15px;&#13;
+    background: #fff;&#13;
+    border-top: 4px solid #111;&#13;
+    border-bottom: 1px solid #bdbdbd;&#13;
+}&#13;
+&#13;
+.stage-label {&#13;
+    flex: 0 0 125px;&#13;
+    font-size: 14px;&#13;
+    text-decoration: underline;&#13;
+}&#13;
+&#13;
+.stage-tabs {&#13;
+    display: flex;&#13;
+    flex: 1;&#13;
+    gap: 28px;&#13;
+}&#13;
+&#13;
+.stage-tab {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+    justify-content: center;&#13;
+    gap: 8px;&#13;
+    flex: 1;&#13;
+    max-width: 245px;&#13;
+    min-height: 36px;&#13;
+    padding: 5px 15px;&#13;
+    color: #16415c;&#13;
+    background: #eee;&#13;
+    border: 0;&#13;
+    border-radius: 7px;&#13;
+    cursor: pointer;&#13;
+    font-size: 14px;&#13;
+    font-weight: 600;&#13;
+}&#13;
+&#13;
+.stage-tab:hover:not([disabled]) {&#13;
+    background: #d9d9d9;&#13;
+}&#13;
+&#13;
+.stage-tab.active-stage {&#13;
+    color: #fff;&#13;
+    background: #f36f21;&#13;
+}&#13;
+&#13;
+.stage-tab[disabled] {&#13;
+    cursor: not-allowed;&#13;
+    opacity: 0.65;&#13;
+}&#13;
+&#13;
+.approval-count {&#13;
+    display: inline-flex;&#13;
+    align-items: center;&#13;
+    justify-content: center;&#13;
+    min-width: 23px;&#13;
+    height: 23px;&#13;
+    padding: 0 6px;&#13;
+    color: #fff;&#13;
+    background: #68737d;&#13;
+    border-radius: 12px;&#13;
+    font-size: 11px;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.active-stage .approval-count {&#13;
+    color: #f36f21;&#13;
+    background: #fff;&#13;
+}&#13;
+&#13;
+/* ============================================================&#13;
+   FILTER TOOLBAR&#13;
+   ============================================================ */&#13;
+&#13;
+.toolbar {&#13;
+    display: flex;&#13;
+    align-items: stretch;&#13;
+    min-height: 155px;&#13;
+    overflow: visible;&#13;
+    background: #e5e5e5;&#13;
+    border-bottom: 1px solid #bdbdbd;&#13;
+}&#13;
+&#13;
+.download-section {&#13;
+    flex: 0 0 145px;&#13;
+    padding: 12px 10px;&#13;
+}&#13;
+&#13;
+.download-btn {&#13;
+    width: 120px;&#13;
+    min-height: 34px;&#13;
+    padding: 6px 10px;&#13;
+    color: #fff;&#13;
+    background: #2ea94f;&#13;
+    border: 0;&#13;
+    font-size: 12px;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.download-btn:hover {&#13;
+    background: #258d41;&#13;
+}&#13;
+&#13;
+.download-btn[disabled] {&#13;
+    cursor: not-allowed;&#13;
+    opacity: 0.65;&#13;
+}&#13;
+&#13;
+.download-btn i {&#13;
+    margin-right: 6px;&#13;
+}&#13;
+&#13;
+.download-help {&#13;
+    width: 120px;&#13;
+    margin-top: 6px;&#13;
+    color: #666;&#13;
+    font-size: 10px;&#13;
+    text-align: center;&#13;
+}&#13;
+&#13;
+.filters-container {&#13;
+    flex: 1;&#13;
+    padding: 10px 5px;&#13;
+    overflow: visible;&#13;
+}&#13;
+&#13;
+.filter-row {&#13;
+    display: flex;&#13;
+    gap: 25px;&#13;
+    margin-bottom: 8px;&#13;
+    overflow: visible;&#13;
+}&#13;
+&#13;
+.filter-group {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+    flex: 1;&#13;
+    min-width: 250px;&#13;
+}&#13;
+&#13;
+.filter-group label {&#13;
+    flex: 0 0 115px;&#13;
+    margin: 0;&#13;
+    padding-right: 8px;&#13;
+    font-size: 13px;&#13;
+    font-weight: normal;&#13;
+    text-align: right;&#13;
+    text-decoration: underline;&#13;
+}&#13;
+&#13;
+.filter-group .form-control {&#13;
+    flex: 1;&#13;
+    height: 31px;&#13;
+    padding: 4px 8px;&#13;
+    color: #333;&#13;
+    background: #fff;&#13;
+    border: 1px solid #c4c4c4;&#13;
+    border-radius: 0;&#13;
+    font-size: 12px;&#13;
+}&#13;
+&#13;
+.ticket-status-field {&#13;
+    color: #555 !important;&#13;
+    background: #f5f5f5 !important;&#13;
+}&#13;
+&#13;
+.empty-filter {&#13;
+    visibility: hidden;&#13;
+}&#13;
+&#13;
+/* ============================================================&#13;
+   REQUEST NUMBER TYPEAHEAD&#13;
+   ============================================================ */&#13;
+&#13;
+.request-number-filter {&#13;
+    overflow: visible;&#13;
+}&#13;
+&#13;
+.request-typeahead {&#13;
+    position: relative;&#13;
+    flex: 1;&#13;
+    min-width: 0;&#13;
+    overflow: visible;&#13;
+    z-index: 1000;&#13;
+}&#13;
+&#13;
+.request-input-wrapper {&#13;
+    position: relative;&#13;
+    display: flex;&#13;
+    width: 100%;&#13;
+}&#13;
+&#13;
+.request-number-input {&#13;
+    width: 100%;&#13;
+    padding-right: 58px !important;&#13;
+}&#13;
+&#13;
+.request-dropdown-button,&#13;
+.request-clear-button {&#13;
+    position: absolute;&#13;
+    top: 1px;&#13;
+    width: 27px;&#13;
+    height: 29px;&#13;
+    padding: 0;&#13;
+    color: #666;&#13;
+    background: transparent;&#13;
+    border: 0;&#13;
+    z-index: 2;&#13;
+}&#13;
+&#13;
+.request-dropdown-button {&#13;
+    right: 1px;&#13;
+}&#13;
+&#13;
+.request-clear-button {&#13;
+    right: 28px;&#13;
+}&#13;
+&#13;
+.request-dropdown-button:hover,&#13;
+.request-clear-button:hover {&#13;
+    color: #f36f21;&#13;
+    background: #f2f2f2;&#13;
+}&#13;
+&#13;
+.request-dropdown-button[disabled] {&#13;
+    cursor: not-allowed;&#13;
+    opacity: 0.5;&#13;
+}&#13;
+&#13;
+.request-suggestion-dropdown {&#13;
+    position: absolute;&#13;
+    top: 33px;&#13;
+    left: 0;&#13;
+    right: 0;&#13;
+    z-index: 9999;&#13;
+    max-height: 260px;&#13;
+    overflow-y: auto;&#13;
+    background: #fff;&#13;
+    border: 1px solid #aaa;&#13;
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.22);&#13;
+}&#13;
+&#13;
+.request-suggestion-item {&#13;
+    display: block;&#13;
+    width: 100%;&#13;
+    padding: 8px 10px;&#13;
+    color: #333;&#13;
+    background: #fff;&#13;
+    border: 0;&#13;
+    border-bottom: 1px solid #eee;&#13;
+    text-align: left;&#13;
+    cursor: pointer;&#13;
+}&#13;
+&#13;
+.request-suggestion-item:last-child {&#13;
+    border-bottom: 0;&#13;
+}&#13;
+&#13;
+.request-suggestion-item:hover,&#13;
+.request-suggestion-item.active-suggestion {&#13;
+    background: #fff1e8;&#13;
+}&#13;
+&#13;
+.suggestion-number {&#13;
+    display: block;&#13;
+    color: #0077b5;&#13;
+    font-size: 13px;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.suggestion-course {&#13;
+    display: block;&#13;
+    margin-top: 2px;&#13;
+    color: #333;&#13;
+    font-size: 11px;&#13;
+    overflow: hidden;&#13;
+    text-overflow: ellipsis;&#13;
+    white-space: nowrap;&#13;
+}&#13;
+&#13;
+.suggestion-employee {&#13;
+    display: block;&#13;
+    margin-top: 2px;&#13;
+    color: #777;&#13;
+    font-size: 10px;&#13;
+    overflow: hidden;&#13;
+    text-overflow: ellipsis;&#13;
+    white-space: nowrap;&#13;
+}&#13;
+&#13;
+.request-suggestion-loading,&#13;
+.request-no-suggestions {&#13;
+    padding: 12px 10px;&#13;
+    color: #666;&#13;
+    font-size: 11px;&#13;
+    text-align: center;&#13;
+}&#13;
+&#13;
+.request-suggestion-loading i {&#13;
+    margin-right: 5px;&#13;
+}&#13;
+&#13;
+/* ============================================================&#13;
+   FILTER BUTTONS&#13;
+   ============================================================ */&#13;
+&#13;
+.filter-button-row {&#13;
+    display: flex;&#13;
+    justify-content: flex-end;&#13;
+    gap: 8px;&#13;
+}&#13;
+&#13;
+.filter-btn {&#13;
+    min-width: 90px;&#13;
+    height: 31px;&#13;
+    color: #fff;&#13;
+    border: 0;&#13;
+    font-size: 12px;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.search-btn {&#13;
+    background: #008fd3;&#13;
+}&#13;
+&#13;
+.search-btn:hover {&#13;
+    background: #007cb8;&#13;
+}&#13;
+&#13;
+.reset-btn {&#13;
+    background: #777;&#13;
+}&#13;
+&#13;
+.reset-btn:hover {&#13;
+    background: #5f5f5f;&#13;
+}&#13;
+&#13;
+.toolbar-actions {&#13;
+    display: flex;&#13;
+    flex: 0 0 46px;&#13;
+    flex-direction: column;&#13;
+    gap: 5px;&#13;
+    padding: 10px 5px 8px 0;&#13;
+}&#13;
+&#13;
+.icon-btn {&#13;
+    width: 36px;&#13;
+    height: 32px;&#13;
+    padding: 0;&#13;
+    color: #fff;&#13;
+    background: #2ea94f;&#13;
+    border: 0;&#13;
+    font-size: 17px;&#13;
+}&#13;
+&#13;
+.icon-btn:hover {&#13;
+    background: #258d41;&#13;
+}&#13;
+&#13;
+.icon-btn[disabled],&#13;
+.filter-btn[disabled] {&#13;
+    cursor: not-allowed;&#13;
+    opacity: 0.65;&#13;
+}&#13;
+&#13;
+.widget-message {&#13;
+    margin: 10px 13px;&#13;
+    padding: 9px 12px;&#13;
+}&#13;
+&#13;
+.loading-message {&#13;
+    padding: 50px 20px;&#13;
+    text-align: center;&#13;
+}&#13;
+&#13;
+/* ============================================================&#13;
+   APPROVAL WORKSPACE&#13;
+   ============================================================ */&#13;
+&#13;
+.approval-workspace {&#13;
+    display: flex;&#13;
+    min-height: 470px;&#13;
+    padding: 12px 13px 75px;&#13;
+}&#13;
+&#13;
+.approval-list-panel {&#13;
+    flex: 0 0 35%;&#13;
+    min-width: 290px;&#13;
+    max-width: 410px;&#13;
+    background: #f5f5f5;&#13;
+    border: 1px solid #d5d5d5;&#13;
+}&#13;
+&#13;
+.list-panel-header {&#13;
+    display: flex;&#13;
+    justify-content: space-between;&#13;
+    padding: 10px 14px;&#13;
+    background: #eee;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.list-record-count {&#13;
+    min-width: 25px;&#13;
+    padding: 4px 7px;&#13;
+    color: #fff;&#13;
+    background: #68737d;&#13;
+    border-radius: 13px;&#13;
+    text-align: center;&#13;
+}&#13;
+&#13;
+.approval-cards {&#13;
+    max-height: 620px;&#13;
+    padding: 10px;&#13;
+    overflow-y: auto;&#13;
+}&#13;
+&#13;
+.approval-card {&#13;
+    display: block;&#13;
+    width: 100%;&#13;
+    margin-bottom: 10px;&#13;
+    padding: 12px;&#13;
+    background: #fff;&#13;
+    border: 1px solid #d7d7d7;&#13;
+    border-left: 4px solid transparent;&#13;
+    text-align: left;&#13;
+    cursor: pointer;&#13;
+}&#13;
+&#13;
+.approval-card:hover,&#13;
+.approval-card.selected-card {&#13;
+    border-left-color: #f36f21;&#13;
+    background: #fffaf6;&#13;
+}&#13;
+&#13;
+.card-top-row,&#13;
+.card-status-row {&#13;
+    display: flex;&#13;
+    justify-content: space-between;&#13;
+}&#13;
+&#13;
+.card-request-number {&#13;
+    color: #0077b5;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.card-course-title {&#13;
+    margin: 8px 0;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.card-detail-row {&#13;
+    display: grid;&#13;
+    grid-template-columns: 95px 1fr;&#13;
+    min-height: 22px;&#13;
+    font-size: 11px;&#13;
+}&#13;
+&#13;
+.card-label {&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.card-status {&#13;
+    padding: 3px 8px;&#13;
+    color: #fff;&#13;
+    background: #f36f21;&#13;
+    border-radius: 10px;&#13;
+    font-size: 10px;&#13;
+}&#13;
+&#13;
+.card-view-text {&#13;
+    color: #0077b5;&#13;
+    font-size: 11px;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.no-records-card {&#13;
+    padding: 40px 20px;&#13;
+    color: #666;&#13;
+    text-align: center;&#13;
+}&#13;
+&#13;
+.no-records-card i {&#13;
+    margin-bottom: 10px;&#13;
+    color: #f36f21;&#13;
+    font-size: 30px;&#13;
+}&#13;
+&#13;
+/* ============================================================&#13;
+   DETAIL PANEL&#13;
+   ============================================================ */&#13;
+&#13;
+.approval-detail-panel {&#13;
+    flex: 1;&#13;
+    border: 1px solid #d5d5d5;&#13;
+    border-left: 0;&#13;
+}&#13;
+&#13;
+.detail-empty-state {&#13;
+    min-height: 470px;&#13;
+    padding: 120px 35px;&#13;
+    text-align: center;&#13;
+}&#13;
+&#13;
+.empty-state-icon {&#13;
+    color: #f36f21;&#13;
+    font-size: 42px;&#13;
+}&#13;
+&#13;
+.empty-state-title {&#13;
+    margin-top: 12px;&#13;
+    font-size: 18px;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.empty-state-text {&#13;
+    margin-top: 8px;&#13;
+    color: #666;&#13;
+}&#13;
+&#13;
+.selected-record-header {&#13;
+    display: flex;&#13;
+    justify-content: space-between;&#13;
+    padding: 10px 16px;&#13;
+    background: #f4f4f4;&#13;
+}&#13;
+&#13;
+.selected-record-caption {&#13;
+    color: #666;&#13;
+    font-size: 11px;&#13;
+}&#13;
+&#13;
+.selected-record-number {&#13;
+    color: #0077b5;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.close-selected-btn {&#13;
+    width: 31px;&#13;
+    height: 31px;&#13;
+    color: #fff;&#13;
+    background: #777;&#13;
+    border: 0;&#13;
+    border-radius: 50%;&#13;
+}&#13;
+&#13;
+.close-selected-btn:hover {&#13;
+    background: #555;&#13;
+}&#13;
+&#13;
+.selected-record-body {&#13;
+    max-height: 620px;&#13;
+    padding: 16px;&#13;
+    overflow-y: auto;&#13;
+}&#13;
+&#13;
+.detail-section {&#13;
+    margin-bottom: 20px;&#13;
+}&#13;
+&#13;
+.detail-section-title {&#13;
+    display: inline-block;&#13;
+    margin-bottom: 12px;&#13;
+    border-bottom: 2px solid #222;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.summary-detail-grid {&#13;
+    display: grid;&#13;
+    grid-template-columns: repeat(2, minmax(190px, 1fr));&#13;
+    gap: 12px 24px;&#13;
+}&#13;
+&#13;
+.summary-detail-item {&#13;
+    display: grid;&#13;
+    grid-template-columns: 145px 1fr;&#13;
+    word-break: break-word;&#13;
+}&#13;
+&#13;
+.summary-detail-label {&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.selected-status-badge {&#13;
+    display: inline-block;&#13;
+    padding: 4px 10px;&#13;
+    color: #fff;&#13;
+    background: #f36f21;&#13;
+    border-radius: 11px;&#13;
+}&#13;
+&#13;
+/* ============================================================&#13;
+   APPROVAL COMMENTS&#13;
+   ============================================================ */&#13;
+&#13;
+.previous-comments-section {&#13;
+    margin-bottom: 20px;&#13;
+    padding: 14px 16px;&#13;
+    background: #f7f7f7;&#13;
+    border: 1px solid #d5d5d5;&#13;
+}&#13;
+&#13;
+.previous-comment-card {&#13;
+    margin-top: 12px;&#13;
+    overflow: hidden;&#13;
+    background: #fff;&#13;
+    border: 1px solid #d7d7d7;&#13;
+}&#13;
+&#13;
+.previous-comment-heading {&#13;
+    padding: 9px 12px;&#13;
+    color: #333;&#13;
+    background: #eee;&#13;
+    border-bottom: 1px solid #d7d7d7;&#13;
+    font-size: 13px;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.previous-comment-heading i {&#13;
+    margin-right: 6px;&#13;
+    color: #f36f21;&#13;
+}&#13;
+&#13;
+.previous-comment-text {&#13;
+    min-height: 45px;&#13;
+    padding: 12px;&#13;
+    color: #444;&#13;
+    font-size: 13px;&#13;
+    line-height: 1.5;&#13;
+    white-space: pre-wrap;&#13;
+    word-break: break-word;&#13;
+}&#13;
+&#13;
+/* ============================================================&#13;
+   COMMENT ENTRY AND ACTIONS&#13;
+   ============================================================ */&#13;
+&#13;
+.selected-comments-panel {&#13;
+    padding: 15px 17px;&#13;
+    background: #e9e9e9;&#13;
+}&#13;
+&#13;
+.comments-title {&#13;
+    margin-bottom: 10px;&#13;
+    color: #ec6608;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.mandatory-symbol {&#13;
+    color: #c9302c;&#13;
+}&#13;
+&#13;
+.selected-comments-textarea {&#13;
+    width: 100%;&#13;
+    min-height: 105px;&#13;
+    resize: vertical;&#13;
+}&#13;
+&#13;
+.comments-help {&#13;
+    margin-top: 5px;&#13;
+    color: #666;&#13;
+    font-size: 11px;&#13;
+}&#13;
+&#13;
+.field-error {&#13;
+    margin-top: 5px;&#13;
+    color: #c9302c;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.selected-record-actions {&#13;
+    display: flex;&#13;
+    justify-content: flex-end;&#13;
+    gap: 12px;&#13;
+    margin-top: 12px;&#13;
+}&#13;
+&#13;
+.decision-btn {&#13;
+    min-width: 105px;&#13;
+    min-height: 33px;&#13;
+    padding: 7px 13px;&#13;
+    color: #fff;&#13;
+    border: 0;&#13;
+    font-weight: bold;&#13;
+}&#13;
+&#13;
+.decision-btn[disabled] {&#13;
+    cursor: not-allowed;&#13;
+    opacity: 0.65;&#13;
+}&#13;
+&#13;
+.decision-btn i {&#13;
+    margin-right: 5px;&#13;
+}&#13;
+&#13;
+.approve-btn {&#13;
+    background: #2ea94f;&#13;
+}&#13;
+&#13;
+.approve-btn:hover:not([disabled]) {&#13;
+    background: #258d41;&#13;
+}&#13;
+&#13;
+.send-back-btn {&#13;
+    background: #f0ad4e;&#13;
+}&#13;
+&#13;
+.send-back-btn:hover:not([disabled]) {&#13;
+    background: #dc982c;&#13;
+}&#13;
+&#13;
+.reject-btn {&#13;
+    background: #d9534f;&#13;
+}&#13;
+&#13;
+.reject-btn:hover:not([disabled]) {&#13;
+    background: #c9302c;&#13;
+}&#13;
+&#13;
+/* ============================================================&#13;
+   BACK BUTTON&#13;
+   ============================================================ */&#13;
+&#13;
+.back-section {&#13;
+    position: absolute;&#13;
+    bottom: 10px;&#13;
+    left: 10px;&#13;
+}&#13;
+&#13;
+.back-btn {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+    justify-content: center;&#13;
+    width: 34px;&#13;
+    height: 34px;&#13;
+    color: #ec6608;&#13;
+    border: 2px solid #ec6608;&#13;
+    border-radius: 50%;&#13;
+    text-decoration: none;&#13;
+}&#13;
+&#13;
+.back-btn:hover,&#13;
+.back-btn:focus {&#13;
+    color: #fff;&#13;
+    background: #ec6608;&#13;
+    text-decoration: none;&#13;
+}&#13;
+&#13;
+/* ============================================================&#13;
+   RESPONSIVE DESIGN&#13;
+   ============================================================ */&#13;
+&#13;
+@media screen and (max-width: 950px) {&#13;
+    .approval-workspace {&#13;
+        flex-direction: column;&#13;
+    }&#13;
+&#13;
+    .approval-list-panel,&#13;
+    .approval-detail-panel {&#13;
+        width: 100%;&#13;
+        max-width: none;&#13;
+    }&#13;
+&#13;
+    .approval-detail-panel {&#13;
+        border-left: 1px solid #d5d5d5;&#13;
+    }&#13;
+}&#13;
+&#13;
+@media screen and (max-width: 800px) {&#13;
+    .stage-selection,&#13;
+    .toolbar,&#13;
+    .filter-row {&#13;
+        flex-direction: column;&#13;
+    }&#13;
+&#13;
+    .stage-selection {&#13;
+        align-items: stretch;&#13;
+    }&#13;
+&#13;
+    .stage-label {&#13;
+        flex: none;&#13;
+        margin-bottom: 8px;&#13;
+    }&#13;
+&#13;
+    .stage-tabs {&#13;
+        width: 100%;&#13;
+        flex-direction: column;&#13;
+        gap: 8px;&#13;
+    }&#13;
+&#13;
+    .stage-tab {&#13;
+        max-width: none;&#13;
+    }&#13;
+&#13;
+    .download-section {&#13;
+        flex: none;&#13;
+    }&#13;
+&#13;
+    .request-typeahead {&#13;
+        width: 100%;&#13;
+    }&#13;
+&#13;
+    .filter-group {&#13;
+        width: 100%;&#13;
+        min-width: 0;&#13;
+    }&#13;
+&#13;
+    .filter-group label {&#13;
+        flex: 0 0 120px;&#13;
+    }&#13;
+&#13;
+    .toolbar-actions {&#13;
+        flex-direction: row;&#13;
+        padding: 10px;&#13;
+    }&#13;
+}&#13;
+&#13;
+@media screen and (max-width: 650px) {&#13;
+    .summary-detail-grid {&#13;
+        grid-template-columns: 1fr;&#13;
+    }&#13;
+&#13;
+    .summary-detail-item {&#13;
+        grid-template-columns: 130px 1fr;&#13;
+    }&#13;
+&#13;
+    .selected-record-actions {&#13;
+        flex-direction: column;&#13;
+    }&#13;
+&#13;
+    .decision-btn {&#13;
+        width: 100%;&#13;
+    }&#13;
+&#13;
+    .filter-group {&#13;
+        align-items: stretch;&#13;
+        flex-direction: column;&#13;
+    }&#13;
+&#13;
+    .filter-group label {&#13;
+        flex: none;&#13;
+        margin-bottom: 4px;&#13;
+        text-align: left;&#13;
+    }&#13;
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>approval_asean_new</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Approval ASEAN New</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function () {
+
+    var APPLICATION_TABLE =
+        "x_1549902_asean_0_learning_application";
+
+    var APPROVAL_TABLE =
+        "sysapproval_approver";
+
+    var STATUS_FIELD =
+        "u_status";
+
+    var MANAGER_COMMENTS_FIELD =
+        "u_direct_manager_comments";
+
+    var L2_COMMENTS_FIELD =
+        "u_l2_manager_comments";
+
+    var HR_COMMENTS_FIELD =
+        "u_hr_comments";
+
+    var currentUserId =
+        gs.getUserID();
+
+    data.records = [];
+    data.stageCounts = {
+        manager: 0,
+        pending_l2_approval: 0,
+        pending_hr_review: 0
+    };
+
+    data.courseTypes = [];
+    data.courseFormats = [];
+    data.countries = [];
+    data.requestNumberSuggestions = [];
+
+    data.loading = false;
+    data.downloading = false;
+    data.downloadReady = false;
+
+    data.successMessage = "";
+    data.errorMessage = "";
+    data.fileContent = "";
+    data.fileName = "";
+
+    data.selectedStatus =
+        input && input.selectedStatus
+            ? String(input.selectedStatus)
+            : "manager";
+
+    data.filters = {
+        requestNumber:
+            input &&
+            input.filters &&
+            input.filters.requestNumber
+                ? String(input.filters.requestNumber)
+                : "",
+
+        courseType:
+            input &&
+            input.filters &&
+            input.filters.courseType
+                ? String(input.filters.courseType)
+                : "",
+
+        courseFormat:
+            input &&
+            input.filters &&
+            input.filters.courseFormat
+                ? String(input.filters.courseFormat)
+                : "",
+
+        country:
+            input &&
+            input.filters &&
+            input.filters.country
+                ? String(input.filters.country)
+                : ""
+    };
+
+    data.sortOrder =
+        input && input.sortOrder
+            ? String(input.sortOrder)
+            : "desc";
+
+    /*
+     * Load filter choices for every request.
+     */
+    loadChoiceData();
+
+    /*
+     * Handle server actions.
+     */
+    if (input && input.action) {
+
+        switch (String(input.action)) {
+
+            case "load":
+            case "search":
+            case "refresh":
+            case "change_stage":
+
+                loadApprovalData();
+                break;
+
+            case "get_request_suggestions":
+
+                loadRequestNumberSuggestions();
+                break;
+
+            case "approve":
+
+                processApprovalAction(
+                    "approved"
+                );
+                break;
+
+            case "reject":
+
+                processApprovalAction(
+                    "rejected"
+                );
+                break;
+
+            case "send_back":
+
+                sendBackForReview();
+                break;
+
+            case "download_report":
+
+                generateApprovalReport();
+                break;
+
+            default:
+
+                loadApprovalData();
+                break;
+        }
+
+    } else {
+
+        loadApprovalData();
+    }
+
+    /*
+     * Loads pending approval records for the selected stage.
+     */
+    function loadApprovalData() {
+
+        data.records = [];
+        data.successMessage = "";
+        data.errorMessage = "";
+
+        calculateStageCounts();
+
+        var approvalGR =
+            new GlideRecord(APPROVAL_TABLE);
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.addQuery(
+            "approver",
+            currentUserId
+        );
+
+        approvalGR.orderByDesc(
+            "sys_created_on"
+        );
+
+        approvalGR.query();
+
+        while (approvalGR.next()) {
+
+            var learningGR =
+                getLearningRecord(approvalGR);
+
+            if (!learningGR) {
+                continue;
+            }
+
+            if (
+                !matchesSelectedStage(
+                    learningGR,
+                    approvalGR
+                )
+            ) {
+                continue;
+            }
+
+            if (
+                !matchesFilters(
+                    learningGR
+                )
+            ) {
+                continue;
+            }
+
+            data.records.push(
+                buildApprovalRecord(
+                    approvalGR,
+                    learningGR
+                )
+            );
+        }
+
+        sortRecords();
+        loadRequestNumberSuggestions();
+    }
+
+    /*
+     * Calculates counts for all three approval tabs.
+     */
+    function calculateStageCounts() {
+
+        data.stageCounts = {
+            manager: 0,
+            pending_l2_approval: 0,
+            pending_hr_review: 0
+        };
+
+        var approvalGR =
+            new GlideRecord(APPROVAL_TABLE);
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.addQuery(
+            "approver",
+            currentUserId
+        );
+
+        approvalGR.query();
+
+        while (approvalGR.next()) {
+
+            var learningGR =
+                getLearningRecord(approvalGR);
+
+            if (!learningGR) {
+                continue;
+            }
+
+            var applicationStatus =
+                String(
+                    learningGR.getValue(
+                        STATUS_FIELD
+                    ) || ""
+                );
+
+            if (
+                applicationStatus ===
+                    "submitted" ||
+                applicationStatus ===
+                    "pending_manager_approval"
+            ) {
+                data.stageCounts.manager++;
+            }
+
+            if (
+                applicationStatus ===
+                "pending_l2_approval"
+            ) {
+                data.stageCounts
+                    .pending_l2_approval++;
+            }
+
+            if (
+                applicationStatus ===
+                "pending_hr_review"
+            ) {
+                data.stageCounts
+                    .pending_hr_review++;
+            }
+        }
+    }
+
+    /*
+     * Determines whether a record belongs to the selected tab.
+     */
+    function matchesSelectedStage(
+        learningGR,
+        approvalGR
+    ) {
+
+        var applicationStatus =
+            String(
+                learningGR.getValue(
+                    STATUS_FIELD
+                ) || ""
+            );
+
+        if (
+            data.selectedStatus ===
+            "manager"
+        ) {
+            return (
+                applicationStatus ===
+                    "submitted" ||
+                applicationStatus ===
+                    "pending_manager_approval"
+            );
+        }
+
+        if (
+            data.selectedStatus ===
+            "pending_l2_approval"
+        ) {
+            return (
+                applicationStatus ===
+                "pending_l2_approval"
+            );
+        }
+
+        if (
+            data.selectedStatus ===
+            "pending_hr_review"
+        ) {
+            return (
+                applicationStatus ===
+                "pending_hr_review"
+            );
+        }
+
+        return false;
+    }
+
+    /*
+     * Applies request number, course type,
+     * course format and country filters.
+     */
+    function matchesFilters(
+        learningGR
+    ) {
+
+        var requestNumberFilter =
+            normalize(
+                data.filters.requestNumber
+            );
+
+        var courseTypeFilter =
+            String(
+                data.filters.courseType || ""
+            );
+
+        var courseFormatFilter =
+            String(
+                data.filters.courseFormat || ""
+            );
+
+        var countryFilter =
+            String(
+                data.filters.country || ""
+            );
+
+        if (requestNumberFilter) {
+
+            var requestNumber =
+                normalize(
+                    learningGR.getDisplayValue(
+                        "number"
+                    ) ||
+                    learningGR.getValue(
+                        "number"
+                    )
+                );
+
+            if (
+                requestNumber.indexOf(
+                    requestNumberFilter
+                ) === -1
+            ) {
+                return false;
+            }
+        }
+
+        if (
+            courseTypeFilter &&
+            String(
+                learningGR.getValue(
+                    "u_course_type"
+                ) || ""
+            ) !== courseTypeFilter
+        ) {
+            return false;
+        }
+
+        if (
+            courseFormatFilter &&
+            String(
+                learningGR.getValue(
+                    "u_course_format"
+                ) || ""
+            ) !== courseFormatFilter
+        ) {
+            return false;
+        }
+
+        if (
+            countryFilter &&
+            String(
+                learningGR.getValue(
+                    "u_country"
+                ) || ""
+            ) !== countryFilter
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /*
+     * Builds the response object consumed by the client script.
+     */
+    function buildApprovalRecord(
+        approvalGR,
+        learningGR
+    ) {
+
+        var record = {};
+
+        record.approval_sys_id =
+            approvalGR.getUniqueValue();
+
+        record.application_sys_id =
+            learningGR.getUniqueValue();
+
+        record.number =
+            getDisplayValueSafely(
+                learningGR,
+                "number"
+            );
+
+        record.course_title =
+            getDisplayValueSafely(
+                learningGR,
+                "u_course_title"
+            );
+
+        record.course_type =
+            getDisplayValueSafely(
+                learningGR,
+                "u_course_type"
+            );
+
+        record.course_type_value =
+            getValueSafely(
+                learningGR,
+                "u_course_type"
+            );
+
+        record.course_format =
+            getDisplayValueSafely(
+                learningGR,
+                "u_course_format"
+            );
+
+        record.course_format_value =
+            getValueSafely(
+                learningGR,
+                "u_course_format"
+            );
+
+        record.training_country =
+            getDisplayValueSafely(
+                learningGR,
+                "u_training_country"
+            );
+
+        record.training_provider =
+            getDisplayValueSafely(
+                learningGR,
+                "u_training_provider_name"
+            );
+
+        record.course_start_date =
+            getDisplayValueSafely(
+                learningGR,
+                "u_course_start_date"
+            );
+
+        record.course_end_date =
+            getDisplayValueSafely(
+                learningGR,
+                "u_course_end_date"
+            );
+
+        record.training_hours =
+            getDisplayValueSafely(
+                learningGR,
+                "u_total_training_hours"
+            );
+
+        record.employee_name =
+            getDisplayValueSafely(
+                learningGR,
+                "u_employee_name"
+            );
+
+        record.employee_email =
+            getDisplayValueSafely(
+                learningGR,
+                "u_employee_email"
+            );
+
+        record.country =
+            getDisplayValueSafely(
+                learningGR,
+                "u_country"
+            );
+
+        record.country_value =
+            getValueSafely(
+                learningGR,
+                "u_country"
+            );
+
+        record.manager =
+            getDisplayValueSafely(
+                learningGR,
+                "u_direct_manager"
+            );
+
+        record.management_l2 =
+            getDisplayValueSafely(
+                learningGR,
+                "u_management_l2"
+            );
+
+        record.l2_required =
+            getDisplayValueSafely(
+                learningGR,
+                "u_l2_required"
+            );
+
+        record.currency =
+            getDisplayValueSafely(
+                learningGR,
+                "u_currency"
+            );
+
+        if (!record.currency) {
+            record.currency =
+                getDisplayValueSafely(
+                    learningGR,
+                    "currency"
+                );
+        }
+
+        record.course_fee =
+            getDisplayValueSafely(
+                learningGR,
+                "u_course_fee"
+            );
+
+        record.other_expenses =
+            getDisplayValueSafely(
+                learningGR,
+                "u_other_expenses"
+            );
+
+        record.total_cost =
+            getDisplayValueSafely(
+                learningGR,
+                "u_total_cost"
+            );
+
+        record.ticket_status =
+            getDisplayValueSafely(
+                learningGR,
+                STATUS_FIELD
+            );
+
+        record.ticket_status_value =
+            getValueSafely(
+                learningGR,
+                STATUS_FIELD
+            );
+
+        record.approval_state =
+            approvalGR.getDisplayValue(
+                "state"
+            );
+
+        record.direct_manager_comments =
+            cleanComment(
+                getValueSafely(
+                    learningGR,
+                    MANAGER_COMMENTS_FIELD
+                )
+            );
+
+        record.l2_manager_comments =
+            cleanComment(
+                getValueSafely(
+                    learningGR,
+                    L2_COMMENTS_FIELD
+                )
+            );
+
+        record.hr_comments =
+            cleanComment(
+                getValueSafely(
+                    learningGR,
+                    HR_COMMENTS_FIELD
+                )
+            );
+
+        record.created_on =
+            approvalGR.getValue(
+                "sys_created_on"
+            );
+
+        record.processing = false;
+        record.actionComments = "";
+        record.commentValidationError =
+            false;
+
+        return record;
+    }
+
+    /*
+     * Approve or reject the selected sysapproval_approver record.
+     */
+    function processApprovalAction(
+        targetState
+    ) {
+
+        data.successMessage = "";
+        data.errorMessage = "";
+
+        var approvalSysId =
+            input &&
+            input.approvalSysId
+                ? String(
+                    input.approvalSysId
+                )
+                : "";
+
+        var comments =
+            input &&
+            input.comments
+                ? String(input.comments).trim()
+                : "";
+
+        if (!approvalSysId) {
+            data.errorMessage =
+                "Approval record was not provided.";
+            loadApprovalData();
+            return;
+        }
+
+        if (!comments) {
+            data.errorMessage =
+                "Please enter the comments.";
+            loadApprovalData();
+            return;
+        }
+
+        var approvalGR =
+            new GlideRecord(APPROVAL_TABLE);
+
+        if (
+            !approvalGR.get(
+                approvalSysId
+            )
+        ) {
+            data.errorMessage =
+                "Approval record was not found.";
+            loadApprovalData();
+            return;
+        }
+
+        if (
+            String(
+                approvalGR.getValue(
+                    "approver"
+                )
+            ) !== currentUserId
+        ) {
+            data.errorMessage =
+                "You are not authorized to update this approval.";
+            loadApprovalData();
+            return;
+        }
+
+        if (
+            String(
+                approvalGR.getValue(
+                    "state"
+                )
+            ) !== "requested"
+        ) {
+            data.errorMessage =
+                "This approval is no longer pending.";
+            loadApprovalData();
+            return;
+        }
+
+        var learningGR =
+            getLearningRecord(
+                approvalGR
+            );
+
+        if (!learningGR) {
+            data.errorMessage =
+                "Learning application was not found.";
+            loadApprovalData();
+            return;
+        }
+
+        var selectedStage =
+            getStageFromApplicationStatus(
+                learningGR
+            );
+
+        saveStageComments(
+            learningGR,
+            selectedStage,
+            comments
+        );
+
+        approvalGR.setValue(
+            "comments",
+            comments
+        );
+
+        approvalGR.setValue(
+            "state",
+            targetState
+        );
+
+        approvalGR.update();
+
+        /*
+         * Update the application status after approval/rejection.
+         */
+        if (
+            targetState ===
+            "approved"
+        ) {
+
+            updateApplicationAfterApproval(
+                learningGR,
+                selectedStage
+            );
+
+            data.successMessage =
+                "The request was approved successfully.";
+
+        } else {
+
+            learningGR.setValue(
+                STATUS_FIELD,
+                "rejected"
+            );
+
+            addApplicationWorkNote(
+                learningGR,
+                buildWorkNoteMessage(
+                    selectedStage,
+                    "rejected",
+                    comments
+                )
+            );
+
+            learningGR.update();
+
+            cancelOtherRequestedApprovals(
+                learningGR.getUniqueValue(),
+                approvalGR.getUniqueValue()
+            );
+
+            data.successMessage =
+                "The request was rejected successfully.";
+        }
+
+        loadApprovalData();
+    }
+
+    /*
+     * Sends the selected application back for rework.
+     *
+     * The approval itself remains requested so that
+     * it can still be used after resubmission.
+     */
+    function sendBackForReview() {
+
+        data.successMessage = "";
+        data.errorMessage = "";
+
+        var approvalSysId =
+            input &&
+            input.approvalSysId
+                ? String(
+                    input.approvalSysId
+                )
+                : "";
+
+        var comments =
+            input &&
+            input.comments
+                ? String(input.comments).trim()
+                : "";
+
+        if (!approvalSysId) {
+            data.errorMessage =
+                "Approval record was not provided.";
+            loadApprovalData();
+            return;
+        }
+
+        if (!comments) {
+            data.errorMessage =
+                "Please enter the comments.";
+            loadApprovalData();
+            return;
+        }
+
+        var approvalGR =
+            new GlideRecord(APPROVAL_TABLE);
+
+        if (
+            !approvalGR.get(
+                approvalSysId
+            )
+        ) {
+            data.errorMessage =
+                "Approval record was not found.";
+            loadApprovalData();
+            return;
+        }
+
+        if (
+            String(
+                approvalGR.getValue(
+                    "approver"
+                )
+            ) !== currentUserId
+        ) {
+            data.errorMessage =
+                "You are not authorized to update this approval.";
+            loadApprovalData();
+            return;
+        }
+
+        if (
+            String(
+                approvalGR.getValue(
+                    "state"
+                )
+            ) !== "requested"
+        ) {
+            data.errorMessage =
+                "This approval is no longer pending.";
+            loadApprovalData();
+            return;
+        }
+
+        var learningGR =
+            getLearningRecord(
+                approvalGR
+            );
+
+        if (!learningGR) {
+            data.errorMessage =
+                "Learning application was not found.";
+            loadApprovalData();
+            return;
+        }
+
+        var selectedStage =
+            getStageFromApplicationStatus(
+                learningGR
+            );
+
+        if (
+            selectedStage !== "manager" &&
+            selectedStage !== "l2" &&
+            selectedStage !== "hr"
+        ) {
+            data.errorMessage =
+                "The current application stage cannot be returned for review.";
+            loadApprovalData();
+            return;
+        }
+
+        saveStageComments(
+            learningGR,
+            selectedStage,
+            comments
+        );
+
+        /*
+         * Keep approval state as requested.
+         */
+        approvalGR.setValue(
+            "comments",
+            comments
+        );
+
+        approvalGR.update();
+
+        if (
+            selectedStage ===
+            "manager"
+        ) {
+            learningGR.setValue(
+                STATUS_FIELD,
+                "return_by_manager"
+            );
+        }
+
+        if (
+            selectedStage ===
+            "l2"
+        ) {
+            learningGR.setValue(
+                STATUS_FIELD,
+                "return_by_l2"
+            );
+        }
+
+        if (
+            selectedStage ===
+            "hr"
+        ) {
+            learningGR.setValue(
+                STATUS_FIELD,
+                "return_by_hr"
+            );
+        }
+
+        addApplicationWorkNote(
+            learningGR,
+            buildWorkNoteMessage(
+                selectedStage,
+                "sent back for review",
+                comments
+            )
+        );
+
+        learningGR.update();
+
+        data.successMessage =
+            "The request was sent back for review successfully.";
+
+        loadApprovalData();
+    }
+
+    /*
+     * Stores stage-specific comments on the application.
+     */
+    function saveStageComments(
+        learningGR,
+        stage,
+        comments
+    ) {
+
+        if (
+            stage === "manager" &&
+            learningGR.isValidField(
+                MANAGER_COMMENTS_FIELD
+            )
+        ) {
+            learningGR.setValue(
+                MANAGER_COMMENTS_FIELD,
+                comments
+            );
+        }
+
+        if (
+            stage === "l2" &&
+            learningGR.isValidField(
+                L2_COMMENTS_FIELD
+            )
+        ) {
+            learningGR.setValue(
+                L2_COMMENTS_FIELD,
+                comments
+            );
+        }
+
+        if (
+            stage === "hr" &&
+            learningGR.isValidField(
+                HR_COMMENTS_FIELD
+            )
+        ) {
+            learningGR.setValue(
+                HR_COMMENTS_FIELD,
+                comments
+            );
+        }
+
+        addApplicationWorkNote(
+            learningGR,
+            buildWorkNoteMessage(
+                stage,
+                "commented",
+                comments
+            )
+        );
+    }
+
+    /*
+     * Moves the application to the next stage after approval.
+     */
+    function updateApplicationAfterApproval(
+        learningGR,
+        stage
+    ) {
+
+        if (
+            stage === "manager"
+        ) {
+
+            if (
+                isL2ApprovalRequired(
+                    learningGR
+                )
+            ) {
+                learningGR.setValue(
+                    STATUS_FIELD,
+                    "pending_l2_approval"
+                );
+            } else {
+                learningGR.setValue(
+                    STATUS_FIELD,
+                    "pending_hr_review"
+                );
+            }
+        }
+
+        if (
+            stage === "l2"
+        ) {
+            learningGR.setValue(
+                STATUS_FIELD,
+                "pending_hr_review"
+            );
+        }
+
+        if (
+            stage === "hr"
+        ) {
+            learningGR.setValue(
+                STATUS_FIELD,
+                "approved"
+            );
+        }
+
+        addApplicationWorkNote(
+            learningGR,
+            buildWorkNoteMessage(
+                stage,
+                "approved",
+                input.comments
+            )
+        );
+
+        learningGR.update();
+    }
+
+    /*
+     * Determines whether L2 approval is required.
+     */
+    function isL2ApprovalRequired(
+        learningGR
+    ) {
+
+        if (
+            !learningGR.isValidField(
+                "u_l2_required"
+            )
+        ) {
+            return true;
+        }
+
+        var rawValue =
+            String(
+                learningGR.getValue(
+                    "u_l2_required"
+                ) || ""
+            ).toLowerCase();
+
+        return (
+            rawValue === "true" ||
+            rawValue === "1" ||
+            rawValue === "yes"
+        );
+    }
+
+    /*
+     * Cancels other requested approvals for the same
+     * application after rejection.
+     */
+    function cancelOtherRequestedApprovals(
+        applicationSysId,
+        currentApprovalSysId
+    ) {
+
+        var otherApprovalGR =
+            new GlideRecord(APPROVAL_TABLE);
+
+        otherApprovalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        otherApprovalGR.addQuery(
+            "sys_id",
+            "!=",
+            currentApprovalSysId
+        );
+
+        otherApprovalGR.addEncodedQuery(
+            "sysapproval=" +
+            applicationSysId +
+            "^ORdocument_id=" +
+            applicationSysId
+        );
+
+        otherApprovalGR.query();
+
+        while (otherApprovalGR.next()) {
+
+            otherApprovalGR.setValue(
+                "state",
+                "not_required"
+            );
+
+            otherApprovalGR.setValue(
+                "comments",
+                "No longer required because another approver rejected the request."
+            );
+
+            otherApprovalGR.update();
+        }
+    }
+
+    /*
+     * Generates the CSV report.
+     *
+     * Only approvals approved by the logged-in user
+     * during the last 90 days are included.
+     */
+    function generateApprovalReport() {
+
+        data.downloadReady = false;
+        data.fileContent = "";
+        data.fileName = "";
+        data.successMessage = "";
+        data.errorMessage = "";
+
+        try {
+
+            var rows = [];
+            var exportedRecordMap = {};
+            var count = 0;
+
+            var ninetyDaysAgo =
+                new GlideDateTime();
+
+            ninetyDaysAgo.addDaysUTC(
+                -90
+            );
+
+            rows.push(
+                createCsvRow([
+                    "Request Number",
+                    "Employee Name",
+                    "Course Title",
+                    "Ticket Status",
+                    "Course Type",
+                    "Course Format",
+                    "Direct Manager Approver Name",
+                    "Direct Manager Comments",
+                    "L2 Manager Name",
+                    "L2 Manager Comments",
+                    "HR Approver Name",
+                    "HR Approver Comments",
+                    "Total Cost",
+                    "Training Country",
+                    "Training Provider",
+                    "Total Training Hours"
+                ])
+            );
+
+            var approvalGR =
+                new GlideRecord(
+                    APPROVAL_TABLE
+                );
+
+            approvalGR.addQuery(
+                "approver",
+                currentUserId
+            );
+
+            approvalGR.addQuery(
+                "state",
+                "approved"
+            );
+
+            approvalGR.addQuery(
+                "sys_updated_on",
+                ">=",
+                ninetyDaysAgo
+            );
+
+            approvalGR.orderByDesc(
+                "sys_updated_on"
+            );
+
+            approvalGR.query();
+
+            while (
+                approvalGR.next()
+            ) {
+
+                var learningGR =
+                    getLearningRecord(
+                        approvalGR
+                    );
+
+                if (!learningGR) {
+                    continue;
+                }
+
+                var learningSysId =
+                    learningGR.getUniqueValue();
+
+                /*
+                 * Export each application only once.
+                 */
+                if (
+                    exportedRecordMap[
+                        learningSysId
+                    ]
+                ) {
+                    continue;
+                }
+
+                exportedRecordMap[
+                    learningSysId
+                ] = true;
+
+                var approverDetails =
+                    getApprovalStageDetails(
+                        learningGR
+                    );
+
+                rows.push(
+                    createCsvRow([
+                        getDisplayValueSafely(
+                            learningGR,
+                            "number"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_employee_name"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_course_title"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            STATUS_FIELD
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_course_type"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_course_format"
+                        ),
+
+                        approverDetails
+                            .managerName,
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            MANAGER_COMMENTS_FIELD
+                        ),
+
+                        approverDetails
+                            .l2Name,
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            L2_COMMENTS_FIELD
+                        ),
+
+                        approverDetails
+                            .hrName,
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            HR_COMMENTS_FIELD
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_total_cost"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_training_country"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_training_provider_name"
+                        ),
+
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_total_training_hours"
+                        )
+                    ])
+                );
+
+                count++;
+            }
+
+            if (
+                count === 0
+            ) {
+                data.errorMessage =
+                    "No approved records were found for you in the last 90 days.";
+
+                return;
+            }
+
+            data.fileContent =
+                rows.join("\r\n");
+
+            var currentDate =
+                new GlideDateTime()
+                    .getLocalDate()
+                    .toString()
+                    .split("-")
+                    .join("");
+
+            data.fileName =
+                "ASEAN_My_Approved_Learning_Requests_" +
+                currentDate +
+                ".csv";
+
+            data.downloadReady = true;
+
+            data.successMessage =
+                count +
+                " approved learning request record(s) exported.";
+
+        } catch (error) {
+
+            data.errorMessage =
+                "Unable to generate report: " +
+                error.message;
+
+            gs.error(
+                "[ASEAN Approval Report] " +
+                error.message
+            );
+        }
+    }
+
+    /*
+     * Finds Manager, L2 and HR approver names.
+     */
+    function getApprovalStageDetails(
+        learningGR
+    ) {
+
+        var result = {
+            managerName: "",
+            l2Name: "",
+            hrName: ""
+        };
+
+        var applicationSysId =
+            learningGR.getUniqueValue();
+
+        var approvalGR =
+            new GlideRecord(
+                APPROVAL_TABLE
+            );
+
+        approvalGR.addEncodedQuery(
+            "sysapproval=" +
+            applicationSysId +
+            "^ORdocument_id=" +
+            applicationSysId
+        );
+
+        approvalGR.orderBy(
+            "sys_created_on"
+        );
+
+        approvalGR.query();
+
+        var stageIndex = 0;
+
+        while (
+            approvalGR.next()
+        ) {
+
+            var approverName =
+                approvalGR.getDisplayValue(
+                    "approver"
+                );
+
+            if (!approverName) {
+                continue;
+            }
+
+            if (
+                stageIndex === 0
+            ) {
+                result.managerName =
+                    approverName;
+            }
+
+            if (
+                stageIndex === 1
+            ) {
+                result.l2Name =
+                    approverName;
+            }
+
+            if (
+                stageIndex >= 2
+            ) {
+                result.hrName =
+                    approverName;
+            }
+
+            stageIndex++;
+        }
+
+        return result;
+    }
+
+    /*
+     * Creates the request-number typeahead list.
+     */
+    function loadRequestNumberSuggestions() {
+
+        data.requestNumberSuggestions =
+            [];
+
+        var suggestionMap = {};
+
+        var approvalGR =
+            new GlideRecord(
+                APPROVAL_TABLE
+            );
+
+        approvalGR.addQuery(
+            "state",
+            "requested"
+        );
+
+        approvalGR.addQuery(
+            "approver",
+            currentUserId
+        );
+
+        approvalGR.orderByDesc(
+            "sys_created_on"
+        );
+
+        approvalGR.setLimit(100);
+
+        approvalGR.query();
+
+        while (
+            approvalGR.next()
+        ) {
+
+            var learningGR =
+                getLearningRecord(
+                    approvalGR
+                );
+
+            if (!learningGR) {
+                continue;
+            }
+
+            if (
+                !matchesSelectedStage(
+                    learningGR,
+                    approvalGR
+                )
+            ) {
+                continue;
+            }
+
+            var requestNumber =
+                getDisplayValueSafely(
+                    learningGR,
+                    "number"
+                );
+
+            if (
+                !requestNumber ||
+                suggestionMap[
+                    requestNumber
+                ]
+            ) {
+                continue;
+            }
+
+            suggestionMap[
+                requestNumber
+            ] = true;
+
+            data.requestNumberSuggestions
+                .push({
+                    value:
+                        requestNumber,
+
+                    label:
+                        requestNumber,
+
+                    courseTitle:
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_course_title"
+                        ),
+
+                    employeeName:
+                        getDisplayValueSafely(
+                            learningGR,
+                            "u_employee_name"
+                        )
+                });
+        }
+    }
+
+    /*
+     * Reads choice values for filters.
+     */
+    function loadChoiceData() {
+
+        data.courseTypes =
+            getChoiceList(
+                APPLICATION_TABLE,
+                "u_course_type"
+            );
+
+        data.courseFormats =
+            getChoiceList(
+                APPLICATION_TABLE,
+                "u_course_format"
+            );
+
+        data.countries =
+            getChoiceList(
+                APPLICATION_TABLE,
+                "u_country"
+            );
+    }
+
+    function getChoiceList(
+        tableName,
+        fieldName
+    ) {
+
+        var choices = [];
+
+        var choiceGR =
+            new GlideRecord(
+                "sys_choice"
+            );
+
+        choiceGR.addQuery(
+            "name",
+            tableName
+        );
+
+        choiceGR.addQuery(
+            "element",
+            fieldName
+        );
+
+        choiceGR.addQuery(
+            "inactive",
+            false
+        );
+
+        choiceGR.addQuery(
+            "language",
+            gs.getSession()
+                .getLanguage()
+        );
+
+        choiceGR.orderBy(
+            "sequence"
+        );
+
+        choiceGR.query();
+
+        while (
+            choiceGR.next()
+        ) {
+
+            choices.push({
+                value:
+                    String(
+                        choiceGR.getValue(
+                            "value"
+                        ) || ""
+                    ),
+
+                label:
+                    String(
+                        choiceGR.getValue(
+                            "label"
+                        ) || ""
+                    )
+            });
+        }
+
+        /*
+         * Fallback to English if localized choices
+         * were not found.
+         */
+        if (
+            choices.length === 0
+        ) {
+
+            choiceGR.initialize();
+
+            choiceGR.addQuery(
+                "name",
+                tableName
+            );
+
+            choiceGR.addQuery(
+                "element",
+                fieldName
+            );
+
+            choiceGR.addQuery(
+                "inactive",
+                false
+            );
+
+            choiceGR.addQuery(
+                "language",
+                "en"
+            );
+
+            choiceGR.orderBy(
+                "sequence"
+            );
+
+            choiceGR.query();
+
+            while (
+                choiceGR.next()
+            ) {
+
+                choices.push({
+                    value:
+                        String(
+                            choiceGR.getValue(
+                                "value"
+                            ) || ""
+                        ),
+
+                    label:
+                        String(
+                            choiceGR.getValue(
+                                "label"
+                            ) || ""
+                        )
+                });
+            }
+        }
+
+        return choices;
+    }
+
+    /*
+     * Returns the Learning Application referenced
+     * by a sysapproval_approver record.
+     */
+    function getLearningRecord(
+        approvalGR
+    ) {
+
+        var applicationSysId = "";
+
+        if (
+            approvalGR.isValidField(
+                "sysapproval"
+            ) &&
+            approvalGR.getValue(
+                "sysapproval"
+            )
+        ) {
+            applicationSysId =
+                String(
+                    approvalGR.getValue(
+                        "sysapproval"
+                    )
+                );
+        }
+
+        if (
+            !applicationSysId &&
+            approvalGR.isValidField(
+                "document_id"
+            ) &&
+            approvalGR.getValue(
+                "document_id"
+            )
+        ) {
+            applicationSysId =
+                String(
+                    approvalGR.getValue(
+                        "document_id"
+                    )
+                );
+        }
+
+        if (!applicationSysId) {
+            return null;
+        }
+
+        var learningGR =
+            new GlideRecord(
+                APPLICATION_TABLE
+            );
+
+        if (
+            !learningGR.get(
+                applicationSysId
+            )
+        ) {
+            return null;
+        }
+
+        return learningGR;
+    }
+
+    /*
+     * Derives the current approval stage from the
+     * Learning Application status.
+     */
+    function getStageFromApplicationStatus(
+        learningGR
+    ) {
+
+        var applicationStatus =
+            String(
+                learningGR.getValue(
+                    STATUS_FIELD
+                ) || ""
+            );
+
+        if (
+            applicationStatus ===
+                "submitted" ||
+            applicationStatus ===
+                "pending_manager_approval"
+        ) {
+            return "manager";
+        }
+
+        if (
+            applicationStatus ===
+            "pending_l2_approval"
+        ) {
+            return "l2";
+        }
+
+        if (
+            applicationStatus ===
+            "pending_hr_review"
+        ) {
+            return "hr";
+        }
+
+        return "";
+    }
+
+    function addApplicationWorkNote(
+        learningGR,
+        message
+    ) {
+
+        if (
+            !message ||
+            !learningGR.isValidField(
+                "work_notes"
+            )
+        ) {
+            return;
+        }
+
+        learningGR.setValue(
+            "work_notes",
+            message
+        );
+    }
+
+    function buildWorkNoteMessage(
+        stage,
+        actionText,
+        comments
+    ) {
+
+        var stageLabel =
+            getStageLabel(stage);
+
+        return (
+            stageLabel +
+            " " +
+            actionText +
+            " the request.\nComments: " +
+            String(comments || "")
+        );
+    }
+
+    function getStageLabel(
+        stage
+    ) {
+
+        if (
+            stage === "manager"
+        ) {
+            return "Direct Manager";
+        }
+
+        if (
+            stage === "l2"
+        ) {
+            return "L2 Manager";
+        }
+
+        if (
+            stage === "hr"
+        ) {
+            return "HR Learning";
+        }
+
+        return "Approver";
+    }
+
+    function sortRecords() {
+
+        data.records.sort(
+            function (
+                firstRecord,
+                secondRecord
+            ) {
+
+                var firstValue =
+                    String(
+                        firstRecord.number || ""
+                    );
+
+                var secondValue =
+                    String(
+                        secondRecord.number || ""
+                    );
+
+                if (
+                    data.sortOrder ===
+                    "asc"
+                ) {
+                    return firstValue.localeCompare(
+                        secondValue
+                    );
+                }
+
+                return secondValue.localeCompare(
+                    firstValue
+                );
+            }
+        );
+    }
+
+    function getValueSafely(
+        recordGR,
+        fieldName
+    ) {
+
+        if (
+            !recordGR ||
+            !recordGR.isValidField(
+                fieldName
+            )
+        ) {
+            return "";
+        }
+
+        return String(
+            recordGR.getValue(
+                fieldName
+            ) || ""
+        );
+    }
+
+    function getDisplayValueSafely(
+        recordGR,
+        fieldName
+    ) {
+
+        if (
+            !recordGR ||
+            !recordGR.isValidField(
+                fieldName
+            )
+        ) {
+            return "";
+        }
+
+        var displayValue =
+            recordGR.getDisplayValue(
+                fieldName
+            );
+
+        if (
+            displayValue !== null &&
+            displayValue !== undefined &&
+            String(displayValue) !== ""
+        ) {
+            return String(
+                displayValue
+            );
+        }
+
+        return String(
+            recordGR.getValue(
+                fieldName
+            ) || ""
+        );
+    }
+
+    function cleanComment(
+        commentValue
+    ) {
+
+        var value =
+            String(
+                commentValue || ""
+            ).trim();
+
+        if (
+            !value ||
+            value === "null" ||
+            value === "undefined"
+        ) {
+            return "";
+        }
+
+        return value;
+    }
+
+    function normalize(
+        value
+    ) {
+
+        return String(
+            value || ""
+        )
+            .toLowerCase()
+            .trim();
+    }
+
+    function createCsvRow(
+        values
+    ) {
+
+        var escapedValues = [];
+
+        for (
+            var index = 0;
+            index < values.length;
+            index++
+        ) {
+
+            escapedValues.push(
+                escapeCsvValue(
+                    values[index]
+                )
+            );
+        }
+
+        return escapedValues.join(",");
+    }
+
+    function escapeCsvValue(
+        value
+    ) {
+
+        var text =
+            value === null ||
+            value === undefined
+                ? ""
+                : String(value);
+
+        text = text.replace(
+            /"/g,
+            '""'
+        );
+
+        return (
+            '"' +
+            text +
+            '"'
+        );
+    }
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-17 09:53:45</sys_created_on>
+        <sys_id>d1a7a40747028710ff78de94116d4360</sys_id>
+        <sys_mod_count>24</sys_mod_count>
+        <sys_name>Approval ASEAN New</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sp_widget_d1a7a40747028710ff78de94116d4360</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-21 04:10:28</sys_updated_on>
+        <template><![CDATA[<div class="learning-widget"
+     ng-click="c.closeRequestSuggestions()">
+
+    <div class="widget-header">
+        <h2>Learning Approval Records</h2>
+    </div>
+
+    <!-- Approval stage tabs -->
+    <div class="stage-selection">
+
+        <div class="stage-label">
+            Select Role:
+        </div>
+
+        <div class="stage-tabs">
+
+            <button type="button"
+                    class="stage-tab"
+                    ng-class="{
+                        'active-stage':
+                            c.selectedStatus === 'manager'
+                    }"
+                    ng-click="
+                        c.changeStage('manager');
+                        $event.stopPropagation()
+                    "
+                    ng-disabled="c.isLoading">
+
+                <span>In-Company Manager</span>
+
+                <span class="approval-count">
+                    {{c.stageCounts.manager || 0}}
+                </span>
+
+            </button>
+
+            <button type="button"
+                    class="stage-tab"
+                    ng-class="{
+                        'active-stage':
+                            c.selectedStatus ===
+                            'pending_l2_approval'
+                    }"
+                    ng-click="
+                        c.changeStage(
+                            'pending_l2_approval'
+                        );
+                        $event.stopPropagation()
+                    "
+                    ng-disabled="c.isLoading">
+
+                <span>Management L2</span>
+
+                <span class="approval-count">
+                    {{
+                        c.stageCounts
+                            .pending_l2_approval || 0
+                    }}
+                </span>
+
+            </button>
+
+            <button type="button"
+                    class="stage-tab"
+                    ng-class="{
+                        'active-stage':
+                            c.selectedStatus ===
+                            'pending_hr_review'
+                    }"
+                    ng-click="
+                        c.changeStage(
+                            'pending_hr_review'
+                        );
+                        $event.stopPropagation()
+                    "
+                    ng-disabled="c.isLoading">
+
+                <span>HR Learning</span>
+
+                <span class="approval-count">
+                    {{
+                        c.stageCounts
+                            .pending_hr_review || 0
+                    }}
+                </span>
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+
+        <!-- Download -->
+        <div class="download-section">
+
+            <button type="button"
+                    class="download-btn"
+                    ng-click="
+                        c.downloadApprovedRecords();
+                        $event.stopPropagation()
+                    "
+                    ng-disabled="
+                        c.isDownloading ||
+                        c.isLoading
+                    ">
+
+                <i class="fa"
+                   ng-class="
+                       c.isDownloading
+                           ? 'fa-spinner fa-spin'
+                           : 'fa-download'
+                   ">
+                </i>
+
+                <span ng-if="!c.isDownloading">
+                    Download
+                </span>
+
+                <span ng-if="c.isDownloading">
+                    Generating...
+                </span>
+
+            </button>
+
+            <div class="download-help">
+                My approved records
+            </div>
+
+        </div>
+
+        <!-- Filters -->
+        <div class="filters-container">
+
+            <div class="filter-row">
+
+                <!-- Request number typeahead -->
+                <div class="filter-group request-number-filter">
+
+                    <label>
+                        Request Number:
+                    </label>
+
+                    <div class="request-typeahead"
+                         ng-click="$event.stopPropagation()">
+
+                        <div class="request-input-wrapper">
+
+                            <input type="text"
+                                   class="form-control request-number-input"
+                                   ng-model="
+                                       c.filters.requestNumber
+                                   "
+                                   ng-change="
+                                       c.onRequestNumberChange()
+                                   "
+                                   ng-focus="
+                                       c.onRequestNumberFocus()
+                                   "
+                                   ng-blur="
+                                       c.onRequestNumberBlur()
+                                   "
+                                   ng-keydown="
+                                       c.handleRequestKeydown(
+                                           $event
+                                       )
+                                   "
+                                   autocomplete="off"
+                                   placeholder="Enter or select request number">
+
+                            <button type="button"
+                                    class="request-clear-button"
+                                    ng-if="
+                                        c.filters.requestNumber
+                                    "
+                                    ng-click="
+                                        c.clearRequestNumber(
+                                            $event
+                                        )
+                                    "
+                                    title="Clear request number">
+
+                                <i class="fa fa-times"></i>
+
+                            </button>
+
+                            <button type="button"
+                                    class="request-dropdown-button"
+                                    ng-click="
+                                        c.toggleRequestSuggestions(
+                                            $event
+                                        )
+                                    "
+                                    ng-disabled="
+                                        c.requestSuggestionLoading
+                                    "
+                                    title="Show request numbers">
+
+                                <i class="fa"
+                                   ng-class="
+                                       c.showRequestSuggestions
+                                           ? 'fa-chevron-up'
+                                           : 'fa-chevron-down'
+                                   ">
+                                </i>
+
+                            </button>
+
+                        </div>
+
+                        <div class="request-suggestion-dropdown"
+                             ng-if="c.showRequestSuggestions">
+
+                            <div class="request-suggestion-loading"
+                                 ng-if="
+                                     c.requestSuggestionLoading
+                                 ">
+
+                                <i class="fa fa-spinner fa-spin"></i>
+                                Loading request numbers...
+
+                            </div>
+
+                            <button type="button"
+                                    class="request-suggestion-item"
+                                    ng-repeat="
+                                        suggestion in
+                                        c.filteredRequestSuggestions
+                                        track by suggestion.value
+                                    "
+                                    ng-class="{
+                                        'active-suggestion':
+                                            $index ===
+                                            c.activeSuggestionIndex
+                                    }"
+                                    ng-mousedown="
+                                        c.selectRequestSuggestion(
+                                            suggestion,
+                                            $event
+                                        )
+                                    "
+                                    ng-if="
+                                        !c.requestSuggestionLoading
+                                    ">
+
+                                <span class="suggestion-number">
+                                    {{suggestion.label}}
+                                </span>
+
+                                <span class="suggestion-course"
+                                      ng-if="
+                                          suggestion.courseTitle
+                                      ">
+                                    {{suggestion.courseTitle}}
+                                </span>
+
+                                <span class="suggestion-employee"
+                                      ng-if="
+                                          suggestion.employeeName
+                                      ">
+                                    {{suggestion.employeeName}}
+                                </span>
+
+                            </button>
+
+                            <div class="request-no-suggestions"
+                                 ng-if="
+                                     !c.requestSuggestionLoading &&
+                                     c.filteredRequestSuggestions
+                                         .length === 0
+                                 ">
+                                No matching request numbers found.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Course type -->
+                <div class="filter-group">
+
+                    <label>
+                        Course Type:
+                    </label>
+
+                    <select class="form-control"
+                            ng-model="
+                                c.filters.courseType
+                            ">
+
+                        <option value="">
+                            All
+                        </option>
+
+                        <option ng-repeat="
+                                    type in c.courseTypes
+                                    track by type.value
+                                "
+                                value="{{type.value}}">
+                            {{type.label}}
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+            <div class="filter-row">
+
+                <!-- Course format -->
+                <div class="filter-group">
+
+                    <label>
+                        Course Format:
+                    </label>
+
+                    <select class="form-control"
+                            ng-model="
+                                c.filters.courseFormat
+                            ">
+
+                        <option value="">
+                            All
+                        </option>
+
+                        <option ng-repeat="
+                                    format in c.courseFormats
+                                    track by format.value
+                                "
+                                value="{{format.value}}">
+                            {{format.label}}
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <!-- Current stage -->
+                <div class="filter-group">
+
+                    <label>
+                        Ticket Status:
+                    </label>
+
+                    <input type="text"
+                           class="form-control ticket-status-field"
+                           ng-value="
+                               c.getSelectedStageLabel()
+                           "
+                           readonly>
+
+                </div>
+
+            </div>
+
+            <div class="filter-row">
+
+                <!-- Country -->
+                <div class="filter-group">
+
+                    <label>
+                        Country:
+                    </label>
+
+                    <select class="form-control"
+                            ng-model="
+                                c.filters.country
+                            ">
+
+                        <option value="">
+                            All
+                        </option>
+
+                        <option ng-repeat="
+                                    country in c.countries
+                                    track by country.value
+                                "
+                                value="{{country.value}}">
+                            {{country.label}}
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div class="filter-group empty-filter">
+                </div>
+
+            </div>
+
+            <div class="filter-button-row">
+
+                <button type="button"
+                        class="filter-btn search-btn"
+                        ng-click="c.search()"
+                        ng-disabled="c.isLoading">
+
+                    <i class="fa fa-search"></i>
+                    Search
+
+                </button>
+
+                <button type="button"
+                        class="filter-btn reset-btn"
+                        ng-click="c.resetFilters()"
+                        ng-disabled="c.isLoading">
+
+                    <i class="fa fa-times-circle"></i>
+                    Reset
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- Toolbar actions -->
+        <div class="toolbar-actions">
+
+            <button type="button"
+                    class="icon-btn"
+                    ng-click="c.toggleSort()"
+                    ng-disabled="c.isLoading"
+                    title="Sort records">
+
+                <i class="fa"
+                   ng-class="
+                       c.sortOrder === 'asc'
+                           ? 'fa-sort-amount-asc'
+                           : 'fa-sort-amount-desc'
+                   ">
+                </i>
+
+            </button>
+
+            <button type="button"
+                    class="icon-btn"
+                    ng-click="c.refresh()"
+                    ng-disabled="c.isLoading"
+                    title="Refresh">
+
+                <i class="fa fa-refresh"
+                   ng-class="{
+                       'fa-spin': c.isLoading
+                   }">
+                </i>
+
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- Messages -->
+    <div class="alert alert-success widget-message"
+         ng-if="c.successMessage">
+        {{c.successMessage}}
+    </div>
+
+    <div class="alert alert-danger widget-message"
+         ng-if="c.errorMessage">
+        {{c.errorMessage}}
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-message"
+         ng-if="c.isLoading">
+
+        <i class="fa fa-spinner fa-spin"></i>
+        Loading approvals...
+
+    </div>
+
+    <!-- Approval workspace -->
+    <div class="approval-workspace"
+         ng-if="!c.isLoading">
+
+        <!-- Left list -->
+        <div class="approval-list-panel">
+
+            <div class="list-panel-header">
+
+                <span>
+                    Pending Approvals
+                </span>
+
+                <span class="list-record-count">
+                    {{c.records.length || 0}}
+                </span>
+
+            </div>
+
+            <div class="approval-cards"
+                 ng-if="c.records.length > 0">
+
+                <button type="button"
+                        class="approval-card"
+                        ng-repeat="
+                            record in c.records
+                            track by record.approval_sys_id
+                        "
+                        ng-class="{
+                            'selected-card':
+                                c.selectedRecord &&
+                                c.selectedRecord
+                                    .approval_sys_id ===
+                                record.approval_sys_id
+                        }"
+                        ng-click="
+                            c.selectRecord(record)
+                        ">
+
+                    <div class="card-top-row">
+
+                        <span class="card-request-number">
+                            {{record.number || '-'}}
+                        </span>
+
+                        <i class="fa fa-chevron-right"></i>
+
+                    </div>
+
+                    <div class="card-course-title">
+                        {{
+                            record.course_title ||
+                            'Course title not available'
+                        }}
+                    </div>
+
+                    <div class="card-detail-row">
+
+                        <span class="card-label">
+                            Employee
+                        </span>
+
+                        <span>
+                            {{record.employee_name || '-'}}
+                        </span>
+
+                    </div>
+
+                    <div class="card-detail-row">
+
+                        <span class="card-label">
+                            Course Type
+                        </span>
+
+                        <span>
+                            {{record.course_type || '-'}}
+                        </span>
+
+                    </div>
+
+                    <div class="card-detail-row">
+
+                        <span class="card-label">
+                            Format
+                        </span>
+
+                        <span>
+                            {{record.course_format || '-'}}
+                        </span>
+
+                    </div>
+
+                    <div class="card-status-row">
+
+                        <span class="card-status">
+                            {{record.ticket_status || '-'}}
+                        </span>
+
+                        <span class="card-view-text">
+                            View
+                        </span>
+
+                    </div>
+
+                </button>
+
+            </div>
+
+            <div class="no-records-card"
+                 ng-if="c.records.length === 0">
+
+                <i class="fa fa-info-circle"></i>
+
+                <div>
+                    No pending approvals found for
+                    <strong>
+                        {{c.getSelectedStageLabel()}}
+                    </strong>.
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Right detail panel -->
+        <div class="approval-detail-panel">
+
+            <div class="detail-empty-state"
+                 ng-if="!c.selectedRecord">
+
+                <div class="empty-state-icon">
+                    <i class="fa fa-hand-pointer-o"></i>
+                </div>
+
+                <div class="empty-state-title">
+                    Select an approval record
+                </div>
+
+                <div class="empty-state-text">
+                    Select a record from the left to view
+                    details and take an approval action.
+                </div>
+
+            </div>
+
+            <div ng-if="c.selectedRecord">
+
+                <div class="selected-record-header">
+
+                    <div>
+
+                        <div class="selected-record-caption">
+                            Learning Application
+                        </div>
+
+                        <div class="selected-record-number">
+                            {{c.selectedRecord.number || '-'}}
+                        </div>
+
+                    </div>
+
+                    <button type="button"
+                            class="close-selected-btn"
+                            ng-click="
+                                c.closeSelectedRecord()
+                            "
+                            title="Close">
+
+                        <i class="fa fa-times"></i>
+
+                    </button>
+
+                </div>
+
+                <div class="selected-record-body">
+
+                    <!-- Course details -->
+                    <div class="detail-section">
+
+                        <div class="detail-section-title">
+                            Course Details
+                        </div>
+
+                        <div class="summary-detail-grid">
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Course Title
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .course_title || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Course Type
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .course_type || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Course Format
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .course_format || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Training Country
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .training_country || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Training Provider
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .training_provider || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Start Date
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .course_start_date || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    End Date
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .course_end_date || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Training Hours
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .training_hours || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Status
+                                </span>
+                                <span class="selected-status-badge">
+                                    {{
+                                        c.selectedRecord
+                                            .ticket_status || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Employee details -->
+                    <div class="detail-section">
+
+                        <div class="detail-section-title">
+                            Employee Details
+                        </div>
+
+                        <div class="summary-detail-grid">
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Employee Name
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .employee_name || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Employee Email
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .employee_email || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Country
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .country || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Manager
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .manager || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Management L2
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .management_l2 || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    L2 Required
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .l2_required || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Cost details -->
+                    <div class="detail-section">
+
+                        <div class="detail-section-title">
+                            Cost Details
+                        </div>
+
+                        <div class="summary-detail-grid">
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Currency
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .currency || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Course Fee
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .course_fee || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Other Expenses
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .other_expenses || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                            <div class="summary-detail-item">
+                                <span class="summary-detail-label">
+                                    Total Cost
+                                </span>
+                                <span>
+                                    {{
+                                        c.selectedRecord
+                                            .total_cost || '-'
+                                    }}
+                                </span>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Existing comments -->
+                    <div class="previous-comments-section"
+                         ng-if="
+                             c.selectedRecord
+                                 .direct_manager_comments ||
+                             c.selectedRecord
+                                 .l2_manager_comments ||
+                             c.selectedRecord
+                                 .hr_comments
+                         ">
+
+                        <div class="detail-section-title">
+                            Approval Comments
+                        </div>
+
+                        <div class="previous-comment-card"
+                             ng-if="
+                                 c.selectedRecord
+                                     .direct_manager_comments
+                             ">
+
+                            <div class="previous-comment-heading">
+                                <i class="fa fa-user"></i>
+                                Direct Manager Comments
+                            </div>
+
+                            <div class="previous-comment-text">
+                                {{
+                                    c.selectedRecord
+                                        .direct_manager_comments
+                                }}
+                            </div>
+
+                        </div>
+
+                        <div class="previous-comment-card"
+                             ng-if="
+                                 c.selectedRecord
+                                     .l2_manager_comments
+                             ">
+
+                            <div class="previous-comment-heading">
+                                <i class="fa fa-users"></i>
+                                L2 Manager Comments
+                            </div>
+
+                            <div class="previous-comment-text">
+                                {{
+                                    c.selectedRecord
+                                        .l2_manager_comments
+                                }}
+                            </div>
+
+                        </div>
+
+                        <div class="previous-comment-card"
+                             ng-if="
+                                 c.selectedRecord
+                                     .hr_comments
+                             ">
+
+                            <div class="previous-comment-heading">
+                                <i class="fa fa-briefcase"></i>
+                                HR Comments
+                            </div>
+
+                            <div class="previous-comment-text">
+                                {{
+                                    c.selectedRecord
+                                        .hr_comments
+                                }}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Action comments -->
+                    <div class="selected-comments-panel">
+
+                        <div class="comments-title">
+                            {{c.getSelectedStageLabel()}} Comments
+
+                            <span class="mandatory-symbol">
+                                *
+                            </span>
+                        </div>
+
+                        <textarea id="approvalActionComments"
+                                  class="form-control selected-comments-textarea"
+                                  rows="5"
+                                  maxlength="4000"
+                                  ng-model="
+                                      c.selectedRecord
+                                          .actionComments
+                                  "
+                                  ng-change="
+                                      c.selectedRecord
+                                          .commentValidationError =
+                                          false
+                                  "
+                                  placeholder="Enter comments">
+                        </textarea>
+
+                        <div class="comments-help">
+                            Comments are mandatory for approval,
+                            rejection, and send back for review.
+                        </div>
+
+                        <div class="field-error"
+                             ng-if="
+                                 c.selectedRecord
+                                     .commentValidationError
+                             ">
+                            Please enter the comments.
+                        </div>
+
+                        <div class="selected-record-actions">
+
+                            <button type="button"
+                                    class="decision-btn approve-btn"
+                                    ng-click="
+                                        c.approveSelected()
+                                    "
+                                    ng-disabled="
+                                        c.selectedRecord.processing
+                                    ">
+
+                                <i class="fa fa-check"
+                                   ng-if="
+                                       !c.selectedRecord.processing
+                                   ">
+                                </i>
+
+                                Approve
+
+                            </button>
+
+                            <button type="button"
+                                    class="decision-btn send-back-btn"
+                                    ng-if="c.canSendBack()"
+                                    ng-click="
+                                        c.sendBackSelected()
+                                    "
+                                    ng-disabled="
+                                        c.selectedRecord.processing
+                                    ">
+
+                                <i class="fa fa-undo"
+                                   ng-if="
+                                       !c.selectedRecord.processing
+                                   ">
+                                </i>
+
+                                Send back for review
+
+                            </button>
+
+                            <button type="button"
+                                    class="decision-btn reject-btn"
+                                    ng-click="
+                                        c.rejectSelected()
+                                    "
+                                    ng-disabled="
+                                        c.selectedRecord.processing
+                                    ">
+
+                                <i class="fa fa-times"
+                                   ng-if="
+                                       !c.selectedRecord.processing
+                                   ">
+                                </i>
+
+                                Reject
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Back -->
+    <div class="back-section">
+
+        <button type="button"
+                class="back-btn"
+                ng-click="c.goBack()"
+                title="Back">
+
+            <i class="fa fa-chevron-left"></i>
+
+        </button>
+
+    </div>
+
+</div>]]></template>
+    </sp_widget>
+</record_update>
