@@ -1,43 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
     <sp_widget action="INSERT_OR_UPDATE">
         <category>custom</category>
-        <client_script><![CDATA[api.controller = function($location,$window,spUtil) {
-
+        <client_script><![CDATA[api.controller = function($location, $window, spUtil) {
     var c = this;
 
     c.goToEmployee = function() {
-        $location.url(
-            "?id=employee_role_asean"
-        );
+        $location.url("?id=employee_role_asean");
     };
 
     c.goToManager = function() {
-        $location.url(
-            "?id=manager_role_asean"
-        );
+        $location.url("?id=manager_role_asean");
     };
 
     c.downloadUserGuide = function(event) {
-
         if (event) {
             event.preventDefault();
             event.stopPropagation();
         }
 
-        if (
-            !c.data.userGuideAvailable ||
-            !c.data.userGuideDownloadUrl
-        ) {
+        if (!c.data.userGuideAvailable ||
+            !c.data.userGuideDownloadUrl) {
+
             spUtil.addErrorMessage(
                 "No PDF is attached to the Role Selection ASEAN widget."
             );
+
             return;
         }
 
-        /*
-         * Using location.href normally triggers the attachment
-         * download more reliably than window.open.
-         */
         $window.location.href =
             c.data.userGuideDownloadUrl;
     };
@@ -51,15 +41,13 @@
         $window.location.reload();
     };
 
-    c.handleTileKey = function(
-        event,
-        roleType
-    ) {
-
-        if (
-            event.which !== 13 &&
-            event.which !== 32
-        ) {
+    c.handleTileKey = function(event, roleType) {
+        /*
+         * Enter key: 13
+         * Space key: 32
+         */
+        if (event.which !== 13 &&
+            event.which !== 32) {
             return;
         }
 
@@ -73,7 +61,6 @@
             c.goToManager();
         }
     };
-
 };]]></client_script>
         <controller_as>c</controller_as>
         <css>.role-selection-page {&#13;
@@ -81,6 +68,7 @@
     padding: 28px 20px;&#13;
     background: #f7f7f7;&#13;
     font-family: Arial, sans-serif;&#13;
+    box-sizing: border-box;&#13;
 }&#13;
 &#13;
 .role-selection-card {&#13;
@@ -92,6 +80,7 @@
     background: #ffffff;&#13;
     border: 1px solid #333333;&#13;
     box-shadow: 0 2px 7px rgba(0, 0, 0, 0.12);&#13;
+    box-sizing: border-box;&#13;
 }&#13;
 &#13;
 .top-row {&#13;
@@ -107,6 +96,7 @@
     min-width: 540px;&#13;
     padding: 8px 14px;&#13;
     background: #eeeeee;&#13;
+    box-sizing: border-box;&#13;
 }&#13;
 &#13;
 .notice-banner:hover {&#13;
@@ -150,7 +140,27 @@
     font-size: 14px;&#13;
 }&#13;
 &#13;
+/* Company logo section */&#13;
+&#13;
 .company-brand {&#13;
+    display: flex;&#13;
+    align-items: center;&#13;
+    justify-content: flex-end;&#13;
+    min-width: 200px;&#13;
+    min-height: 70px;&#13;
+    text-align: right;&#13;
+}&#13;
+&#13;
+.company-logo {&#13;
+    display: block;&#13;
+    width: auto;&#13;
+    height: auto;&#13;
+    max-width: 190px;&#13;
+    max-height: 75px;&#13;
+    object-fit: contain;&#13;
+}&#13;
+&#13;
+.company-brand-fallback {&#13;
     position: relative;&#13;
     min-width: 180px;&#13;
     padding-right: 20px;&#13;
@@ -171,11 +181,13 @@
 &#13;
 .brand-dots {&#13;
     position: absolute;&#13;
-    right: 0;&#13;
     top: 18px;&#13;
+    right: 0;&#13;
     color: #f58220;&#13;
     font-size: 18px;&#13;
 }&#13;
+&#13;
+/* Welcome section */&#13;
 &#13;
 .welcome-section {&#13;
     margin-top: 15px;&#13;
@@ -189,6 +201,8 @@
     font-size: 29px;&#13;
 }&#13;
 &#13;
+/* Role selection */&#13;
+&#13;
 .role-panel {&#13;
     display: flex;&#13;
     justify-content: space-around;&#13;
@@ -198,6 +212,7 @@
     margin: 25px auto 0;&#13;
     padding: 20px 35px;&#13;
     border: 4px solid #1c1c1c;&#13;
+    box-sizing: border-box;&#13;
 }&#13;
 &#13;
 .role-tile {&#13;
@@ -210,6 +225,7 @@
     outline: none;&#13;
     border: 2px solid transparent;&#13;
     transition: all 0.2s ease;&#13;
+    box-sizing: border-box;&#13;
 }&#13;
 &#13;
 .role-tile:hover,&#13;
@@ -249,6 +265,8 @@
     line-height: 1.25;&#13;
 }&#13;
 &#13;
+/* Utility links */&#13;
+&#13;
 .utility-section {&#13;
     margin-top: 15px;&#13;
 }&#13;
@@ -264,8 +282,10 @@
     cursor: pointer;&#13;
 }&#13;
 &#13;
-.utility-link:hover {&#13;
+.utility-link:hover,&#13;
+.utility-link:focus {&#13;
     text-decoration: underline;&#13;
+    outline: none;&#13;
 }&#13;
 &#13;
 .utility-icon {&#13;
@@ -280,6 +300,8 @@
     border-radius: 50%;&#13;
     font-size: 17px;&#13;
 }&#13;
+&#13;
+/* User information */&#13;
 &#13;
 .user-information-panel {&#13;
     width: 420px;&#13;
@@ -322,6 +344,8 @@
     font-weight: bold;&#13;
 }&#13;
 &#13;
+/* Bottom user details */&#13;
+&#13;
 .bottom-user-details {&#13;
     position: absolute;&#13;
     right: 70px;&#13;
@@ -346,6 +370,8 @@
     font-weight: 500;&#13;
 }&#13;
 &#13;
+/* Responsive */&#13;
+&#13;
 @media screen and (max-width: 900px) {&#13;
 &#13;
     .role-selection-card {&#13;
@@ -363,6 +389,12 @@
 &#13;
     .company-brand {&#13;
         align-self: flex-end;&#13;
+        min-width: 0;&#13;
+    }&#13;
+&#13;
+    .company-logo {&#13;
+        max-width: 180px;&#13;
+        max-height: 70px;&#13;
     }&#13;
 &#13;
     .role-panel {&#13;
@@ -383,6 +415,28 @@
     .user-information-panel {&#13;
         width: 100%;&#13;
     }&#13;
+}&#13;
+&#13;
+@media screen and (max-width: 600px) {&#13;
+&#13;
+    .role-selection-page {&#13;
+        padding: 12px;&#13;
+    }&#13;
+&#13;
+    .dear-text,&#13;
+    .welcome-text,&#13;
+    .select-role-text {&#13;
+        font-size: 22px;&#13;
+    }&#13;
+&#13;
+    .role-panel {&#13;
+        padding: 15px;&#13;
+    }&#13;
+&#13;
+    .company-logo {&#13;
+        max-width: 150px;&#13;
+        max-height: 60px;&#13;
+    }&#13;
 }</css>
         <data_table>sp_instance</data_table>
         <demo_data/>
@@ -401,25 +455,96 @@
         <roles/>
         <script><![CDATA[(function() {
 
-    data.userName = gs.getUserDisplayName() || "";
-    data.userEmail = gs.getUser().getEmail() || "";
-    data.userUserName = gs.getUserName() || "";
+    /*
+     * Current user information
+     */
+    data.userName =
+        gs.getUserDisplayName() || "";
+
+    data.userEmail =
+        gs.getUser().getEmail() || "";
+
+    data.userUserName =
+        gs.getUserName() || "";
+
     data.showUserInformation = false;
 
+    /*
+     * User Guide attachment variables
+     */
     data.userGuideAvailable = false;
     data.userGuideDownloadUrl = "";
     data.userGuideFileName = "";
 
     /*
-     * Sys ID of the Role Selection ASEAN widget.
+     * Company logo attachment variables
+     */
+    data.logoAvailable = false;
+    data.logoUrl = "";
+    data.logoFileName = "";
+
+    /*
+     * Sys ID of Role Selection ASEAN widget.
      */
     var WIDGET_SYS_ID =
         "405a2ea247ce8310ff78de94116d4322";
 
     /*
-     * Find the latest PDF attached to this widget.
+     * Fetch the latest PNG image attached to the widget.
+     *
+     * The image can be detected either by:
+     * 1. Content type image/png
+     * 2. Filename ending with .png
      */
-    var attachmentGR = new GlideRecord("sys_attachment");
+    var logoGR = new GlideRecord("sys_attachment");
+
+    logoGR.addQuery(
+        "table_name",
+        "sp_widget"
+    );
+
+    logoGR.addQuery(
+        "table_sys_id",
+        WIDGET_SYS_ID
+    );
+
+    var logoCondition = logoGR.addQuery(
+        "content_type",
+        "image/png"
+    );
+
+    logoCondition.addOrCondition(
+        "file_name",
+        "ENDSWITH",
+        ".png"
+    );
+
+    logoGR.orderByDesc("sys_created_on");
+    logoGR.setLimit(1);
+    logoGR.query();
+
+    if (logoGR.next()) {
+
+        data.logoAvailable = true;
+
+        data.logoFileName =
+            logoGR.getValue("file_name") ||
+            "Company Logo.png";
+
+        data.logoUrl =
+            "/sys_attachment.do?sys_id=" +
+            logoGR.getUniqueValue();
+    }
+
+    /*
+     * Fetch the latest PDF attached to the widget.
+     *
+     * The PDF can be detected either by:
+     * 1. Content type application/pdf
+     * 2. Filename ending with .pdf
+     */
+    var attachmentGR =
+        new GlideRecord("sys_attachment");
 
     attachmentGR.addQuery(
         "table_name",
@@ -431,14 +556,10 @@
         WIDGET_SYS_ID
     );
 
-    /*
-     * Accept PDF content type or a filename ending in .pdf.
-     */
-    var pdfCondition =
-        attachmentGR.addQuery(
-            "content_type",
-            "application/pdf"
-        );
+    var pdfCondition = attachmentGR.addQuery(
+        "content_type",
+        "application/pdf"
+    );
 
     pdfCondition.addOrCondition(
         "file_name",
@@ -461,7 +582,6 @@
         data.userGuideDownloadUrl =
             "/sys_attachment.do?sys_id=" +
             attachmentGR.getUniqueValue();
-
     }
 
 })();]]></script>
@@ -470,28 +590,25 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-07-16 06:11:11</sys_created_on>
         <sys_id>405a2ea247ce8310ff78de94116d4322</sys_id>
-        <sys_mod_count>6</sys_mod_count>
+        <sys_mod_count>7</sys_mod_count>
         <sys_name>Role Selection ASEAN</sys_name>
         <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
         <sys_policy/>
         <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
         <sys_update_name>sp_widget_405a2ea247ce8310ff78de94116d4322</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-07-21 04:45:51</sys_updated_on>
+        <sys_updated_on>2026-07-22 03:49:14</sys_updated_on>
         <template><![CDATA[<div class="role-selection-page">
-
     <div class="role-selection-card">
 
         <div class="top-row">
 
             <div class="notice-banner">
-
                 <div class="notice-icon">
                     <i class="fa fa-exclamation-triangle"></i>
                 </div>
 
                 <div class="notice-text">
-
                     <div>
                         For a better experience, use the Chrome browser.
                     </div>
@@ -499,40 +616,43 @@
                     <div>
                         Click the attachment icon to download the User Guide.
 
-                        <button
-                            type="button"
-                            class="guide-download-button"
-                            title="Download User Guide PDF"
-                            aria-label="Download User Guide PDF"
-                            ng-click="c.downloadUserGuide($event)">
+                        <button type="button"
+                                class="guide-download-button"
+                                title="Download User Guide PDF"
+                                aria-label="Download User Guide PDF"
+                                ng-click="c.downloadUserGuide($event)">
 
                             <i class="fa fa-paperclip"></i>
-
-                            <span>
-                               User Guide
-                            </span>
-
+                            <span>User Guide</span>
                         </button>
-
                     </div>
-
                 </div>
-
             </div>
 
+            <!-- Company logo -->
             <div class="company-brand">
 
-                <div class="brand-main">
-                    SIEMENS
-                </div>
+                <img ng-if="c.data.logoAvailable"
+                     ng-src="{{c.data.logoUrl}}"
+                     class="company-logo"
+                     alt="Company Logo"/>
 
-                <div class="brand-sub">
-                    Healthineers
-                </div>
+                <!-- Fallback when PNG is not attached -->
+                <div class="company-brand-fallback"
+                     ng-if="!c.data.logoAvailable">
 
-                <span class="brand-dots">
-                    •••
-                </span>
+                    <div class="brand-main">
+                        SIEMENS
+                    </div>
+
+                    <div class="brand-sub">
+                        Healthineers
+                    </div>
+
+                    <span class="brand-dots">
+                        •••
+                    </span>
+                </div>
 
             </div>
 
@@ -556,12 +676,11 @@
 
         <div class="role-panel">
 
-            <div
-                class="role-tile"
-                role="button"
-                tabindex="0"
-                ng-click="c.goToEmployee()"
-                ng-keypress="c.handleTileKey($event, 'employee')">
+            <div class="role-tile"
+                 role="button"
+                 tabindex="0"
+                 ng-click="c.goToEmployee()"
+                 ng-keypress="c.handleTileKey($event, 'employee')">
 
                 <div class="role-icon employee-icon">
                     <i class="fa fa-users"></i>
@@ -581,12 +700,11 @@
 
             </div>
 
-            <div
-                class="role-tile"
-                role="button"
-                tabindex="0"
-                ng-click="c.goToManager()"
-                ng-keypress="c.handleTileKey($event, 'manager')">
+            <div class="role-tile"
+                 role="button"
+                 tabindex="0"
+                 ng-click="c.goToManager()"
+                 ng-keypress="c.handleTileKey($event, 'manager')">
 
                 <div class="role-icon manager-icon">
                     <i class="fa fa-user"></i>
@@ -610,53 +728,45 @@
 
         <div class="utility-section">
 
-            <div
-                class="utility-link"
-                ng-click="c.toggleUserInformation()">
+            <div class="utility-link"
+                 role="button"
+                 tabindex="0"
+                 ng-click="c.toggleUserInformation()">
 
                 <span class="utility-icon">
                     <i class="fa fa-info"></i>
                 </span>
 
-                <span>
-                    User Information
-                </span>
-
+                <span>User Information</span>
             </div>
 
-            <div
-                class="utility-link"
-                ng-click="c.refreshPage()">
+            <div class="utility-link"
+                 role="button"
+                 tabindex="0"
+                 ng-click="c.refreshPage()">
 
                 <span class="utility-icon">
                     <i class="fa fa-refresh"></i>
                 </span>
 
-                <span>
-                    Refresh Page
-                </span>
-
+                <span>Refresh Page</span>
             </div>
 
         </div>
 
-        <div
-            class="user-information-panel"
-            ng-if="c.data.showUserInformation">
+        <div class="user-information-panel"
+             ng-if="c.data.showUserInformation">
 
             <div class="user-information-header">
 
-                <span>
-                    User Information
-                </span>
+                <span>User Information</span>
 
-                <button
-                    type="button"
-                    class="close-information"
-                    ng-click="c.toggleUserInformation()">
+                <button type="button"
+                        class="close-information"
+                        aria-label="Close User Information"
+                        ng-click="c.toggleUserInformation()">
 
                     <i class="fa fa-times"></i>
-
                 </button>
 
             </div>
@@ -664,39 +774,22 @@
             <div class="user-information-body">
 
                 <div class="information-row">
-
-                    <span class="information-label">
-                        Name:
-                    </span>
-
-                    <span>
-                        {{c.data.userName}}
-                    </span>
-
+                    <span class="information-label">Name:</span>
+                    <span>{{c.data.userName}}</span>
                 </div>
 
                 <div class="information-row">
-
-                    <span class="information-label">
-                        Email:
-                    </span>
-
+                    <span class="information-label">Email:</span>
                     <span>
                         {{c.data.userEmail || 'Not available'}}
                     </span>
-
                 </div>
 
                 <div class="information-row">
-
-                    <span class="information-label">
-                        User ID:
-                    </span>
-
+                    <span class="information-label">User ID:</span>
                     <span>
                         {{c.data.userUserName || 'Not available'}}
                     </span>
-
                 </div>
 
             </div>
@@ -706,35 +799,65 @@
         <div class="bottom-user-details">
 
             <div class="bottom-row">
-
-                <span class="bottom-label">
-                    User Login:
-                </span>
+                <span class="bottom-label">User Login:</span>
 
                 <span class="bottom-value">
                     {{c.data.userEmail || c.data.userUserName}}
                 </span>
-
             </div>
 
             <div class="bottom-row">
-
-                <span class="bottom-label">
-                    User:
-                </span>
+                <span class="bottom-label">User:</span>
 
                 <span class="bottom-value">
                     {{c.data.userName}}
                 </span>
-
             </div>
 
         </div>
 
     </div>
-
 </div>]]></template>
     </sp_widget>
+    <sys_attachment action="INSERT_OR_UPDATE">
+        <average_image_color>#f6f4ef</average_image_color>
+        <chunk_size_bytes>700000</chunk_size_bytes>
+        <compressed>true</compressed>
+        <content_type>image/png</content_type>
+        <file_name>logo.png</file_name>
+        <hash>5c873e37576ade106d45de0b0500158bd5586b930678ffe0a934abe13848ed10</hash>
+        <image_height>94</image_height>
+        <image_width>208</image_width>
+        <size_bytes>4268</size_bytes>
+        <size_compressed>4103</size_compressed>
+        <state>available</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-22 03:46:10</sys_created_on>
+        <sys_id>7ea3816447d64310ff78de94116d4379</sys_id>
+        <sys_mod_count>3</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-22 03:46:11</sys_updated_on>
+        <table_name>sp_widget</table_name>
+        <table_sys_id>405a2ea247ce8310ff78de94116d4322</table_sys_id>
+    </sys_attachment>
+    <sys_attachment_doc action="INSERT_OR_UPDATE">
+        <data>H4sIAAAAAAAA/w==</data>
+        <length>16</length>
+        <position>0</position>
+        <sys_attachment display_value="logo.png" sys_id="7ea3816447d64310ff78de94116d4379">7ea3816447d64310ff78de94116d4379</sys_attachment>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-22 03:46:10</sys_created_on>
+        <sys_id>32a3816447d64310ff78de94116d437a</sys_id>
+    </sys_attachment_doc>
+    <sys_attachment_doc action="INSERT_OR_UPDATE">
+        <data>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</data>
+        <length>5460</length>
+        <position>1</position>
+        <sys_attachment display_value="logo.png" sys_id="7ea3816447d64310ff78de94116d4379">7ea3816447d64310ff78de94116d4379</sys_attachment>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-22 03:46:10</sys_created_on>
+        <sys_id>f2a3816447d64310ff78de94116d437a</sys_id>
+    </sys_attachment_doc>
     <sys_attachment action="INSERT_OR_UPDATE">
         <average_image_color/>
         <chunk_size_bytes>700000</chunk_size_bytes>

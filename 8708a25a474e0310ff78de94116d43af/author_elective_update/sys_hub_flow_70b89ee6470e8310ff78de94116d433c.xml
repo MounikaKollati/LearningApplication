@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update sys_domain="global" table="sys_hub_flow">
+    <sys_hub_flow action="DELETE">
+        <access>public</access>
+        <acls/>
+        <active>true</active>
+        <allow_high_security_roles>false</allow_high_security_roles>
+        <annotation/>
+        <attributes>browserActivatedIn=chrome,integrationActivatedIn=integrated,timeFromCreateToActivate=1263000,viewActivatedIn=naturalLanguage</attributes>
+        <authored_on_release_version>29000</authored_on_release_version>
+        <callable_by_client_api>false</callable_by_client_api>
+        <category/>
+        <copied_from>9a41b6c2ff12101088e94ee9453bf1a4</copied_from>
+        <copied_from_name>FlowTemplate_Empty</copied_from_name>
+        <description/>
+        <display_name_after_preview/>
+        <flow_priority/>
+        <generation_source/>
+        <internal_name>approval_reminder_notification</internal_name>
+        <label_cache>[{"name":"c0b90530-c62b-4207-a066-8b41e053de61.Records","label":"1 - Look Up Records➛Approval Records","reference":"sysapproval_approver","reference_display":"Approval","type":"records","base_type":"records","usedInstances":{"c28a8072-cb8e-4d73-899d-16e725dee4b5":["items"]},"attributes":{"element_mapping_provider":"com.glide.flow_design.action.data.FlowDesignVariableMapper"}},{"name":"c28a8072-cb8e-4d73-899d-16e725dee4b5.item","label":"2 - For Each➛Approval Record","reference":"sysapproval_approver","reference_display":"Approval","type":"reference","base_type":"reference","usedInstances":{"5fce13e6-da3e-442e-a2bc-cae8952a17c5":["record"]},"attributes":{"pills_draggable_inside_block":"true","pills_draggable_outside_block":"false"}}]</label_cache>
+        <master_snapshot>dd8dd2a2474e8310ff78de94116d432d</master_snapshot>
+        <master_snapshot_digest/>
+        <name>Approval Reminder Notification</name>
+        <natlang/>
+        <outputs/>
+        <pre_compiled>false</pre_compiled>
+        <remote_trigger_id>a98dd2a2474e8310ff78de94116d4381</remote_trigger_id>
+        <run_as>user</run_as>
+        <run_with_roles/>
+        <sc_callable>false</sc_callable>
+        <show_draft_actions>false</show_draft_actions>
+        <show_triggered_flows>false</show_triggered_flows>
+        <status>published</status>
+        <substatus/>
+        <sys_class_name>sys_hub_flow</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 04:49:51</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>70b89ee6470e8310ff78de94116d433c</sys_id>
+        <sys_mod_count>16</sys_mod_count>
+        <sys_name>Approval Reminder Notification</sys_name>
+        <sys_overrides/>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name>sys_hub_flow_70b89ee6470e8310ff78de94116d433c</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:55</sys_updated_on>
+        <type>flow</type>
+        <updation_source/>
+        <version>2</version>
+        <version_record>9d7d12a2474e8310ff78de94116d439b</version_record>
+    </sys_hub_flow>
+    <sys_translated_text action="DELETE" query="documentkey=70b89ee6470e8310ff78de94116d433c"/>
+    <sys_variable_value action="DELETE" query="document_key=70b89ee6470e8310ff78de94116d433c"/>
+    <sys_flow_timer_trigger action="DELETE">
+        <active>true</active>
+        <day_of_month>1</day_of_month>
+        <day_of_week/>
+        <name/>
+        <published_version/>
+        <run_period/>
+        <run_start>2026-07-16 05:10:55</run_start>
+        <sys_class_name>sys_flow_timer_trigger</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 05:10:55</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>a98dd2a2474e8310ff78de94116d4381</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_overrides/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:55</sys_updated_on>
+        <time>1970-01-01 19:00:00</time>
+        <timer_type>11</timer_type>
+        <trigger_definition display_value="Daily">89142dc0c32222002841b63b12d3ae8a</trigger_definition>
+    </sys_flow_timer_trigger>
+    <sys_flow_trigger_auto_script action="DELETE" query="name=Trigger:a98dd2a2474e8310ff78de94116d4381^sys_idNOT IN658dd2a2474e8310ff78de94116d4382"/>
+    <sys_flow_trigger_auto_script action="DELETE">
+        <active>true</active>
+        <advanced>false</advanced>
+        <business_calendar/>
+        <condition/>
+        <conditional>false</conditional>
+        <entered_run_end/>
+        <entered_run_start/>
+        <entered_time/>
+        <max_drift/>
+        <name>Trigger:a98dd2a2474e8310ff78de94116d4381</name>
+        <offset/>
+        <offset_type>0</offset_type>
+        <repeat_every/>
+        <run_as display_value="System Administrator">6816f79cc0a8016401c5a33be04be441</run_as>
+        <run_as_tz/>
+        <run_dayofmonth>1</run_dayofmonth>
+        <run_dayofweek/>
+        <run_daysofweek/>
+        <run_end/>
+        <run_month/>
+        <run_period/>
+        <run_start>2026-07-16 05:10:55</run_start>
+        <run_time>1970-01-01 19:00:00</run_time>
+        <run_type>daily</run_type>
+        <run_weekinmonth/>
+        <script><![CDATA[sn_flow_trigger.FlowTriggerAPI.fireTimerTrigger('a98dd2a2474e8310ff78de94116d4381');]]></script>
+        <sys_class_name>sys_flow_trigger_auto_script</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 05:10:55</sys_created_on>
+        <sys_id>658dd2a2474e8310ff78de94116d4382</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name/>
+        <sys_package/>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name/>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:55</sys_updated_on>
+        <time_zone/>
+        <trigger display_value="">a98dd2a2474e8310ff78de94116d4381</trigger>
+        <upgrade_safe>true</upgrade_safe>
+    </sys_flow_trigger_auto_script>
+    <sys_trigger_runner_mapping action="DELETE" query="identifier=70b89ee6470e8310ff78de94116d433c"/>
+    <sys_hub_flow_stage action="DELETE" query="flow=70b89ee6470e8310ff78de94116d433c"/>
+    <sys_flow_cat_variable_model action="DELETE" query="id=70b89ee6470e8310ff78de94116d433c^sys_idNOT IN38b89ee6470e8310ff78de94116d433d"/>
+    <sys_flow_cat_variable_model action="DELETE">
+        <id>70b89ee6470e8310ff78de94116d433c</id>
+        <name>Approval Reminder Notification</name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 04:49:51</sys_created_on>
+        <sys_id>38b89ee6470e8310ff78de94116d433d</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_scope/>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 04:49:51</sys_updated_on>
+    </sys_flow_cat_variable_model>
+    <sys_flow_cat_variable action="DELETE" query="flow_catalog_model=38b89ee6470e8310ff78de94116d433d"/>
+    <sys_hub_flow_input action="DELETE" query="model=70b89ee6470e8310ff78de94116d433c"/>
+    <sys_hub_flow_output action="DELETE" query="model=70b89ee6470e8310ff78de94116d433c"/>
+    <sys_hub_alias_mapping action="DELETE" query="source_id=70b89ee6470e8310ff78de94116d433c"/>
+    <sys_hub_trigger_instance_v2 action="DELETE" query="flow=70b89ee6470e8310ff78de94116d433c^sys_idNOT INead8d22a470e8310ff78de94116d4388"/>
+    <sys_hub_trigger_instance_v2 action="DELETE">
+        <comment/>
+        <display_text/>
+        <flow display_value="Approval Reminder Notification">70b89ee6470e8310ff78de94116d433c</flow>
+        <generation_source/>
+        <name>Daily</name>
+        <published_version/>
+        <remote_sys_id/>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 04:50:30</sys_created_on>
+        <sys_id>ead8d22a470e8310ff78de94116d4388</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_scope/>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:54</sys_updated_on>
+        <trigger_definition display_value="Daily">89142dc0c32222002841b63b12d3ae8a</trigger_definition>
+        <trigger_inputs>H4sIAAAAAAAA/31Sy07DMBD8FeRziZymvHJDQpU4ABJUXBCKNvamteQXjlMIiH9nnaQVFETki2d3Z2fGefpgGmrUrGQrZZDNmLIRgwW96j0SutZKYhXHmgErIbrQszKGDmesCc6s0HgNkZob0C2BLkgMrMw5n7Et6A4f+vZaEhcxWDCJdeIbqnTNL874Mc/pHOV5yTkdqkrVEnH/+G+T2CgtA1pWPj3PmIdAC2Ja/3FQiuSnOvSaVBUgFygFF8WcPs7n54u8Pi3qfC4LQDyhvoOxnybiH0F9jwDfIlqJcp/PrxQDgryzut93bOgRxrwMvLXqHSeqgA2SIYFjcX+tpqhGWGycEnjno3J2RCLUepoRTnfG3o4OUsjYQKfjLmRCupb40CfNScUkqXnYuNf73cKlsoPBqaidAL2/QYxB1V3ENr0CajREVBnwXtl15YPbqmGYtJhsiC1rtHulpa1a2wxEEp5RRJAtCb8a4EcIKrm4IRoa/hzcVy9d2jv6mBRXo2lqaEVQPl4S3Xb3c34+fwHJrOxS8QIAAA==</trigger_inputs>
+        <trigger_outputs/>
+        <trigger_type>daily</trigger_type>
+        <updation_source/>
+    </sys_hub_trigger_instance_v2>
+    <sys_hub_action_instance_v2 action="DELETE" query="flow=70b89ee6470e8310ff78de94116d433c^sys_idNOT IN60195622470e8310ff78de94116d4318,ce1b126e470e8310ff78de94116d4316"/>
+    <sys_hub_action_instance_v2 action="DELETE">
+        <action_type display_value="Look Up Records">43400a1587003300663ca1bb36cb0b4b</action_type>
+        <action_type_parent display_value="Look Up Records">d1c56ec50b30030085c083eb37673a50</action_type_parent>
+        <attributes/>
+        <comment/>
+        <compiled_snapshot/>
+        <display_text/>
+        <flow display_value="Approval Reminder Notification">70b89ee6470e8310ff78de94116d433c</flow>
+        <generation_source/>
+        <order>1</order>
+        <parent_ui_id/>
+        <sys_class_name>sys_hub_action_instance_v2</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 04:51:28</sys_created_on>
+        <sys_id>60195622470e8310ff78de94116d4318</sys_id>
+        <sys_mod_count>5</sys_mod_count>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:54</sys_updated_on>
+        <ui_id>c0b90530-c62b-4207-a066-8b41e053de61</ui_id>
+        <updation_source/>
+        <values>H4sIAAAAAAAA/9VXbU/qMBT+K2SfF7IxwJdPGl9uTK6aKPGLV5tu66CxtLPtBDT+93u6dgMBFZH48o225+U55zzPWq6fPJp6u9521g4CHHa2t4IgioKg240SHMZx1E3iIG7Hnu9xPCRgqXHMCCwfMCvMWk0UznMpYI3sDyLhOKUqZ3hy5az2nQmcJAPKUkm4t3t943s5lhBXg8/u09yRnuQEMRwTBgF6Jm3jzGDwV4b8wnmxBJOgWiJuQwuZGiyB75GxJjwlkCrDTBHfG2KeYi3kpN6RBKfnnE03BpRriOgZ47GijxB+OzB2GYGyEmLP6iVyXbLbyUDQhJznmgpudyxQeyhYMeRntgDTX5Lhgumqv7BTKIhHcoPZgHCIssuBGF1UCY8pL8tzh0wkMJJqhbWWNC40UWYWhJEhBEJDGCrlfWTmR0tnwDJs9hksmhkTI0iqaJ83cWKAN6FFuHkM+4fl9hWW1FRxCmFKYmSUwbSRbboShSy78oASVqjyQGKubCzvuewVui8MSlu1qw/ZFoGBSiTN9T44PBBXyrO/Eqs7wZQSieApNTnVLLVLdBbqvwJCpGMUdto7O0ELYUUwRwFiBEtu+gP1MZpgE+NWaaydhyT3BYHC0lsQCkqAMfAb0F8c/d3vnVwd/entpXgishEhd3u4L/Y6i+L5NhzrSfVgtperzmGp87LhONG+2HOiDTcmWoD7TbLVsvh5qn1Ph7bgd8SYbL1Jgs503kpIjWznZtS4qIu1GXpMCUtfXCYrgKuczw3ZGvHkNbyOoJnJMXertH79rfJJemYpsn2hnFFeXr4QENL8YN4Gb3+8duZ4UI5/9g6BPaySRfbihhaNx/W/suVcK/6uALJyvAREjZ5FuQR49X2twjvqRhujbtT6GHWBONdPNfq6a0saXL3dzOgq+0djj+ftgUQzDuHzTU39g/Vyhh/N2TI557QZfUics8yyJ4evEGzDL8MvFrFvEg7A1eVDVqxoRNM+0dPslVUq9Aizu2Xnjl21hsryPv3KbL+pvW441RloAEmiYFSzz8wQHhuLn4fQt9vrfR1OuCb9snmrQqw8T/G4cVFjXArcfSJoncNxur3B99dXXG9V45eqp+r/r/hbtS6Fb/4Dn220bwAQAAA=</values>
+    </sys_hub_action_instance_v2>
+    <sys_hub_alias_mapping action="DELETE" query="source_id=60195622470e8310ff78de94116d4318"/>
+    <sys_hub_action_instance_v2 action="DELETE">
+        <action_type display_value="Send Notification">0d8dd9f10f11101051218e8ebc767e27</action_type>
+        <action_type_parent display_value="Send Notification">7eda5d710f11101051218e8ebc767ec1</action_type_parent>
+        <attributes/>
+        <comment/>
+        <compiled_snapshot/>
+        <display_text/>
+        <flow display_value="Approval Reminder Notification">70b89ee6470e8310ff78de94116d433c</flow>
+        <generation_source/>
+        <order>3</order>
+        <parent_ui_id>c28a8072-cb8e-4d73-899d-16e725dee4b5</parent_ui_id>
+        <sys_class_name>sys_hub_action_instance_v2</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 05:00:18</sys_created_on>
+        <sys_id>ce1b126e470e8310ff78de94116d4316</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:54</sys_updated_on>
+        <ui_id>5fce13e6-da3e-442e-a2bc-cae8952a17c5</ui_id>
+        <updation_source/>
+        <values>H4sIAAAAAAAA/8WV207jMBCGXwXluqniJG1c7pAQEhILEstyg1aRD2Ow5BxInEK36rvvOHWPlIMQ7N7VU3tm/n/8xXfzQMvgOEgllXKiSKQIIRGJRiQmFChwkY0ziGkwCEpWAO5sQFSNxPWUmc4F5nMRU0ajLA4FpxCmMktCOpnIkIwhi0cSIOWjobZQLBZ4Tuq2Nmx2649jRDxoIxsog+O734OgZg1WstAEx/O9v+yshtwwDgYPnlaiK6C0R+enmOOjKlanr1cy9mW5GriWPnuuXRD/cv2QQQDPFkoJWE0x08IgKFgpma2a2TrSAJNXpdkEHnRpl0oL9tzqP5g/id0+BShNeBfWy9w7tDKn0gKuaqurchmxjJuVc5XpivJyKcF5C4p1xm5527WYD2rXs2vCNh02pH4+VE/Xq3pnuuzV+W5NJZhZr5i1jeadhdaNo9M3aM/FwQmAgd6wgtW1Lu/zuqmmuk+MbRbDe4OLoTLVE/bT6vtyyITTNET32PAM46d9+JY12gn8gWnw8MDXfDGSTv8q9WMH527wkkRZMolEiPctCdNIsJBTyUPGYzVK0zEdcxIseo/zx87JW7rlfcl7a3tf8/4+4NZWNLq2J9jjFLwbi4GnhZK37lkSb67VVs4NMe2sRXFoDzP58kcvdA+ME7/l04DcuNpHl8vaH+175/ArOjwiOzFPSPxlhNDo/xDiO/oiRHZm8O2E7ExkBxDBOVccJiHhQoRpBjSkMctCGEUiUXESRZl6F5D3sEjfvl5bj0hZWa20YP3INmCMBOWSwTjNIqAJ5lEZlTBJCRnLNEmSl5DcQGuPLnezfY6W9azXj8n7alZn9xo4LNJT02zV8dAkb0Oz/GZ/5lXBDw1M3figYBq/NcK3cgikFya+BtVrSXdIY0qBsCBzpcFIvD55f+YfPFE7riMSmG2NyMWBWX87lNsDb8Hm3oDcJchV1RTMjbHXsk9tOiGQJTENJ+MYqYVkFHKZJCFBigEYqFh+xbP2+y93eVvWBgoAAA==</values>
+    </sys_hub_action_instance_v2>
+    <sys_hub_alias_mapping action="DELETE" query="source_id=ce1b126e470e8310ff78de94116d4316"/>
+    <sys_hub_sub_flow_instance_v2 action="DELETE" query="flow=70b89ee6470e8310ff78de94116d433c"/>
+    <sys_hub_flow_logic_instance_v2 action="DELETE" query="flow=70b89ee6470e8310ff78de94116d433c^sys_idNOT INfcfa5a2e470e8310ff78de94116d43eb"/>
+    <sys_hub_flow_logic_instance_v2 action="DELETE">
+        <attributes/>
+        <block display_value="">1d8d92a2474e8310ff78de94116d43f3</block>
+        <comment/>
+        <connected_to/>
+        <decision_table/>
+        <display_text/>
+        <flow display_value="Approval Reminder Notification">70b89ee6470e8310ff78de94116d433c</flow>
+        <flow_variables_assigned/>
+        <generation_source/>
+        <logic_definition display_value="For Each">098e1dc5c3e232002841b63b12d3ae33</logic_definition>
+        <order>2</order>
+        <outputs_assigned/>
+        <parent_ui_id/>
+        <sys_class_name>sys_hub_flow_logic_instance_v2</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 04:59:40</sys_created_on>
+        <sys_id>fcfa5a2e470e8310ff78de94116d43eb</sys_id>
+        <sys_mod_count>7</sys_mod_count>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:54</sys_updated_on>
+        <ui_id>c28a8072-cb8e-4d73-899d-16e725dee4b5</ui_id>
+        <updation_source/>
+        <values>H4sIAAAAAAAA/51TwW7bMAz9F50TQ7Yzr8mtwFCgh65AV/QyFAYt0YlQWdIkOaln+N9HxU469DTsZPGRfHxPlEdm++j6GJ7tbQhqb9ju5+uKKZMwOo9MSbZj+Va225xvRVlUZcF5cbPJm6ps8kKWgLJiK2agQ6pUEbtA4RF0n+JxFLzZ8i8lX4uqaNabgn9dA6+q9U2zyZESEqs8e0JhvQzTRK1SBadhePl/BnFQWnpczDjwpC2iZ7vxUyoODmsNDWoatDBQ/796vnTeL6Y/3UFip9BfeemTVBR8xfA9opFIg1rQAVesAyMhWj+wXfQ9AR5BPho9XCsOykSiY6n2PajfxJ1zngpbJEcC5+Q1rJeLnGFxsErgo4vKmhmJ0OilR1jdd+b7LD+tAFvodbysgJA+EB+6pDmpWCS1Pw729HQZeKfM2d+S1FaAvkYQo1dNHzGkNaDGjojqDpxTZl87b4/q3ExaumyvKchabU80ND3LDEQSntEVQXZH+Lcz/AJeJRcPREPN09l9/atPc2cfi+J6Nk0FQXjl4i3RHXERN72m9zozhflhSBQq0MDnhN1f/oaUGGjJSvwNnax/S1I/sOkPzqV8zlcDAAA=</values>
+        <workflow_reference/>
+    </sys_hub_flow_logic_instance_v2>
+    <sys_hub_pill_compound action="DELETE" query="attached_to=70b89ee6470e8310ff78de94116d433c"/>
+    <sys_hub_flow_variable action="DELETE" query="model=70b89ee6470e8310ff78de94116d433c"/>
+    <sys_choice action="DELETE" query="name=var__m_sys_hub_flow_input_70b89ee6470e8310ff78de94116d433c"/>
+    <sys_choice action="DELETE" query="name=var__m_sys_hub_flow_output_70b89ee6470e8310ff78de94116d433c"/>
+    <sys_hub_flow_snapshot action="DELETE">
+        <access>public</access>
+        <acls/>
+        <active>true</active>
+        <allow_high_security_roles>false</allow_high_security_roles>
+        <annotation/>
+        <attributes>browserActivatedIn=chrome,integrationActivatedIn=integrated,viewActivatedIn=naturalLanguage</attributes>
+        <authored_on_release_version>29000</authored_on_release_version>
+        <callable_by_client_api>false</callable_by_client_api>
+        <category/>
+        <copied_from>9a41b6c2ff12101088e94ee9453bf1a4</copied_from>
+        <copied_from_name/>
+        <description/>
+        <flow_priority/>
+        <internal_name>approval_reminder_notification</internal_name>
+        <label_cache>[{"name":"c0b90530-c62b-4207-a066-8b41e053de61.Records","label":"1 - Look Up Records➛Approval Records","reference":"sysapproval_approver","reference_display":"Approval","type":"records","base_type":"records","usedInstances":{"c28a8072-cb8e-4d73-899d-16e725dee4b5":["items"]},"attributes":{"element_mapping_provider":"com.glide.flow_design.action.data.FlowDesignVariableMapper"}},{"name":"c28a8072-cb8e-4d73-899d-16e725dee4b5.item","label":"2 - For Each➛Approval Record","reference":"sysapproval_approver","reference_display":"Approval","type":"reference","base_type":"reference","usedInstances":{"5fce13e6-da3e-442e-a2bc-cae8952a17c5":["record"]},"attributes":{"pills_draggable_inside_block":"true","pills_draggable_outside_block":"false"}}]</label_cache>
+        <master>true</master>
+        <name>Approval Reminder Notification</name>
+        <natlang/>
+        <outputs/>
+        <parent_flow display_value="Approval Reminder Notification">70b89ee6470e8310ff78de94116d433c</parent_flow>
+        <remote_trigger_id/>
+        <run_as>user</run_as>
+        <run_with_roles/>
+        <sc_callable>false</sc_callable>
+        <status>published</status>
+        <sys_class_name>sys_hub_flow_snapshot</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 05:10:54</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>dd8dd2a2474e8310ff78de94116d432d</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name/>
+        <sys_overrides/>
+        <sys_package/>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_update_name/>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:54</sys_updated_on>
+        <type>flow</type>
+        <version>2</version>
+    </sys_hub_flow_snapshot>
+    <sys_translated_text action="DELETE" query="documentkey=dd8dd2a2474e8310ff78de94116d432d"/>
+    <sys_variable_value action="DELETE" query="document_key=dd8dd2a2474e8310ff78de94116d432d"/>
+    <sys_hub_flow_stage action="DELETE" query="flow=dd8dd2a2474e8310ff78de94116d432d"/>
+    <sys_flow_cat_variable_model action="DELETE" query="id=dd8dd2a2474e8310ff78de94116d432d^sys_idNOT IN598dd2a2474e8310ff78de94116d432f"/>
+    <sys_flow_cat_variable_model action="DELETE">
+        <id>dd8dd2a2474e8310ff78de94116d432d</id>
+        <name>Approval Reminder Notification</name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 05:10:54</sys_created_on>
+        <sys_id>598dd2a2474e8310ff78de94116d432f</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_scope/>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:54</sys_updated_on>
+    </sys_flow_cat_variable_model>
+    <sys_flow_cat_variable action="DELETE" query="flow_catalog_model=598dd2a2474e8310ff78de94116d432f"/>
+    <sys_hub_flow_input action="DELETE" query="model=dd8dd2a2474e8310ff78de94116d432d"/>
+    <sys_hub_flow_output action="DELETE" query="model=dd8dd2a2474e8310ff78de94116d432d"/>
+    <sys_hub_alias_mapping action="DELETE" query="source_id=dd8dd2a2474e8310ff78de94116d432d"/>
+    <sys_hub_trigger_instance_v2 action="DELETE" query="flow=dd8dd2a2474e8310ff78de94116d432d^sys_idNOT IN9d8dd2a2474e8310ff78de94116d433f"/>
+    <sys_hub_trigger_instance_v2 action="DELETE">
+        <comment/>
+        <display_text/>
+        <flow display_value="Approval Reminder Notification">dd8dd2a2474e8310ff78de94116d432d</flow>
+        <generation_source/>
+        <name>Daily</name>
+        <published_version/>
+        <remote_sys_id/>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 05:10:54</sys_created_on>
+        <sys_id>9d8dd2a2474e8310ff78de94116d433f</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_scope/>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:54</sys_updated_on>
+        <trigger_definition display_value="Daily">89142dc0c32222002841b63b12d3ae8a</trigger_definition>
+        <trigger_inputs>H4sIAAAAAAAA/31Sy07DMBD8FeRziZymvHJDQpU4ABJUXBCKNvamteQXjlMIiH9nnaQVFETki2d3Z2fGefpgGmrUrGQrZZDNmLIRgwW96j0SutZKYhXHmgErIbrQszKGDmesCc6s0HgNkZob0C2BLkgMrMw5n7Et6A4f+vZaEhcxWDCJdeIbqnTNL874Mc/pHOV5yTkdqkrVEnH/+G+T2CgtA1pWPj3PmIdAC2Ja/3FQiuSnOvSaVBUgFygFF8WcPs7n54u8Pi3qfC4LQDyhvoOxnybiH0F9jwDfIlqJcp/PrxQDgryzut93bOgRxrwMvLXqHSeqgA2SIYFjcX+tpqhGWGycEnjno3J2RCLUepoRTnfG3o4OUsjYQKfjLmRCupb40CfNScUkqXnYuNf73cKlsoPBqaidAL2/QYxB1V3ENr0CajREVBnwXtl15YPbqmGYtJhsiC1rtHulpa1a2wxEEp5RRJAtCb8a4EcIKrm4IRoa/hzcVy9d2jv6mBRXo2lqaEVQPl4S3Xb3c34+fwHJrOxS8QIAAA==</trigger_inputs>
+        <trigger_outputs/>
+        <trigger_type>daily</trigger_type>
+        <updation_source/>
+    </sys_hub_trigger_instance_v2>
+    <sys_hub_action_instance_v2 action="DELETE" query="flow=dd8dd2a2474e8310ff78de94116d432d^sys_idNOT IN998dd2a2474e8310ff78de94116d433e,d18dd2a2474e8310ff78de94116d433d"/>
+    <sys_hub_action_instance_v2 action="DELETE">
+        <action_type display_value="Send Notification">0d8dd9f10f11101051218e8ebc767e27</action_type>
+        <action_type_parent display_value="Send Notification">7eda5d710f11101051218e8ebc767ec1</action_type_parent>
+        <attributes/>
+        <comment/>
+        <compiled_snapshot>0d8dd9f10f11101051218e8ebc767e27</compiled_snapshot>
+        <display_text/>
+        <flow display_value="Approval Reminder Notification">dd8dd2a2474e8310ff78de94116d432d</flow>
+        <generation_source/>
+        <order>3</order>
+        <parent_ui_id>c28a8072-cb8e-4d73-899d-16e725dee4b5</parent_ui_id>
+        <sys_class_name>sys_hub_action_instance_v2</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 05:10:54</sys_created_on>
+        <sys_id>998dd2a2474e8310ff78de94116d433e</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:54</sys_updated_on>
+        <ui_id>5fce13e6-da3e-442e-a2bc-cae8952a17c5</ui_id>
+        <updation_source/>
+        <values>H4sIAAAAAAAA/9WV207cMBCGXwXlerOKk+zGyx0qQkJqQQLamwpFPozBknNo4izdrnj3jhPvkS0ttCD1Lh57PP8cvvjrMtAyOA5SSaWcKRIpQkhEogmJCQUKXGTTDGIajIKSFYAnGxBVI3E9Z6ZzhuVSxJTRKItDwSmEqcySkM5mMiRTyOKJBEj5ZKwtFI+P6Cd1Wxu2+OLd0SLutZENlMHx19tRULMGI1loguPl3tafSjWMg8GjVyut+9rtonZrWYmugNLmemX86D1P/c7R+SnuoJOTQ0YBfLdQSkAdipkWRkHBSsls1SzWlgaYvCzNxnCvSzskWrDvrf6BkZPYnVOAmQlfhPUy9wUazOqUWXZtm07YrlnXq9IC2qEmEhTrjP2wbRsOXNZWV+XgYhk3K+/KdEV5MVQkWF+w1Y+uRRFQu0SdcgyOWajr++rhaiXyTJd9SXyKphLMrFfM2kbzzjo5y6DTN4eqPZgP1xsM9AcLVte6vMvrpprrPh6qL8Z3BhdjZaoHlNnqu3LMhEt1jJ1g4zO0n/bmL6zRLu9PeA06u5ifS/2tg3M3R5JEWTKLRIgzmoRpJFjIqeQh47GapOmUTjkJHkdBu2g/GNa2m4phq/JvnUt4qJ+vVN4Xu6903g+ccxaNru0JypuDr8/jyDNHyXODnMSbud26c8Md6sK8sDLM5MNHn+MeXif+yIsx+wN1K8xu+uE6rNaT9sT2cdv36GLY8JzFL+RsGNADmNHoP8LMp/X3nO3UeheznWq/C2WCc644zELChQjTDGhIY5aFMIlEouIkijL1Csp+x1b6/PRuvWdlZbXSgvVN3NA1EZRLBtM0i4AmeI/KqIRZSshUpkmSPCXtBlp7dLF72wtftt+LXiG3F+dwLp69DQG76F1t2T15yfPkDaC95oHD9sLcdQ8KpvF/JbzEQzju5faP0fyVkh1emVIgLMhcaTASRy7vfd7ktVTXwBpxf+YiuR4OcP6C7e1e7nQbscfAT4Df7nELNvfyc8dwrqqmYK5zvZL3+iOkMwJZEtNwNo3xjwDJJOQySUKCfwgABiqWb/Pu3v4Elbve7+0KAAA=</values>
+    </sys_hub_action_instance_v2>
+    <sys_hub_alias_mapping action="DELETE" query="source_id=998dd2a2474e8310ff78de94116d433e"/>
+    <sys_hub_action_instance_v2 action="DELETE">
+        <action_type display_value="Look Up Records">43400a1587003300663ca1bb36cb0b4b</action_type>
+        <action_type_parent display_value="Look Up Records">d1c56ec50b30030085c083eb37673a50</action_type_parent>
+        <attributes/>
+        <comment/>
+        <compiled_snapshot>43400a1587003300663ca1bb36cb0b4b</compiled_snapshot>
+        <display_text/>
+        <flow display_value="Approval Reminder Notification">dd8dd2a2474e8310ff78de94116d432d</flow>
+        <generation_source/>
+        <order>1</order>
+        <parent_ui_id/>
+        <sys_class_name>sys_hub_action_instance_v2</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 05:10:54</sys_created_on>
+        <sys_id>d18dd2a2474e8310ff78de94116d433d</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:54</sys_updated_on>
+        <ui_id>c0b90530-c62b-4207-a066-8b41e053de61</ui_id>
+        <updation_source/>
+        <values>H4sIAAAAAAAA/+VX207jMBD9lSrPVZXQC5cnEJcVEhcJKl5YsCaJ01q4TrEd2lL133ccO2nUBraViha0b/XMeHxm5hzHfZx7LPaOvIOk4/sQdA/2fb/d9v1erx1BEIbtXhT6YSf0mp6AEcVIDSGnuHwDnpm1mikYj2WKa2J/UInumKkxh9mDizpxIeiJhozHkgrv6PGp6Y1BYl6Ne47mK65NgXEIKcfQvkO2AlTPxuWS5D5ru6pua9xYRypjA8VvenSqqYgpYkiAK9r0RiBi0KmclRZJIb4VfGkYMqExo2eCp4q947kHvolLKFYVUesrl8Q1yZqTM9Bwr2UW6Uy60GiYsogq24+YJpBxfVq12YDbsWapsFts2XZ3yrORuLHt8MoExUzQkikEQcemUIPclZHcD9PJXYHygom8J87J0wjHWKxAa8nCTBs8c49yOsJEZIREYGJAzMxZvhmxjFoDjotWwtMJHqrYQLQgMsBb2FdoXaD9LDc/gGSmimtMk5MpYRwZQuwIVZrJvJVvJOKZyh0ShLK5vEXTUPKUg1LLyrHl5DUzuG0fXMXENs1siSQb6xNM8UZdcYvmRtro+kvKRamImUGhqgLJ8VrwvzNMEU9J0O0cHvp7BBQFQXzCKUhhOoYVcxaByfGsNGi3Q9LXjGKp8TPWRiIkHv5G9HfnVyf9y4fzX/3jGGZpMqH05RgG6XF3XYL/DMcuBZ93uxD8abXddSNw0l+zXdUlcNIPdiZ9rOMniR8P/37a317NtgV/kXS0/ynJuks+qVRqYntZ0fS6urbm+QYQCp7fGmY2wtlHqBzNE0Z5XPeFuzCOlS/c3v/5hfuWJEdAMbHTY4IzkT9XEOhXsd///Io9XOFZTq/q9wxtoKJ1DUBDp433rZWwAZxCCfd4dqNv8dRALO77nDKrd31hdAJo70wA7b3dCGBellk2sqbnxQvVTLOIfzfxsBqPFKxsCBZ1AtvqzGDbM/cW6wJub6XgKtms5+wDzu34KfuBIptfeQUMcas7j1j9kgmLB1QvTy+i4lRPgL/U+R3jSDGovLwveBZ3PpVtL1hKFJVCJFU4vOq7OMDn0fodEjStebsrZAMsRTuuYdq4K8HUInTXCCqdDvLZVO+Ry9LqSN7Z4YPx235Ji2HVarCY2Y/4N7k7ITz9AajM5rY9EQAA</values>
+    </sys_hub_action_instance_v2>
+    <sys_hub_alias_mapping action="DELETE" query="source_id=d18dd2a2474e8310ff78de94116d433d"/>
+    <sys_hub_sub_flow_instance_v2 action="DELETE" query="flow=dd8dd2a2474e8310ff78de94116d432d"/>
+    <sys_hub_flow_logic_instance_v2 action="DELETE" query="flow=dd8dd2a2474e8310ff78de94116d432d^sys_idNOT INd98dd2a2474e8310ff78de94116d433a"/>
+    <sys_hub_flow_logic_instance_v2 action="DELETE">
+        <attributes/>
+        <block display_value="">1d8d92a2474e8310ff78de94116d43f3</block>
+        <comment/>
+        <connected_to/>
+        <decision_table/>
+        <display_text/>
+        <flow display_value="Approval Reminder Notification">dd8dd2a2474e8310ff78de94116d432d</flow>
+        <flow_variables_assigned/>
+        <generation_source/>
+        <logic_definition display_value="For Each">098e1dc5c3e232002841b63b12d3ae33</logic_definition>
+        <order>2</order>
+        <outputs_assigned/>
+        <parent_ui_id/>
+        <sys_class_name>sys_hub_flow_logic_instance_v2</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 05:10:54</sys_created_on>
+        <sys_id>d98dd2a2474e8310ff78de94116d433a</sys_id>
+        <sys_mod_count>1</sys_mod_count>
+        <sys_scope/>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:54</sys_updated_on>
+        <ui_id>c28a8072-cb8e-4d73-899d-16e725dee4b5</ui_id>
+        <updation_source/>
+        <values>H4sIAAAAAAAA/51TTW+jMBD9Lz4nyJAs2+RWtapUqbuV0qqXVYUGe0isGpu1TVIW8d93HAitelrtCebN13uPoWe2DU0b/LO99l7tDdv+el0wZSJG7z1Tkm1ZupHVJuUbscryVcZ5drVOy3xVpplcAcqcLZiBGqlSBaw9hUfQbYz7XvByw7+t+FLkWblcZ/z7EnieL6/KdYqUkJinyQ6FddIPA7VK5RsN3cv/TxAHpaXDSUwDjrgFdGzbf0n9qzgNJWoqvZ/UfREbuiaGbqQwAQ9Tz25G6RFJZHzB8D2gkUjrK9AeF6wGIyFY17FtcC0BDkE+Gt3NFQdlAo1jsfbdqz+0MeU8FlZIggSOyTksJh9HuLqFAE80WoTWTaXiYJVAP1ohsYJWh5vP2Fjw2ARlzdgSoNSXbqvb2vwcnWDzgMtnI6T1RAKbKDRSn3RUTwd72l1Y3ilzNmVKaitAzxGE4FTZhsinZ6ixpkFFDU2jzL5onD2qczNxqZO9piCptD3R0njKCYhIPCFfIbkj/PYMv4BTUcUPGkPNw4L5zt9o8P5DC5lY/G4jk1HZpKEYbYgtwqkmXNOCI050h9d49ePs2VOhPFF4jtj95Z+KiY4uSInP0Mm6t0j+Axv+AiTAz7udAwAA</values>
+        <workflow_reference/>
+    </sys_hub_flow_logic_instance_v2>
+    <sys_hub_pill_compound action="DELETE" query="attached_to=dd8dd2a2474e8310ff78de94116d432d"/>
+    <sys_hub_flow_variable action="DELETE" query="model=dd8dd2a2474e8310ff78de94116d432d"/>
+    <sys_choice action="DELETE" query="name=var__m_sys_hub_flow_input_dd8dd2a2474e8310ff78de94116d432d"/>
+    <sys_choice action="DELETE" query="name=var__m_sys_hub_flow_output_dd8dd2a2474e8310ff78de94116d432d"/>
+    <sys_hub_flow action="DELETE">
+        <sys_id>70b89ee6470e8310ff78de94116d433c</sys_id>
+        <latest_snapshot>dd8dd2a2474e8310ff78de94116d432d</latest_snapshot>
+        <compiler_build/>
+        <version_record/>
+    </sys_hub_flow>
+    <sys_flow_trigger_plan action="DELETE" query="plan_id=70b89ee6470e8310ff78de94116d433c^sys_idNOT INa98dd2a2474e8310ff78de94116d4385"/>
+    <sys_flow_trigger_plan action="DELETE">
+        <binding_strategy>com.snc.process_flow.engine.binding.RunAlways</binding_strategy>
+        <plan/>
+        <plan_id>70b89ee6470e8310ff78de94116d433c</plan_id>
+        <snapshot>dd8dd2a2474e8310ff78de94116d432d</snapshot>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 05:10:55</sys_created_on>
+        <sys_domain>global</sys_domain>
+        <sys_domain_path>/</sys_domain_path>
+        <sys_id>a98dd2a2474e8310ff78de94116d4385</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_overrides/>
+        <sys_scope/>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:55</sys_updated_on>
+        <trigger display_value="">a98dd2a2474e8310ff78de94116d4381</trigger>
+    </sys_flow_trigger_plan>
+    <sys_flow_subflow_plan action="DELETE" query="plan_id=70b89ee6470e8310ff78de94116d433c"/>
+    <sys_update_version action="INSERT_OR_UPDATE">
+        <action>DELETE</action>
+        <application display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</application>
+        <file_path/>
+        <instance_id>1342adfb3b190fd8baf6048aa4e45a41</instance_id>
+        <instance_name>dev404202</instance_name>
+        <name>sys_hub_flow_70b89ee6470e8310ff78de94116d433c</name>
+        <payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update sys_domain="global" table="sys_hub_flow"&gt;&lt;sys_hub_flow action="INSERT_OR_UPDATE"&gt;&lt;access&gt;public&lt;/access&gt;&lt;acls/&gt;&lt;active&gt;true&lt;/active&gt;&lt;allow_high_security_roles&gt;false&lt;/allow_high_security_roles&gt;&lt;annotation/&gt;&lt;attributes&gt;browserActivatedIn=chrome,integrationActivatedIn=integrated,timeFromCreateToActivate=1263000,viewActivatedIn=naturalLanguage&lt;/attributes&gt;&lt;authored_on_release_version&gt;29000&lt;/authored_on_release_version&gt;&lt;callable_by_client_api&gt;false&lt;/callable_by_client_api&gt;&lt;category/&gt;&lt;copied_from&gt;9a41b6c2ff12101088e94ee9453bf1a4&lt;/copied_from&gt;&lt;copied_from_name&gt;FlowTemplate_Empty&lt;/copied_from_name&gt;&lt;description/&gt;&lt;display_name_after_preview/&gt;&lt;flow_priority/&gt;&lt;generation_source/&gt;&lt;internal_name&gt;approval_reminder_notification&lt;/internal_name&gt;&lt;label_cache&gt;[{"name":"c0b90530-c62b-4207-a066-8b41e053de61.Records","label":"1 - Look Up Records➛Approval Records","reference":"sysapproval_approver","reference_display":"Approval","type":"records","base_type":"records","usedInstances":{"c28a8072-cb8e-4d73-899d-16e725dee4b5":["items"]},"attributes":{"element_mapping_provider":"com.glide.flow_design.action.data.FlowDesignVariableMapper"}},{"name":"c28a8072-cb8e-4d73-899d-16e725dee4b5.item","label":"2 - For Each➛Approval Record","reference":"sysapproval_approver","reference_display":"Approval","type":"reference","base_type":"reference","usedInstances":{"5fce13e6-da3e-442e-a2bc-cae8952a17c5":["record"]},"attributes":{"pills_draggable_inside_block":"true","pills_draggable_outside_block":"false"}}]&lt;/label_cache&gt;&lt;master_snapshot&gt;dd8dd2a2474e8310ff78de94116d432d&lt;/master_snapshot&gt;&lt;master_snapshot_digest/&gt;&lt;name&gt;Approval Reminder Notification&lt;/name&gt;&lt;natlang/&gt;&lt;outputs/&gt;&lt;pre_compiled&gt;false&lt;/pre_compiled&gt;&lt;remote_trigger_id&gt;a98dd2a2474e8310ff78de94116d4381&lt;/remote_trigger_id&gt;&lt;run_as&gt;user&lt;/run_as&gt;&lt;run_with_roles/&gt;&lt;sc_callable&gt;false&lt;/sc_callable&gt;&lt;show_draft_actions&gt;false&lt;/show_draft_actions&gt;&lt;show_triggered_flows&gt;false&lt;/show_triggered_flows&gt;&lt;status&gt;published&lt;/status&gt;&lt;substatus/&gt;&lt;sys_class_name&gt;sys_hub_flow&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 04:49:51&lt;/sys_created_on&gt;&lt;sys_domain&gt;global&lt;/sys_domain&gt;&lt;sys_domain_path&gt;/&lt;/sys_domain_path&gt;&lt;sys_id&gt;70b89ee6470e8310ff78de94116d433c&lt;/sys_id&gt;&lt;sys_mod_count&gt;16&lt;/sys_mod_count&gt;&lt;sys_name&gt;Approval Reminder Notification&lt;/sys_name&gt;&lt;sys_overrides/&gt;&lt;sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="ASEAN Learning Application"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_hub_flow_70b89ee6470e8310ff78de94116d433c&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:55&lt;/sys_updated_on&gt;&lt;type&gt;flow&lt;/type&gt;&lt;updation_source/&gt;&lt;version&gt;2&lt;/version&gt;&lt;version_record&gt;9d7d12a2474e8310ff78de94116d439b&lt;/version_record&gt;&lt;/sys_hub_flow&gt;&lt;sys_translated_text action="delete_multiple" query="documentkey=70b89ee6470e8310ff78de94116d433c"/&gt;&lt;sys_variable_value action="delete_multiple" query="document_key=70b89ee6470e8310ff78de94116d433c"/&gt;&lt;sys_flow_timer_trigger action="INSERT_OR_UPDATE"&gt;&lt;active&gt;true&lt;/active&gt;&lt;day_of_month&gt;1&lt;/day_of_month&gt;&lt;day_of_week/&gt;&lt;name/&gt;&lt;published_version/&gt;&lt;run_period/&gt;&lt;run_start&gt;2026-07-16 05:10:55&lt;/run_start&gt;&lt;sys_class_name&gt;sys_flow_timer_trigger&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 05:10:55&lt;/sys_created_on&gt;&lt;sys_domain&gt;global&lt;/sys_domain&gt;&lt;sys_domain_path&gt;/&lt;/sys_domain_path&gt;&lt;sys_id&gt;a98dd2a2474e8310ff78de94116d4381&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_overrides/&gt;&lt;sys_scope display_value="ASEAN Learning Application"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_scope&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:55&lt;/sys_updated_on&gt;&lt;time&gt;1970-01-01 19:00:00&lt;/time&gt;&lt;timer_type&gt;11&lt;/timer_type&gt;&lt;trigger_definition display_value="Daily"&gt;89142dc0c32222002841b63b12d3ae8a&lt;/trigger_definition&gt;&lt;/sys_flow_timer_trigger&gt;&lt;sys_flow_trigger_auto_script action="delete_multiple" query="name=Trigger:a98dd2a2474e8310ff78de94116d4381^sys_idNOT IN658dd2a2474e8310ff78de94116d4382"/&gt;&lt;sys_flow_trigger_auto_script action="INSERT_OR_UPDATE"&gt;&lt;active&gt;true&lt;/active&gt;&lt;advanced&gt;false&lt;/advanced&gt;&lt;business_calendar/&gt;&lt;condition/&gt;&lt;conditional&gt;false&lt;/conditional&gt;&lt;entered_run_end/&gt;&lt;entered_run_start/&gt;&lt;entered_time/&gt;&lt;max_drift/&gt;&lt;name&gt;Trigger:a98dd2a2474e8310ff78de94116d4381&lt;/name&gt;&lt;offset/&gt;&lt;offset_type&gt;0&lt;/offset_type&gt;&lt;repeat_every/&gt;&lt;run_as display_value="System Administrator"&gt;6816f79cc0a8016401c5a33be04be441&lt;/run_as&gt;&lt;run_as_tz/&gt;&lt;run_dayofmonth&gt;1&lt;/run_dayofmonth&gt;&lt;run_dayofweek/&gt;&lt;run_daysofweek/&gt;&lt;run_end/&gt;&lt;run_month/&gt;&lt;run_period/&gt;&lt;run_start&gt;2026-07-16 05:10:55&lt;/run_start&gt;&lt;run_time&gt;1970-01-01 19:00:00&lt;/run_time&gt;&lt;run_type&gt;daily&lt;/run_type&gt;&lt;run_weekinmonth/&gt;&lt;script&gt;&lt;![CDATA[sn_flow_trigger.FlowTriggerAPI.fireTimerTrigger('a98dd2a2474e8310ff78de94116d4381');]]&gt;&lt;/script&gt;&lt;sys_class_name&gt;sys_flow_trigger_auto_script&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 05:10:55&lt;/sys_created_on&gt;&lt;sys_id&gt;658dd2a2474e8310ff78de94116d4382&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_name/&gt;&lt;sys_package/&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="ASEAN Learning Application"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_scope&gt;&lt;sys_update_name/&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:55&lt;/sys_updated_on&gt;&lt;time_zone/&gt;&lt;trigger display_value=""&gt;a98dd2a2474e8310ff78de94116d4381&lt;/trigger&gt;&lt;upgrade_safe&gt;true&lt;/upgrade_safe&gt;&lt;/sys_flow_trigger_auto_script&gt;&lt;sys_trigger_runner_mapping action="delete_multiple" query="identifier=70b89ee6470e8310ff78de94116d433c"/&gt;&lt;sys_hub_flow_stage action="delete_multiple" query="flow=70b89ee6470e8310ff78de94116d433c"/&gt;&lt;sys_flow_cat_variable_model action="delete_multiple" query="id=70b89ee6470e8310ff78de94116d433c^sys_idNOT IN38b89ee6470e8310ff78de94116d433d"/&gt;&lt;sys_flow_cat_variable_model action="INSERT_OR_UPDATE"&gt;&lt;id&gt;70b89ee6470e8310ff78de94116d433c&lt;/id&gt;&lt;name&gt;Approval Reminder Notification&lt;/name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 04:49:51&lt;/sys_created_on&gt;&lt;sys_id&gt;38b89ee6470e8310ff78de94116d433d&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_scope/&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 04:49:51&lt;/sys_updated_on&gt;&lt;/sys_flow_cat_variable_model&gt;&lt;sys_flow_cat_variable action="delete_multiple" query="flow_catalog_model=38b89ee6470e8310ff78de94116d433d"/&gt;&lt;sys_hub_flow_input action="delete_multiple" query="model=70b89ee6470e8310ff78de94116d433c"/&gt;&lt;sys_hub_flow_output action="delete_multiple" query="model=70b89ee6470e8310ff78de94116d433c"/&gt;&lt;sys_hub_alias_mapping action="delete_multiple" query="source_id=70b89ee6470e8310ff78de94116d433c"/&gt;&lt;sys_hub_trigger_instance_v2 action="delete_multiple" query="flow=70b89ee6470e8310ff78de94116d433c^sys_idNOT INead8d22a470e8310ff78de94116d4388"/&gt;&lt;sys_hub_trigger_instance_v2 action="INSERT_OR_UPDATE"&gt;&lt;comment/&gt;&lt;display_text/&gt;&lt;flow display_value="Approval Reminder Notification"&gt;70b89ee6470e8310ff78de94116d433c&lt;/flow&gt;&lt;generation_source/&gt;&lt;name&gt;Daily&lt;/name&gt;&lt;published_version/&gt;&lt;remote_sys_id/&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 04:50:30&lt;/sys_created_on&gt;&lt;sys_id&gt;ead8d22a470e8310ff78de94116d4388&lt;/sys_id&gt;&lt;sys_mod_count&gt;1&lt;/sys_mod_count&gt;&lt;sys_scope/&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:54&lt;/sys_updated_on&gt;&lt;trigger_definition display_value="Daily"&gt;89142dc0c32222002841b63b12d3ae8a&lt;/trigger_definition&gt;&lt;trigger_inputs&gt;H4sIAAAAAAAA/31Sy07DMBD8FeRziZymvHJDQpU4ABJUXBCKNvamteQXjlMIiH9nnaQVFETki2d3Z2fGefpgGmrUrGQrZZDNmLIRgwW96j0SutZKYhXHmgErIbrQszKGDmesCc6s0HgNkZob0C2BLkgMrMw5n7Et6A4f+vZaEhcxWDCJdeIbqnTNL874Mc/pHOV5yTkdqkrVEnH/+G+T2CgtA1pWPj3PmIdAC2Ja/3FQiuSnOvSaVBUgFygFF8WcPs7n54u8Pi3qfC4LQDyhvoOxnybiH0F9jwDfIlqJcp/PrxQDgryzut93bOgRxrwMvLXqHSeqgA2SIYFjcX+tpqhGWGycEnjno3J2RCLUepoRTnfG3o4OUsjYQKfjLmRCupb40CfNScUkqXnYuNf73cKlsoPBqaidAL2/QYxB1V3ENr0CajREVBnwXtl15YPbqmGYtJhsiC1rtHulpa1a2wxEEp5RRJAtCb8a4EcIKrm4IRoa/hzcVy9d2jv6mBRXo2lqaEVQPl4S3Xb3c34+fwHJrOxS8QIAAA==&lt;/trigger_inputs&gt;&lt;trigger_outputs/&gt;&lt;trigger_type&gt;daily&lt;/trigger_type&gt;&lt;updation_source/&gt;&lt;/sys_hub_trigger_instance_v2&gt;&lt;sys_hub_action_instance_v2 action="delete_multiple" query="flow=70b89ee6470e8310ff78de94116d433c^sys_idNOT IN60195622470e8310ff78de94116d4318,ce1b126e470e8310ff78de94116d4316"/&gt;&lt;sys_hub_action_instance_v2 action="INSERT_OR_UPDATE"&gt;&lt;action_type display_value="Look Up Records"&gt;43400a1587003300663ca1bb36cb0b4b&lt;/action_type&gt;&lt;action_type_parent display_value="Look Up Records"&gt;d1c56ec50b30030085c083eb37673a50&lt;/action_type_parent&gt;&lt;attributes/&gt;&lt;comment/&gt;&lt;compiled_snapshot/&gt;&lt;display_text/&gt;&lt;flow display_value="Approval Reminder Notification"&gt;70b89ee6470e8310ff78de94116d433c&lt;/flow&gt;&lt;generation_source/&gt;&lt;order&gt;1&lt;/order&gt;&lt;parent_ui_id/&gt;&lt;sys_class_name&gt;sys_hub_action_instance_v2&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 04:51:28&lt;/sys_created_on&gt;&lt;sys_id&gt;60195622470e8310ff78de94116d4318&lt;/sys_id&gt;&lt;sys_mod_count&gt;5&lt;/sys_mod_count&gt;&lt;sys_scope display_value="ASEAN Learning Application"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_scope&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:54&lt;/sys_updated_on&gt;&lt;ui_id&gt;c0b90530-c62b-4207-a066-8b41e053de61&lt;/ui_id&gt;&lt;updation_source/&gt;&lt;values&gt;H4sIAAAAAAAA/9VXbU/qMBT+K2SfF7IxwJdPGl9uTK6aKPGLV5tu66CxtLPtBDT+93u6dgMBFZH48o225+U55zzPWq6fPJp6u9521g4CHHa2t4IgioKg240SHMZx1E3iIG7Hnu9xPCRgqXHMCCwfMCvMWk0UznMpYI3sDyLhOKUqZ3hy5az2nQmcJAPKUkm4t3t943s5lhBXg8/u09yRnuQEMRwTBgF6Jm3jzGDwV4b8wnmxBJOgWiJuQwuZGiyB75GxJjwlkCrDTBHfG2KeYi3kpN6RBKfnnE03BpRriOgZ47GijxB+OzB2GYGyEmLP6iVyXbLbyUDQhJznmgpudyxQeyhYMeRntgDTX5Lhgumqv7BTKIhHcoPZgHCIssuBGF1UCY8pL8tzh0wkMJJqhbWWNC40UWYWhJEhBEJDGCrlfWTmR0tnwDJs9hksmhkTI0iqaJ83cWKAN6FFuHkM+4fl9hWW1FRxCmFKYmSUwbSRbboShSy78oASVqjyQGKubCzvuewVui8MSlu1qw/ZFoGBSiTN9T44PBBXyrO/Eqs7wZQSieApNTnVLLVLdBbqvwJCpGMUdto7O0ELYUUwRwFiBEtu+gP1MZpgE+NWaaydhyT3BYHC0lsQCkqAMfAb0F8c/d3vnVwd/entpXgishEhd3u4L/Y6i+L5NhzrSfVgtperzmGp87LhONG+2HOiDTcmWoD7TbLVsvh5qn1Ph7bgd8SYbL1Jgs503kpIjWznZtS4qIu1GXpMCUtfXCYrgKuczw3ZGvHkNbyOoJnJMXertH79rfJJemYpsn2hnFFeXr4QENL8YN4Gb3+8duZ4UI5/9g6BPaySRfbihhaNx/W/suVcK/6uALJyvAREjZ5FuQR49X2twjvqRhujbtT6GHWBONdPNfq6a0saXL3dzOgq+0djj+ftgUQzDuHzTU39g/Vyhh/N2TI557QZfUics8yyJ4evEGzDL8MvFrFvEg7A1eVDVqxoRNM+0dPslVUq9Aizu2Xnjl21hsryPv3KbL+pvW441RloAEmiYFSzz8wQHhuLn4fQt9vrfR1OuCb9snmrQqw8T/G4cVFjXArcfSJoncNxur3B99dXXG9V45eqp+r/r/hbtS6Fb/4Dn220bwAQAAA=&lt;/values&gt;&lt;/sys_hub_action_instance_v2&gt;&lt;sys_hub_alias_mapping action="delete_multiple" query="source_id=60195622470e8310ff78de94116d4318"/&gt;&lt;sys_hub_action_instance_v2 action="INSERT_OR_UPDATE"&gt;&lt;action_type display_value="Send Notification"&gt;0d8dd9f10f11101051218e8ebc767e27&lt;/action_type&gt;&lt;action_type_parent display_value="Send Notification"&gt;7eda5d710f11101051218e8ebc767ec1&lt;/action_type_parent&gt;&lt;attributes/&gt;&lt;comment/&gt;&lt;compiled_snapshot/&gt;&lt;display_text/&gt;&lt;flow display_value="Approval Reminder Notification"&gt;70b89ee6470e8310ff78de94116d433c&lt;/flow&gt;&lt;generation_source/&gt;&lt;order&gt;3&lt;/order&gt;&lt;parent_ui_id&gt;c28a8072-cb8e-4d73-899d-16e725dee4b5&lt;/parent_ui_id&gt;&lt;sys_class_name&gt;sys_hub_action_instance_v2&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 05:00:18&lt;/sys_created_on&gt;&lt;sys_id&gt;ce1b126e470e8310ff78de94116d4316&lt;/sys_id&gt;&lt;sys_mod_count&gt;2&lt;/sys_mod_count&gt;&lt;sys_scope display_value="ASEAN Learning Application"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_scope&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:54&lt;/sys_updated_on&gt;&lt;ui_id&gt;5fce13e6-da3e-442e-a2bc-cae8952a17c5&lt;/ui_id&gt;&lt;updation_source/&gt;&lt;values&gt;H4sIAAAAAAAA/8WV207jMBCGXwXluqniJG1c7pAQEhILEstyg1aRD2Ow5BxInEK36rvvOHWPlIMQ7N7VU3tm/n/8xXfzQMvgOEgllXKiSKQIIRGJRiQmFChwkY0ziGkwCEpWAO5sQFSNxPWUmc4F5nMRU0ajLA4FpxCmMktCOpnIkIwhi0cSIOWjobZQLBZ4Tuq2Nmx2649jRDxoIxsog+O734OgZg1WstAEx/O9v+yshtwwDgYPnlaiK6C0R+enmOOjKlanr1cy9mW5GriWPnuuXRD/cv2QQQDPFkoJWE0x08IgKFgpma2a2TrSAJNXpdkEHnRpl0oL9tzqP5g/id0+BShNeBfWy9w7tDKn0gKuaqurchmxjJuVc5XpivJyKcF5C4p1xm5527WYD2rXs2vCNh02pH4+VE/Xq3pnuuzV+W5NJZhZr5i1jeadhdaNo9M3aM/FwQmAgd6wgtW1Lu/zuqmmuk+MbRbDe4OLoTLVE/bT6vtyyITTNET32PAM46d9+JY12gn8gWnw8MDXfDGSTv8q9WMH527wkkRZMolEiPctCdNIsJBTyUPGYzVK0zEdcxIseo/zx87JW7rlfcl7a3tf8/4+4NZWNLq2J9jjFLwbi4GnhZK37lkSb67VVs4NMe2sRXFoDzP58kcvdA+ME7/l04DcuNpHl8vaH+175/ArOjwiOzFPSPxlhNDo/xDiO/oiRHZm8O2E7ExkBxDBOVccJiHhQoRpBjSkMctCGEUiUXESRZl6F5D3sEjfvl5bj0hZWa20YP3INmCMBOWSwTjNIqAJ5lEZlTBJCRnLNEmSl5DcQGuPLnezfY6W9azXj8n7alZn9xo4LNJT02zV8dAkb0Oz/GZ/5lXBDw1M3figYBq/NcK3cgikFya+BtVrSXdIY0qBsCBzpcFIvD55f+YfPFE7riMSmG2NyMWBWX87lNsDb8Hm3oDcJchV1RTMjbHXsk9tOiGQJTENJ+MYqYVkFHKZJCFBigEYqFh+xbP2+y93eVvWBgoAAA==&lt;/values&gt;&lt;/sys_hub_action_instance_v2&gt;&lt;sys_hub_alias_mapping action="delete_multiple" query="source_id=ce1b126e470e8310ff78de94116d4316"/&gt;&lt;sys_hub_sub_flow_instance_v2 action="delete_multiple" query="flow=70b89ee6470e8310ff78de94116d433c"/&gt;&lt;sys_hub_flow_logic_instance_v2 action="delete_multiple" query="flow=70b89ee6470e8310ff78de94116d433c^sys_idNOT INfcfa5a2e470e8310ff78de94116d43eb"/&gt;&lt;sys_hub_flow_logic_instance_v2 action="INSERT_OR_UPDATE"&gt;&lt;attributes/&gt;&lt;block display_value=""&gt;1d8d92a2474e8310ff78de94116d43f3&lt;/block&gt;&lt;comment/&gt;&lt;connected_to/&gt;&lt;decision_table/&gt;&lt;display_text/&gt;&lt;flow display_value="Approval Reminder Notification"&gt;70b89ee6470e8310ff78de94116d433c&lt;/flow&gt;&lt;flow_variables_assigned/&gt;&lt;generation_source/&gt;&lt;logic_definition display_value="For Each"&gt;098e1dc5c3e232002841b63b12d3ae33&lt;/logic_definition&gt;&lt;order&gt;2&lt;/order&gt;&lt;outputs_assigned/&gt;&lt;parent_ui_id/&gt;&lt;sys_class_name&gt;sys_hub_flow_logic_instance_v2&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 04:59:40&lt;/sys_created_on&gt;&lt;sys_id&gt;fcfa5a2e470e8310ff78de94116d43eb&lt;/sys_id&gt;&lt;sys_mod_count&gt;7&lt;/sys_mod_count&gt;&lt;sys_scope display_value="ASEAN Learning Application"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_scope&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:54&lt;/sys_updated_on&gt;&lt;ui_id&gt;c28a8072-cb8e-4d73-899d-16e725dee4b5&lt;/ui_id&gt;&lt;updation_source/&gt;&lt;values&gt;H4sIAAAAAAAA/51TwW7bMAz9F50TQ7Yzr8mtwFCgh65AV/QyFAYt0YlQWdIkOaln+N9HxU469DTsZPGRfHxPlEdm++j6GJ7tbQhqb9ju5+uKKZMwOo9MSbZj+Va225xvRVlUZcF5cbPJm6ps8kKWgLJiK2agQ6pUEbtA4RF0n+JxFLzZ8i8lX4uqaNabgn9dA6+q9U2zyZESEqs8e0JhvQzTRK1SBadhePl/BnFQWnpczDjwpC2iZ7vxUyoODmsNDWoatDBQ/796vnTeL6Y/3UFip9BfeemTVBR8xfA9opFIg1rQAVesAyMhWj+wXfQ9AR5BPho9XCsOykSiY6n2PajfxJ1zngpbJEcC5+Q1rJeLnGFxsErgo4vKmhmJ0OilR1jdd+b7LD+tAFvodbysgJA+EB+6pDmpWCS1Pw729HQZeKfM2d+S1FaAvkYQo1dNHzGkNaDGjojqDpxTZl87b4/q3ExaumyvKchabU80ND3LDEQSntEVQXZH+Lcz/AJeJRcPREPN09l9/atPc2cfi+J6Nk0FQXjl4i3RHXERN72m9zozhflhSBQq0MDnhN1f/oaUGGjJSvwNnax/S1I/sOkPzqV8zlcDAAA=&lt;/values&gt;&lt;workflow_reference/&gt;&lt;/sys_hub_flow_logic_instance_v2&gt;&lt;sys_hub_pill_compound action="delete_multiple" query="attached_to=70b89ee6470e8310ff78de94116d433c"/&gt;&lt;sys_hub_flow_variable action="delete_multiple" query="model=70b89ee6470e8310ff78de94116d433c"/&gt;&lt;sys_choice action="delete_multiple" query="name=var__m_sys_hub_flow_input_70b89ee6470e8310ff78de94116d433c"/&gt;&lt;sys_choice action="delete_multiple" query="name=var__m_sys_hub_flow_output_70b89ee6470e8310ff78de94116d433c"/&gt;&lt;sys_hub_flow_snapshot action="INSERT_OR_UPDATE"&gt;&lt;access&gt;public&lt;/access&gt;&lt;acls/&gt;&lt;active&gt;true&lt;/active&gt;&lt;allow_high_security_roles&gt;false&lt;/allow_high_security_roles&gt;&lt;annotation/&gt;&lt;attributes&gt;browserActivatedIn=chrome,integrationActivatedIn=integrated,viewActivatedIn=naturalLanguage&lt;/attributes&gt;&lt;authored_on_release_version&gt;29000&lt;/authored_on_release_version&gt;&lt;callable_by_client_api&gt;false&lt;/callable_by_client_api&gt;&lt;category/&gt;&lt;copied_from&gt;9a41b6c2ff12101088e94ee9453bf1a4&lt;/copied_from&gt;&lt;copied_from_name/&gt;&lt;description/&gt;&lt;flow_priority/&gt;&lt;internal_name&gt;approval_reminder_notification&lt;/internal_name&gt;&lt;label_cache&gt;[{"name":"c0b90530-c62b-4207-a066-8b41e053de61.Records","label":"1 - Look Up Records➛Approval Records","reference":"sysapproval_approver","reference_display":"Approval","type":"records","base_type":"records","usedInstances":{"c28a8072-cb8e-4d73-899d-16e725dee4b5":["items"]},"attributes":{"element_mapping_provider":"com.glide.flow_design.action.data.FlowDesignVariableMapper"}},{"name":"c28a8072-cb8e-4d73-899d-16e725dee4b5.item","label":"2 - For Each➛Approval Record","reference":"sysapproval_approver","reference_display":"Approval","type":"reference","base_type":"reference","usedInstances":{"5fce13e6-da3e-442e-a2bc-cae8952a17c5":["record"]},"attributes":{"pills_draggable_inside_block":"true","pills_draggable_outside_block":"false"}}]&lt;/label_cache&gt;&lt;master&gt;true&lt;/master&gt;&lt;name&gt;Approval Reminder Notification&lt;/name&gt;&lt;natlang/&gt;&lt;outputs/&gt;&lt;parent_flow display_value="Approval Reminder Notification"&gt;70b89ee6470e8310ff78de94116d433c&lt;/parent_flow&gt;&lt;remote_trigger_id/&gt;&lt;run_as&gt;user&lt;/run_as&gt;&lt;run_with_roles/&gt;&lt;sc_callable&gt;false&lt;/sc_callable&gt;&lt;status&gt;published&lt;/status&gt;&lt;sys_class_name&gt;sys_hub_flow_snapshot&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 05:10:54&lt;/sys_created_on&gt;&lt;sys_domain&gt;global&lt;/sys_domain&gt;&lt;sys_domain_path&gt;/&lt;/sys_domain_path&gt;&lt;sys_id&gt;dd8dd2a2474e8310ff78de94116d432d&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_name/&gt;&lt;sys_overrides/&gt;&lt;sys_package/&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="ASEAN Learning Application"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_scope&gt;&lt;sys_update_name/&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:54&lt;/sys_updated_on&gt;&lt;type&gt;flow&lt;/type&gt;&lt;version&gt;2&lt;/version&gt;&lt;/sys_hub_flow_snapshot&gt;&lt;sys_translated_text action="delete_multiple" query="documentkey=dd8dd2a2474e8310ff78de94116d432d"/&gt;&lt;sys_variable_value action="delete_multiple" query="document_key=dd8dd2a2474e8310ff78de94116d432d"/&gt;&lt;sys_hub_flow_stage action="delete_multiple" query="flow=dd8dd2a2474e8310ff78de94116d432d"/&gt;&lt;sys_flow_cat_variable_model action="delete_multiple" query="id=dd8dd2a2474e8310ff78de94116d432d^sys_idNOT IN598dd2a2474e8310ff78de94116d432f"/&gt;&lt;sys_flow_cat_variable_model action="INSERT_OR_UPDATE"&gt;&lt;id&gt;dd8dd2a2474e8310ff78de94116d432d&lt;/id&gt;&lt;name&gt;Approval Reminder Notification&lt;/name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 05:10:54&lt;/sys_created_on&gt;&lt;sys_id&gt;598dd2a2474e8310ff78de94116d432f&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_scope/&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:54&lt;/sys_updated_on&gt;&lt;/sys_flow_cat_variable_model&gt;&lt;sys_flow_cat_variable action="delete_multiple" query="flow_catalog_model=598dd2a2474e8310ff78de94116d432f"/&gt;&lt;sys_hub_flow_input action="delete_multiple" query="model=dd8dd2a2474e8310ff78de94116d432d"/&gt;&lt;sys_hub_flow_output action="delete_multiple" query="model=dd8dd2a2474e8310ff78de94116d432d"/&gt;&lt;sys_hub_alias_mapping action="delete_multiple" query="source_id=dd8dd2a2474e8310ff78de94116d432d"/&gt;&lt;sys_hub_trigger_instance_v2 action="delete_multiple" query="flow=dd8dd2a2474e8310ff78de94116d432d^sys_idNOT IN9d8dd2a2474e8310ff78de94116d433f"/&gt;&lt;sys_hub_trigger_instance_v2 action="INSERT_OR_UPDATE"&gt;&lt;comment/&gt;&lt;display_text/&gt;&lt;flow display_value="Approval Reminder Notification"&gt;dd8dd2a2474e8310ff78de94116d432d&lt;/flow&gt;&lt;generation_source/&gt;&lt;name&gt;Daily&lt;/name&gt;&lt;published_version/&gt;&lt;remote_sys_id/&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 05:10:54&lt;/sys_created_on&gt;&lt;sys_id&gt;9d8dd2a2474e8310ff78de94116d433f&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_scope/&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:54&lt;/sys_updated_on&gt;&lt;trigger_definition display_value="Daily"&gt;89142dc0c32222002841b63b12d3ae8a&lt;/trigger_definition&gt;&lt;trigger_inputs&gt;H4sIAAAAAAAA/31Sy07DMBD8FeRziZymvHJDQpU4ABJUXBCKNvamteQXjlMIiH9nnaQVFETki2d3Z2fGefpgGmrUrGQrZZDNmLIRgwW96j0SutZKYhXHmgErIbrQszKGDmesCc6s0HgNkZob0C2BLkgMrMw5n7Et6A4f+vZaEhcxWDCJdeIbqnTNL874Mc/pHOV5yTkdqkrVEnH/+G+T2CgtA1pWPj3PmIdAC2Ja/3FQiuSnOvSaVBUgFygFF8WcPs7n54u8Pi3qfC4LQDyhvoOxnybiH0F9jwDfIlqJcp/PrxQDgryzut93bOgRxrwMvLXqHSeqgA2SIYFjcX+tpqhGWGycEnjno3J2RCLUepoRTnfG3o4OUsjYQKfjLmRCupb40CfNScUkqXnYuNf73cKlsoPBqaidAL2/QYxB1V3ENr0CajREVBnwXtl15YPbqmGYtJhsiC1rtHulpa1a2wxEEp5RRJAtCb8a4EcIKrm4IRoa/hzcVy9d2jv6mBRXo2lqaEVQPl4S3Xb3c34+fwHJrOxS8QIAAA==&lt;/trigger_inputs&gt;&lt;trigger_outputs/&gt;&lt;trigger_type&gt;daily&lt;/trigger_type&gt;&lt;updation_source/&gt;&lt;/sys_hub_trigger_instance_v2&gt;&lt;sys_hub_action_instance_v2 action="delete_multiple" query="flow=dd8dd2a2474e8310ff78de94116d432d^sys_idNOT IN998dd2a2474e8310ff78de94116d433e,d18dd2a2474e8310ff78de94116d433d"/&gt;&lt;sys_hub_action_instance_v2 action="INSERT_OR_UPDATE"&gt;&lt;action_type display_value="Send Notification"&gt;0d8dd9f10f11101051218e8ebc767e27&lt;/action_type&gt;&lt;action_type_parent display_value="Send Notification"&gt;7eda5d710f11101051218e8ebc767ec1&lt;/action_type_parent&gt;&lt;attributes/&gt;&lt;comment/&gt;&lt;compiled_snapshot&gt;0d8dd9f10f11101051218e8ebc767e27&lt;/compiled_snapshot&gt;&lt;display_text/&gt;&lt;flow display_value="Approval Reminder Notification"&gt;dd8dd2a2474e8310ff78de94116d432d&lt;/flow&gt;&lt;generation_source/&gt;&lt;order&gt;3&lt;/order&gt;&lt;parent_ui_id&gt;c28a8072-cb8e-4d73-899d-16e725dee4b5&lt;/parent_ui_id&gt;&lt;sys_class_name&gt;sys_hub_action_instance_v2&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 05:10:54&lt;/sys_created_on&gt;&lt;sys_id&gt;998dd2a2474e8310ff78de94116d433e&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_scope display_value="ASEAN Learning Application"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_scope&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:54&lt;/sys_updated_on&gt;&lt;ui_id&gt;5fce13e6-da3e-442e-a2bc-cae8952a17c5&lt;/ui_id&gt;&lt;updation_source/&gt;&lt;values&gt;H4sIAAAAAAAA/9WV207cMBCGXwXlerOKk+zGyx0qQkJqQQLamwpFPozBknNo4izdrnj3jhPvkS0ttCD1Lh57PP8cvvjrMtAyOA5SSaWcKRIpQkhEogmJCQUKXGTTDGIajIKSFYAnGxBVI3E9Z6ZzhuVSxJTRKItDwSmEqcySkM5mMiRTyOKJBEj5ZKwtFI+P6Cd1Wxu2+OLd0SLutZENlMHx19tRULMGI1loguPl3tafSjWMg8GjVyut+9rtonZrWYmugNLmemX86D1P/c7R+SnuoJOTQ0YBfLdQSkAdipkWRkHBSsls1SzWlgaYvCzNxnCvSzskWrDvrf6BkZPYnVOAmQlfhPUy9wUazOqUWXZtm07YrlnXq9IC2qEmEhTrjP2wbRsOXNZWV+XgYhk3K+/KdEV5MVQkWF+w1Y+uRRFQu0SdcgyOWajr++rhaiXyTJd9SXyKphLMrFfM2kbzzjo5y6DTN4eqPZgP1xsM9AcLVte6vMvrpprrPh6qL8Z3BhdjZaoHlNnqu3LMhEt1jJ1g4zO0n/bmL6zRLu9PeA06u5ifS/2tg3M3R5JEWTKLRIgzmoRpJFjIqeQh47GapOmUTjkJHkdBu2g/GNa2m4phq/JvnUt4qJ+vVN4Xu6903g+ccxaNru0JypuDr8/jyDNHyXODnMSbud26c8Md6sK8sDLM5MNHn+MeXif+yIsx+wN1K8xu+uE6rNaT9sT2cdv36GLY8JzFL+RsGNADmNHoP8LMp/X3nO3UeheznWq/C2WCc644zELChQjTDGhIY5aFMIlEouIkijL1Csp+x1b6/PRuvWdlZbXSgvVN3NA1EZRLBtM0i4AmeI/KqIRZSshUpkmSPCXtBlp7dLF72wtftt+LXiG3F+dwLp69DQG76F1t2T15yfPkDaC95oHD9sLcdQ8KpvF/JbzEQzju5faP0fyVkh1emVIgLMhcaTASRy7vfd7ktVTXwBpxf+YiuR4OcP6C7e1e7nQbscfAT4Df7nELNvfyc8dwrqqmYK5zvZL3+iOkMwJZEtNwNo3xjwDJJOQySUKCfwgABiqWb/Pu3v4Elbve7+0KAAA=&lt;/values&gt;&lt;/sys_hub_action_instance_v2&gt;&lt;sys_hub_alias_mapping action="delete_multiple" query="source_id=998dd2a2474e8310ff78de94116d433e"/&gt;&lt;sys_hub_action_instance_v2 action="INSERT_OR_UPDATE"&gt;&lt;action_type display_value="Look Up Records"&gt;43400a1587003300663ca1bb36cb0b4b&lt;/action_type&gt;&lt;action_type_parent display_value="Look Up Records"&gt;d1c56ec50b30030085c083eb37673a50&lt;/action_type_parent&gt;&lt;attributes/&gt;&lt;comment/&gt;&lt;compiled_snapshot&gt;43400a1587003300663ca1bb36cb0b4b&lt;/compiled_snapshot&gt;&lt;display_text/&gt;&lt;flow display_value="Approval Reminder Notification"&gt;dd8dd2a2474e8310ff78de94116d432d&lt;/flow&gt;&lt;generation_source/&gt;&lt;order&gt;1&lt;/order&gt;&lt;parent_ui_id/&gt;&lt;sys_class_name&gt;sys_hub_action_instance_v2&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 05:10:54&lt;/sys_created_on&gt;&lt;sys_id&gt;d18dd2a2474e8310ff78de94116d433d&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_scope display_value="ASEAN Learning Application"&gt;8708a25a474e0310ff78de94116d43af&lt;/sys_scope&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:54&lt;/sys_updated_on&gt;&lt;ui_id&gt;c0b90530-c62b-4207-a066-8b41e053de61&lt;/ui_id&gt;&lt;updation_source/&gt;&lt;values&gt;H4sIAAAAAAAA/+VX207jMBD9lSrPVZXQC5cnEJcVEhcJKl5YsCaJ01q4TrEd2lL133ccO2nUBraViha0b/XMeHxm5hzHfZx7LPaOvIOk4/sQdA/2fb/d9v1erx1BEIbtXhT6YSf0mp6AEcVIDSGnuHwDnpm1mikYj2WKa2J/UInumKkxh9mDizpxIeiJhozHkgrv6PGp6Y1BYl6Ne47mK65NgXEIKcfQvkO2AlTPxuWS5D5ru6pua9xYRypjA8VvenSqqYgpYkiAK9r0RiBi0KmclRZJIb4VfGkYMqExo2eCp4q947kHvolLKFYVUesrl8Q1yZqTM9Bwr2UW6Uy60GiYsogq24+YJpBxfVq12YDbsWapsFts2XZ3yrORuLHt8MoExUzQkikEQcemUIPclZHcD9PJXYHygom8J87J0wjHWKxAa8nCTBs8c49yOsJEZIREYGJAzMxZvhmxjFoDjotWwtMJHqrYQLQgMsBb2FdoXaD9LDc/gGSmimtMk5MpYRwZQuwIVZrJvJVvJOKZyh0ShLK5vEXTUPKUg1LLyrHl5DUzuG0fXMXENs1siSQb6xNM8UZdcYvmRtro+kvKRamImUGhqgLJ8VrwvzNMEU9J0O0cHvp7BBQFQXzCKUhhOoYVcxaByfGsNGi3Q9LXjGKp8TPWRiIkHv5G9HfnVyf9y4fzX/3jGGZpMqH05RgG6XF3XYL/DMcuBZ93uxD8abXddSNw0l+zXdUlcNIPdiZ9rOMniR8P/37a317NtgV/kXS0/ynJuks+qVRqYntZ0fS6urbm+QYQCp7fGmY2wtlHqBzNE0Z5XPeFuzCOlS/c3v/5hfuWJEdAMbHTY4IzkT9XEOhXsd///Io9XOFZTq/q9wxtoKJ1DUBDp433rZWwAZxCCfd4dqNv8dRALO77nDKrd31hdAJo70wA7b3dCGBellk2sqbnxQvVTLOIfzfxsBqPFKxsCBZ1AtvqzGDbM/cW6wJub6XgKtms5+wDzu34KfuBIptfeQUMcas7j1j9kgmLB1QvTy+i4lRPgL/U+R3jSDGovLwveBZ3PpVtL1hKFJVCJFU4vOq7OMDn0fodEjStebsrZAMsRTuuYdq4K8HUInTXCCqdDvLZVO+Ry9LqSN7Z4YPx235Ji2HVarCY2Y/4N7k7ITz9AajM5rY9EQAA&lt;/values&gt;&lt;/sys_hub_action_instance_v2&gt;&lt;sys_hub_alias_mapping action="delete_multiple" query="source_id=d18dd2a2474e8310ff78de94116d433d"/&gt;&lt;sys_hub_sub_flow_instance_v2 action="delete_multiple" query="flow=dd8dd2a2474e8310ff78de94116d432d"/&gt;&lt;sys_hub_flow_logic_instance_v2 action="delete_multiple" query="flow=dd8dd2a2474e8310ff78de94116d432d^sys_idNOT INd98dd2a2474e8310ff78de94116d433a"/&gt;&lt;sys_hub_flow_logic_instance_v2 action="INSERT_OR_UPDATE"&gt;&lt;attributes/&gt;&lt;block display_value=""&gt;1d8d92a2474e8310ff78de94116d43f3&lt;/block&gt;&lt;comment/&gt;&lt;connected_to/&gt;&lt;decision_table/&gt;&lt;display_text/&gt;&lt;flow display_value="Approval Reminder Notification"&gt;dd8dd2a2474e8310ff78de94116d432d&lt;/flow&gt;&lt;flow_variables_assigned/&gt;&lt;generation_source/&gt;&lt;logic_definition display_value="For Each"&gt;098e1dc5c3e232002841b63b12d3ae33&lt;/logic_definition&gt;&lt;order&gt;2&lt;/order&gt;&lt;outputs_assigned/&gt;&lt;parent_ui_id/&gt;&lt;sys_class_name&gt;sys_hub_flow_logic_instance_v2&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 05:10:54&lt;/sys_created_on&gt;&lt;sys_id&gt;d98dd2a2474e8310ff78de94116d433a&lt;/sys_id&gt;&lt;sys_mod_count&gt;1&lt;/sys_mod_count&gt;&lt;sys_scope/&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:54&lt;/sys_updated_on&gt;&lt;ui_id&gt;c28a8072-cb8e-4d73-899d-16e725dee4b5&lt;/ui_id&gt;&lt;updation_source/&gt;&lt;values&gt;H4sIAAAAAAAA/51TTW+jMBD9Lz4nyJAs2+RWtapUqbuV0qqXVYUGe0isGpu1TVIW8d93HAitelrtCebN13uPoWe2DU0b/LO99l7tDdv+el0wZSJG7z1Tkm1ZupHVJuUbscryVcZ5drVOy3xVpplcAcqcLZiBGqlSBaw9hUfQbYz7XvByw7+t+FLkWblcZ/z7EnieL6/KdYqUkJinyQ6FddIPA7VK5RsN3cv/TxAHpaXDSUwDjrgFdGzbf0n9qzgNJWoqvZ/UfREbuiaGbqQwAQ9Tz25G6RFJZHzB8D2gkUjrK9AeF6wGIyFY17FtcC0BDkE+Gt3NFQdlAo1jsfbdqz+0MeU8FlZIggSOyTksJh9HuLqFAE80WoTWTaXiYJVAP1ohsYJWh5vP2Fjw2ARlzdgSoNSXbqvb2vwcnWDzgMtnI6T1RAKbKDRSn3RUTwd72l1Y3ilzNmVKaitAzxGE4FTZhsinZ6ixpkFFDU2jzL5onD2qczNxqZO9piCptD3R0njKCYhIPCFfIbkj/PYMv4BTUcUPGkPNw4L5zt9o8P5DC5lY/G4jk1HZpKEYbYgtwqkmXNOCI050h9d49ePs2VOhPFF4jtj95Z+KiY4uSInP0Mm6t0j+Axv+AiTAz7udAwAA&lt;/values&gt;&lt;workflow_reference/&gt;&lt;/sys_hub_flow_logic_instance_v2&gt;&lt;sys_hub_pill_compound action="delete_multiple" query="attached_to=dd8dd2a2474e8310ff78de94116d432d"/&gt;&lt;sys_hub_flow_variable action="delete_multiple" query="model=dd8dd2a2474e8310ff78de94116d432d"/&gt;&lt;sys_choice action="delete_multiple" query="name=var__m_sys_hub_flow_input_dd8dd2a2474e8310ff78de94116d432d"/&gt;&lt;sys_choice action="delete_multiple" query="name=var__m_sys_hub_flow_output_dd8dd2a2474e8310ff78de94116d432d"/&gt;&lt;sys_hub_flow action="UPDATE"&gt;&lt;sys_id&gt;70b89ee6470e8310ff78de94116d433c&lt;/sys_id&gt;&lt;latest_snapshot&gt;dd8dd2a2474e8310ff78de94116d432d&lt;/latest_snapshot&gt;&lt;compiler_build/&gt;&lt;version_record/&gt;&lt;/sys_hub_flow&gt;&lt;sys_flow_trigger_plan action="delete_multiple" query="plan_id=70b89ee6470e8310ff78de94116d433c^sys_idNOT INa98dd2a2474e8310ff78de94116d4385"/&gt;&lt;sys_flow_trigger_plan action="INSERT_OR_UPDATE"&gt;&lt;binding_strategy&gt;com.snc.process_flow.engine.binding.RunAlways&lt;/binding_strategy&gt;&lt;plan/&gt;&lt;plan_id&gt;70b89ee6470e8310ff78de94116d433c&lt;/plan_id&gt;&lt;snapshot&gt;dd8dd2a2474e8310ff78de94116d432d&lt;/snapshot&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2026-07-16 05:10:55&lt;/sys_created_on&gt;&lt;sys_domain&gt;global&lt;/sys_domain&gt;&lt;sys_domain_path&gt;/&lt;/sys_domain_path&gt;&lt;sys_id&gt;a98dd2a2474e8310ff78de94116d4385&lt;/sys_id&gt;&lt;sys_mod_count&gt;0&lt;/sys_mod_count&gt;&lt;sys_overrides/&gt;&lt;sys_scope/&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2026-07-16 05:10:55&lt;/sys_updated_on&gt;&lt;trigger display_value=""&gt;a98dd2a2474e8310ff78de94116d4381&lt;/trigger&gt;&lt;/sys_flow_trigger_plan&gt;&lt;sys_flow_subflow_plan action="delete_multiple" query="plan_id=70b89ee6470e8310ff78de94116d433c"/&gt;&lt;/record_update&gt;</payload>
+        <payload_hash>374891764</payload_hash>
+        <record_name>Approval Reminder Notification</record_name>
+        <reverted_from/>
+        <source>6c8436d247ce0310ff78de94116d43c1</source>
+        <source_table>sys_update_set</source_table>
+        <state>previous</state>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-16 05:10:56</sys_created_on>
+        <sys_id>a58dd2a2474e8310ff78de94116d43a8</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_recorded_at>19f6955c3710000001</sys_recorded_at>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-16 05:10:56</sys_updated_on>
+        <type>Flow</type>
+        <update_guid>658dd2a2434e8310b4b5263957a7f2a7</update_guid>
+        <update_guid_history>658dd2a2434e8310b4b5263957a7f2a7:374891764,1d8dd2a2774e8310840fd5e7687eae05:-1784827549,a77d92a2004e83109b1f14f3a0e16d0b:-89671356,576dde62334e831083756e498f804033:741235950,3e2d96621d4e83103b16674ad091616a:-50117203,282b526e120e83108fc8203e56594566:-132935068,8bfada2e910e8310e8154fd4481ab9e9:-975385574,6bea5a2e680e8310b3dd1e02b118104a:-245635720,6a6a1aea750e8310267271a5720e6739:-361177289,fc4a92ea370e83103b3b34476a764cc5:-2077380379,14791a6a100e8310270f6291e6d99dd1:-1440264833,cb195e2ad10e8310e535496c244de909:861649242,c1e8562a240e83104eb8886d56e28d20:-1811330330,70b89ee6a50e8310cac9ce9b2c9ab744:820090741</update_guid_history>
+    </sys_update_version>
+    <sys_metadata_delete action="INSERT_OR_UPDATE">
+        <sys_audit_delete/>
+        <sys_class_name>sys_metadata_delete</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-07-21 16:25:49</sys_created_on>
+        <sys_db_object display_value="" name="sys_hub_flow">sys_hub_flow</sys_db_object>
+        <sys_id>846f923f74cf473ca076b9da46ac4290</sys_id>
+        <sys_metadata>70b89ee6470e8310ff78de94116d433c</sys_metadata>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Approval Reminder Notification</sys_name>
+        <sys_package display_value="ASEAN Learning Application" source="x_1549902_asean_0">8708a25a474e0310ff78de94116d43af</sys_package>
+        <sys_parent/>
+        <sys_policy/>
+        <sys_scope display_value="ASEAN Learning Application">8708a25a474e0310ff78de94116d43af</sys_scope>
+        <sys_scope_delete display_value="">150a93e03297447584ae8ab0fd980be9</sys_scope_delete>
+        <sys_update_name>sys_hub_flow_70b89ee6470e8310ff78de94116d433c</sys_update_name>
+        <sys_update_version display_value="sys_hub_flow_70b89ee6470e8310ff78de94116d433c">a58dd2a2474e8310ff78de94116d43a8</sys_update_version>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-07-21 16:25:49</sys_updated_on>
+    </sys_metadata_delete>
+</record_update>
